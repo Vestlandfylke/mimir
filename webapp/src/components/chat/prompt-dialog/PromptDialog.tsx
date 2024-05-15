@@ -98,9 +98,9 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
             if (
                 key === 'chatMemories' &&
                 value &&
-                !(value as string).includes('User has also shared some document snippets:')
+                !(value as string).includes('Brukaren har også delt nokre dokumentutdrag:')
             ) {
-                value += '\nNo relevant document memories.';
+                value += '\nIngen relevante dokumentminner.';
             }
 
             return value && key !== 'metaPromptTemplate' ? (
@@ -119,7 +119,7 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
     return (
         <Dialog>
             <DialogTrigger disableButtonEnhancement>
-                <Tooltip content={'Show prompt'} relationship="label">
+                <Tooltip content={'Vis prompt'} relationship="label">
                     <Button className={classes.infoButton} icon={<Info16Regular />} appearance="transparent" />
                 </Tooltip>
             </DialogTrigger>
@@ -135,10 +135,10 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                         {message.prompt && typeof prompt !== 'string' && (
                             <TabList selectedValue={selectedTab} onTabSelect={onTabSelect}>
                                 <Tab data-testid="formatted" id="formatted" value="formatted">
-                                    Formatted
+                                    Formatert
                                 </Tab>
                                 <Tab data-testid="rawContent" id="rawContent" value="rawContent">
-                                    Raw Content
+                                    Råinnhald
                                 </Tab>
                             </TabList>
                         )}
@@ -153,8 +153,8 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                                     ? (prompt as BotResponsePrompt).metaPromptTemplate.map((contextMessage, index) => {
                                           return (
                                               <div key={`context-message-${index}`}>
-                                                  <p>{`Role: ${contextMessage.Role.Label}`}</p>
-                                                  {formatParagraphTextContent(`Content: ${contextMessage.Content}`)}
+                                                  <p>{`Rolle: ${contextMessage.Role.Label}`}</p>
+                                                  {formatParagraphTextContent(`Innhald: ${contextMessage.Content}`)}
                                                   <Divider />
                                               </div>
                                           );
@@ -164,18 +164,18 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                     </DialogContent>
                     <DialogActions position="start" className={dialogClasses.footer}>
                         <Label size="small" color="brand">
-                            Want to learn more about prompts? Click{' '}
+                            Vil du lære meir om prompts? Klikk{' '}
                             <Link href="https://aka.ms/sk-about-prompts" target="_blank" rel="noreferrer">
-                                here
+                                her
                             </Link>
                             .
                         </Label>
                         <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="secondary">Close</Button>
+                            <Button appearance="secondary">Lukk</Button>
                         </DialogTrigger>
                     </DialogActions>
                 </DialogBody>
             </DialogSurface>
         </Dialog>
-    );
+    );    
 };

@@ -16,13 +16,14 @@ export const AddPluginCard: React.FC = () => {
         <div className={classes.root}>
             <BaseCard
                 image={AddPluginIcon}
-                header="Custom Plugin"
-                secondaryText="AI Developer"
-                description="Add your own ChatGPT compatible plugin."
+                header="Tilpassa Tillegg"
+                secondaryText="AI-Utviklar"
+                description="Legg til ditt eige ChatGPT-kompatible tillegg."
                 action={<PluginWizard />}
-                helpText="Want to learn how to create a custom plugin?"
+                helpText="Vil du lære korleis du kan lage eit tilpassa tillegg?"
                 helpLink="https://aka.ms/sk-plugins-howto"
             />
         </div>
     );
+    
 };

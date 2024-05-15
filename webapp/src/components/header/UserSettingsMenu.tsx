@@ -92,10 +92,10 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                                     setOpenSettingsDialog(true);
                                 }}
                             >
-                                Settings
+                                innstillinger
                             </MenuItem>
                             <MenuItem data-testid="logOutMenuButton" onClick={onLogout}>
-                                Sign out
+                                Logg ut
                             </MenuItem>
                         </MenuList>
                     </MenuPopover>
@@ -110,7 +110,7 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                         setOpenSettingsDialog(true);
                     }}
                 >
-                    Settings
+                    innstillinger
                 </Button>
             )}
             <SettingsDialog

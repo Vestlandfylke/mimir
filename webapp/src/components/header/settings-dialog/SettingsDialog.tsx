@@ -67,13 +67,13 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
         >
             <DialogSurface className={classes.outer}>
                 <DialogBody className={classes.root}>
-                    <DialogTitle>Settings</DialogTitle>
+                    <DialogTitle>Innstillingar</DialogTitle>
                     <DialogContent className={classes.content}>
                         <TokenUsageGraph tokenUsage={tokenUsage} />
                         <Accordion collapsible multiple defaultOpenItems={['basic']}>
                             <AccordionItem value="basic">
                                 <AccordionHeader expandIconPosition="end">
-                                    <h3>Basic</h3>
+                                    <h3>Grunnleggjande</h3>
                                 </AccordionHeader>
                                 <AccordionPanel>
                                     <SettingSection key={settings[0].title} setting={settings[0]} contentOnly />
@@ -82,11 +82,11 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                             <Divider />
                             <AccordionItem value="advanced">
                                 <AccordionHeader expandIconPosition="end" data-testid="advancedSettingsFoldup">
-                                    <h3>Advanced</h3>
+                                    <h3>Avansert</h3>
                                 </AccordionHeader>
                                 <AccordionPanel>
                                     <Body1 color={tokens.colorNeutralForeground3}>
-                                        Some settings are disabled by default as they are not fully supported yet.
+                                        Enkelte innstillingar er som standard deaktiverte då dei ikkje er fullstendig støtta enno.
                                     </Body1>
                                     {settings.slice(1).map((setting) => {
                                         return <SettingSection key={setting.title} setting={setting} />;
@@ -96,13 +96,13 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                             <Divider />
                             <AccordionItem value="about">
                                 <AccordionHeader expandIconPosition="end">
-                                    <h3>About</h3>
+                                    <h3>Om</h3>
                                 </AccordionHeader>
                                 <AccordionPanel>
                                     <Body1 color={tokens.colorNeutralForeground3}>
-                                        Backend version: {serviceInfo.version}
+                                        Bakandelsversjon: {serviceInfo.version}
                                         <br />
-                                        Frontend version: {process.env.REACT_APP_SK_VERSION ?? '-'}
+                                        Framandelsversjon: {process.env.REACT_APP_SK_VERSION ?? '-'}
                                         <br />
                                         {process.env.REACT_APP_SK_BUILD_INFO}
                                     </Body1>
@@ -114,18 +114,19 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                 </DialogBody>
                 <DialogActions position="start" className={dialogClasses.footer}>
                     <Label size="small" color="brand" className={classes.footer}>
-                        Join the Semantic Kernel open source community!{' '}
-                        <a href="https://aka.ms/semantic-kernel" target="_blank" rel="noreferrer">
-                            Learn More
+                        Pilot prosjekt for VLFK{' '}
+                        <a href="https://www.vestlandfylke.no/" target="_blank" rel="noreferrer">
+                            Les meir
                         </a>
                     </Label>
                     <DialogTrigger disableButtonEnhancement>
                         <Button appearance="secondary" data-testid="userSettingsCloseButton">
-                            Close
+                            Lukk
                         </Button>
                     </DialogTrigger>
                 </DialogActions>
             </DialogSurface>
         </Dialog>
     );
+    
 };

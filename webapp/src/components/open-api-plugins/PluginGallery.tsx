@@ -118,10 +118,10 @@ export const PluginGallery: React.FC = () => {
                     style={{ color: 'white' }}
                     appearance="transparent"
                     icon={<AppsAddIn24 color="white" />}
-                    title="Plugins Gallery"
-                    aria-label="Plugins Gallery"
+                    title="Tilleggsgalleri"
+                    aria-label="Tilleggsgalleri"
                 >
-                    Plugins
+                    Tillegg
                 </Button>
             </DialogTrigger>
             <DialogSurface className={classes.root}>
@@ -132,23 +132,23 @@ export const PluginGallery: React.FC = () => {
                                 <Button
                                     data-testid="closeEnableCCPluginsPopUp"
                                     appearance="subtle"
-                                    aria-label="close"
+                                    aria-label="lukk"
                                     icon={<Dismiss24 />}
                                 />
                             </DialogTrigger>
                         }
                     >
                         <Subtitle1 block className={classes.title}>
-                            Enable Chat Copilot Plugins
+                            Aktiver Chat Copilot-tillegg
                         </Subtitle1>
                         <Body1 as="p" block className={classes.description}>
-                            Authorize plugins and have more powerful bots!
+                            Autoriser tillegg og få kraftigare botar!
                         </Body1>
                     </DialogTitle>
                     <DialogContent className={classes.dialogContent}>
                         <AddPluginCard />
                         <Subtitle2 block className={classes.title}>
-                            Available Plugins
+                            Tilgjengelege Tillegg
                         </Subtitle2>
                         <div className={classes.content}>
                             {Object.entries(plugins).map((entry) => {
@@ -157,7 +157,7 @@ export const PluginGallery: React.FC = () => {
                             })}
                         </div>
                         <Subtitle2 block className={classes.title}>
-                            Hosted Plugins
+                            Hosta Tillegg
                         </Subtitle2>
                         <div className={classes.content}>
                             {Object.entries(hostedPlugins).map((entry) => {
@@ -166,9 +166,9 @@ export const PluginGallery: React.FC = () => {
                             })}
                         </div>
                         <Label size="small" color="brand">
-                            Want to learn more about plugins? Click{' '}
+                            Vil du lære meir om tillegg? Klikk{' '}
                             <Link href="https://aka.ms/sk-plugins-howto" target="_blank" rel="noreferrer">
-                                here
+                                her
                             </Link>
                             .
                         </Label>

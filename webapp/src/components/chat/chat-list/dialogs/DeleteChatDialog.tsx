@@ -41,24 +41,24 @@ export const DeleteChatDialog: React.FC<IEditChatNameProps> = ({ chatId }) => {
     return (
         <Dialog modalType="alert">
             <DialogTrigger>
-                <Tooltip content={'Delete chat session'} relationship="label">
+                <Tooltip content={'Slett chatøkt'} relationship="label">
                     <Button icon={<Delete16 />} appearance="transparent" aria-label="Edit" />
                 </Tooltip>
             </DialogTrigger>
             <DialogSurface className={classes.root}>
                 <DialogBody>
-                    <DialogTitle>Are you sure you want to delete chat: {chatName}?</DialogTitle>
+                    <DialogTitle>Er du sikker på at du vil slette samtalen: {chatName}?</DialogTitle>
                     <DialogContent>
-                        This action will permanently delete the chat, and any associated resources and memories, for all
-                        participants, including Chat Copilot.
+                        Denne handlinga vil permanent slette samtalen, og alle tilknytta ressursar og minner, for alle
+                        deltakarar, inkludert VLFK Chat Copilot.
                     </DialogContent>
                     <DialogActions className={classes.actions}>
                         <DialogTrigger action="close" disableButtonEnhancement>
-                            <Button appearance="secondary">Cancel</Button>
+                            <Button appearance="secondary">Avbryt</Button>
                         </DialogTrigger>
                         <DialogTrigger action="close" disableButtonEnhancement>
                             <Button appearance="primary" onClick={onDeleteChat}>
-                                Delete
+                                Slett
                             </Button>
                         </DialogTrigger>
                     </DialogActions>

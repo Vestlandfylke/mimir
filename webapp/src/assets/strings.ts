@@ -1,8 +1,8 @@
 export const COPY = {
-    STEPWISE_RESULT_NOT_FOUND_REGEX: /(Result not found, review _stepsTaken to see what happened\.)\s+(\[{.*}])/g,
+    STEPWISE_RESULT_NOT_FOUND_REGEX: /(Resultat ikkje funne, sjå gjennom _stepsTaken for å sjå kva som hende\.)\s+(\[{.*}])/g,
     CHAT_DELETED_MESSAGE: (chatName?: string) =>
         `Chat ${
             chatName ? `{${chatName}} ` : ''
-        }has been removed by another user. You can still access the latest chat history for now. All chat content will be cleared once you refresh or exit the application.`,
-    REFRESH_APP_ADVISORY: 'Please refresh the page to ensure you have the latest data.',
+        }er fjerna av ein annan brukar. Du kan framleis få tilgang til den siste chattehistorikken for no. Alt innhald i chatten vil bli tømt når du oppdaterer eller går ut av applikasjonen.`,
+    REFRESH_APP_ADVISORY: 'Vennlegst oppdater sida for å sikre at du har dei nyaste dataene.',
 };

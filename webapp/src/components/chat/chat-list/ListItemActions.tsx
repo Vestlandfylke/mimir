@@ -54,35 +54,35 @@ export const ListItemActions: React.FC<IListItemActionsProps> = ({ chatId, onEdi
                     <Button
                         icon={<ErrorCircleRegular />}
                         appearance="transparent"
-                        aria-label="Alert: Chat has been deleted by another user."
+                        aria-label="Varsel: Samtalen har blitt sletta av ein annan brukar."
                     />
                 </Tooltip>
             ) : (
                 <>
-                    <Tooltip content={'Edit chat name'} relationship="label">
+                    <Tooltip content={'Rediger samtalenamn'} relationship="label">
                         <Button
                             icon={<Edit />}
                             appearance="transparent"
-                            aria-label="Edit chat name"
+                            aria-label="Rediger samtalenamn"
                             onClick={onEditTitleClick}
                             data-testid="editChatTitleButtonSimplified"
                         />
                     </Tooltip>
-                    <Tooltip content={'Download chat session'} relationship="label">
+                    <Tooltip content={'Last ned samtalen'} relationship="label">
                         <Button
                             disabled={!features[FeatureKeys.BotAsDocs].enabled}
                             icon={<ArrowDownload16 />}
                             appearance="transparent"
-                            aria-label="Download chat session"
+                            aria-label="Last ned samtalen"
                             onClick={onDownloadBotClick}
                         />
                     </Tooltip>
-                    <Tooltip content={'Share live chat code'} relationship="label">
+                    <Tooltip content={'Del live chat-kode'} relationship="label">
                         <Button
                             disabled={!features[FeatureKeys.MultiUserChat].enabled}
                             icon={<Share20 />}
                             appearance="transparent"
-                            aria-label="Share live chat code"
+                            aria-label="Del live chat-kode"
                             onClick={() => {
                                 setIsGettingInvitationId(true);
                             }}

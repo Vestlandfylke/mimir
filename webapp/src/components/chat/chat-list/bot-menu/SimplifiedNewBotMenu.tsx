@@ -27,8 +27,8 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = () => {
     const chat = useChat();
     const { features } = useAppSelector((state: RootState) => state.app);
 
-    // It needs to keep the menu open to keep the FileUploader reference
-    // when the file uploader is clicked.
+    // Det er nødvendig å halde menyen open for å behalde referansen til FileUploader
+    // når file uploader blir klikka på.
     const [isJoiningBot, setIsJoiningBot] = useState(false);
 
     const onAddChat = () => {
@@ -46,14 +46,14 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = () => {
         <div>
             <Menu>
                 <MenuTrigger disableButtonEnhancement>
-                    <Tooltip content="Add a chat" relationship="label">
+                    <Tooltip content="Legg til ei samtaleøkt" relationship="label">
                         <Button data-testid="createNewConversationButton" icon={<Add20 />} appearance="transparent" />
                     </Tooltip>
                 </MenuTrigger>
                 <MenuPopover>
                     <MenuList>
                         <MenuItem data-testid="addNewBotMenuItem" onClick={onAddChat}>
-                            New Chat Session
+                            Ny samtaleøkt
                         </MenuItem>
                         <Divider />
                         <MenuItem
@@ -61,7 +61,7 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = () => {
                             disabled={!features[FeatureKeys.MultiUserChat].enabled}
                             onClick={onJoinClick}
                         >
-                            Join Shared Chat
+                            Bli med i delt samtaleøkt
                         </MenuItem>
                     </MenuList>
                 </MenuPopover>

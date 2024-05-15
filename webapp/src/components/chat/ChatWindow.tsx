@@ -118,7 +118,7 @@ export const ChatWindow: React.FC = () => {
                             </Label>
                             <Popover open={isEditing}>
                                 <PopoverTrigger disableButtonEnhancement>
-                                    <Tooltip content={'Edit conversation name'} relationship="label">
+                                    <Tooltip content={'Rediger samtalenavn'} relationship="label">
                                         <Button
                                             data-testid="editChatTitleButton"
                                             icon={isEditing ? <Edit24Filled /> : <EditRegular />}
@@ -127,12 +127,12 @@ export const ChatWindow: React.FC = () => {
                                                 setIsEditing(true);
                                             }}
                                             disabled={!chatName}
-                                            aria-label="Edit conversation name"
+                                            aria-label="Rediger samtalenavn"
                                         />
                                     </Tooltip>
                                 </PopoverTrigger>
                                 <PopoverSurface className={classes.popover}>
-                                    <h3 className={classes.popoverHeader}>Bot name</h3>
+                                    <h3 className={classes.popoverHeader}>Botnamn</h3>
                                     <EditChatName
                                         name={chatName}
                                         chatId={selectedId}
@@ -146,17 +146,17 @@ export const ChatWindow: React.FC = () => {
                         </>
                     )}
                     <TabList selectedValue={selectedTab} onTabSelect={onTabSelect}>
-                        <Tab data-testid="chatTab" id="chat" value="chat" aria-label="Chat Tab" title="Chat Tab">
+                        <Tab data-testid="chatTab" id="chat" value="chat" aria-label="Chat-fane" title="Chat-fane">
                             Chat
                         </Tab>
                         <Tab
                             data-testid="documentsTab"
                             id="documents"
                             value="documents"
-                            aria-label="Documents Tab"
-                            title="Documents Tab"
+                            aria-label="Dokumenter-fane"
+                            title="Dokumenter-fane"
                         >
-                            Documents
+                            Dokument
                         </Tab>
                         {features[FeatureKeys.PluginsPlannersAndPersonas].enabled && (
                             <>
@@ -165,18 +165,18 @@ export const ChatWindow: React.FC = () => {
                                     id="plans"
                                     value="plans"
                                     icon={<Map16Regular />}
-                                    aria-label="Plans Tab"
-                                    title="Plans Tab"
+                                    aria-label="Planer-fane"
+                                    title="Planer-fane"
                                 >
-                                    Plans
+                                    Planar
                                 </Tab>
                                 <Tab
                                     data-testid="personaTab"
                                     id="persona"
                                     value="persona"
                                     icon={<Person16Regular />}
-                                    aria-label="Persona Tab"
-                                    title="Persona Tab"
+                                    aria-label="Persona-fane"
+                                    title="Persona-fane"
                                 >
                                     Persona
                                 </Tab>
@@ -214,4 +214,5 @@ export const ChatWindow: React.FC = () => {
             )}
         </div>
     );
+    
 };

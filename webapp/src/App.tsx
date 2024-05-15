@@ -89,14 +89,14 @@ const App = () => {
                     }),
                 );
 
-                // Privacy disclaimer for internal Microsoft users
-                if (account.username.split('@')[1] === 'microsoft.com') {
-                    dispatch(
-                        addAlert({
-                            message:
-                                'By using Chat Copilot, you agree to protect sensitive data, not store it in chat, and allow chat history collection for service improvements. This tool is for internal use only.',
-                            type: AlertType.Info,
-                        }),
+                    // Personvernerklæring for interne Microsoft-brukarar
+                    if (account.username.split('@')[1] === 'microsoft.com') {
+                        dispatch(
+                            addAlert({
+                                message:
+                                    'Ved å bruke Chat Copilot samtykker du i å beskytte sensitiv informasjon, ikkje lagre det i samtaler, og tillate innsamling av samtalshistorikk for å forbetre tenesten. Dette verktøyet er berre for intern bruk.',
+                                type: AlertType.Info,
+                            }),
                     );
                 }
 
@@ -142,7 +142,7 @@ const App = () => {
                     <UnauthenticatedTemplate>
                         <div className={classes.container}>
                             <div className={classes.header}>
-                                <Subtitle1 as="h1">Chat Copilot</Subtitle1>
+                                <Subtitle1 as="h1">VLFK Chat Copilot</Subtitle1>
                             </div>
                             {appState === AppState.SigningOut && <Loading text="Signing you out..." />}
                             {appState !== AppState.SigningOut && <Login />}
@@ -178,7 +178,7 @@ const Chat = ({
     return (
         <div className={classes.container}>
             <div className={classes.header}>
-                <Subtitle1 as="h1">Chat Copilot</Subtitle1>
+                <Subtitle1 as="h1">VLFK Chat Copilot</Subtitle1>
                 {appState > AppState.SettingUserInfo && (
                     <div className={classes.cornerItems}>
                         <div className={classes.cornerItems}>

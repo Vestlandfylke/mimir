@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft. All rights reserved.
-
+import logo from '../../../assets/logo.png';
 import {
     Button,
     Input,
@@ -28,6 +28,7 @@ import { NewBotMenu } from './bot-menu/NewBotMenu';
 import { SimplifiedNewBotMenu } from './bot-menu/SimplifiedNewBotMenu';
 import { ChatListSection } from './ChatListSection';
 
+
 const useClasses = makeStyles({
     root: {
         display: 'flex',
@@ -35,6 +36,8 @@ const useClasses = makeStyles({
         width: '320px',
         backgroundColor: tokens.colorNeutralBackground4,
         flexDirection: 'column',
+        height: '100%',
+        position: 'relative',
         ...shorthands.overflow('hidden'),
         ...Breakpoints.small({
             width: '64px',
@@ -79,6 +82,20 @@ const useClasses = makeStyles({
         ...shorthands.border(tokens.borderRadiusNone),
         backgroundColor: tokens.colorSubtleBackground,
         fontSize: tokens.fontSizeBase500,
+    },
+    logoContainer: {
+        ...shorthands.padding(tokens.spacingVerticalM),
+        display: 'flex',
+        justifyContent: 'left',
+        alignItems: 'left',
+        position: 'absolute', 
+        bottom: 0,
+        left: 0,
+        right: 0,
+    },
+    logo: {
+        maxWidth: '80%',
+        maxHeight: '80%',
     },
 });
 
@@ -186,7 +203,7 @@ export const ChatList: FC = () => {
                     <>
                         {!isFiltering && (
                             <>
-                                <Subtitle2Stronger className={classes.title}>Conversations</Subtitle2Stronger>
+                                <Subtitle2Stronger className={classes.title}>Samtaler</Subtitle2Stronger>
                                 <Button icon={<Filter20 />} appearance="transparent" onClick={onFilterClick} />
                                 <NewBotMenu onFileUpload={() => fileUploaderRef.current?.click()} />
                                 <FileUploader
@@ -199,7 +216,7 @@ export const ChatList: FC = () => {
                         {isFiltering && (
                             <>
                                 <Input
-                                    placeholder="Filter by name"
+                                    placeholder="Filtrer etter namn"
                                     className={mergeClasses(classes.input, classes.title)}
                                     onChange={onSearch}
                                     autoFocus
@@ -210,14 +227,19 @@ export const ChatList: FC = () => {
                     </>
                 )}
             </div>
-            <div aria-label={'chat list'} className={classes.list}>
+            <div aria-label={'chat liste'} className={classes.list}>
                 {conversationsView.latestConversations && (
-                    <ChatListSection header="Today" conversations={conversationsView.latestConversations} />
+                    <ChatListSection header="I dag" conversations={conversationsView.latestConversations} />
                 )}
                 {conversationsView.olderConversations && (
-                    <ChatListSection header="Older" conversations={conversationsView.olderConversations} />
+                    <ChatListSection header="Eldre" conversations={conversationsView.olderConversations} />
                 )}
+            </div>
+            {/* Plasserer logoen her */}
+            <div className={classes.logoContainer}>
+                <img src={logo} alt="Logo" className={classes.logo} />
             </div>
         </div>
     );
+    
 };

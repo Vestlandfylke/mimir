@@ -112,7 +112,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
 
         initSpeechRecognizer().catch((e) => {
             const errorDetails = getErrorDetails(e);
-            const errorMessage = `Unable to initialize speech recognizer. Details: ${errorDetails}`;
+            const errorMessage = `Kan ikkje initialisere talegjenkjenner. Detaljar: ${errorDetails}`;
             dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
         });
     }, [dispatch, instance, inProgress]);
@@ -138,14 +138,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
 
     const handleSubmit = (value: string, messageType: ChatMessageType = ChatMessageType.Message) => {
         if (value.trim() === '') {
-            return; // only submit if value is not empty
+            return; // berre send inn dersom verdien ikkje er tom
         }
 
         setValue('');
         dispatch(editConversationInput({ id: selectedId, newInput: '' }));
-        dispatch(updateBotResponseStatus({ chatId: selectedId, status: 'Calling the kernel' }));
+        dispatch(updateBotResponseStatus({ chatId: selectedId, status: 'Kallar på kjernen' }));
         onSubmit({ value, messageType, chatId: selectedId }).catch((error) => {
-            const message = `Error submitting chat input: ${(error as Error).message}`;
+            const message = `Feil ved innsending av chat-input: ${(error as Error).message}`;
             log(message);
             dispatch(
                 addAlert({
@@ -169,8 +169,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
             <Alerts />
             <div className={classes.content}>
                 <Textarea
-                    title="Chat input"
-                    aria-label="Chat input field. Click enter to submit input."
+                    title="Chat-input"
+                    aria-label="Chat-input felt. Klikk enter for å sende inn input."
                     ref={textAreaRef}
                     id="chat-input"
                     resize="vertical"
@@ -181,15 +181,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                             : classes.textarea,
                     }}
                     className={classes.input}
-                    value={isDraggingOver ? 'Drop your files here' : value}
+                    value={isDraggingOver ? 'Slepp filene dine her' : value}
                     onDrop={handleDrop}
                     onFocus={() => {
-                        // update the locally stored value to the current value
+                        // oppdater den lokalt lagra verdien til den nåverande verdien
                         const chatInput = document.getElementById('chat-input');
                         if (chatInput) {
                             setValue((chatInput as HTMLTextAreaElement).value);
                         }
-                        // User is considered typing if the input is in focus
+                        // Brukeren er ansett som skrivande hvis input er i fokus
                         if (activeUserInfo) {
                             dispatch(
                                 updateUserIsTyping({ userId: activeUserInfo.id, chatId: selectedId, isTyping: true }),
@@ -211,7 +211,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         }
                     }}
                     onBlur={() => {
-                        // User is considered not typing if the input is not  in focus
+                        // Brukeren er ansett som ikkje skrivande hvis input ikkje er i fokus
                         if (activeUserInfo) {
                             dispatch(
                                 updateUserIsTyping({ userId: activeUserInfo.id, chatId: selectedId, isTyping: false }),
@@ -222,7 +222,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
             </div>
             <div className={classes.controls}>
                 <div className={classes.functional}>
-                    {/* Hidden input for file upload. Only accept .txt and .pdf files for now. */}
+                    {/* Skjult input for filopplasting. Godtek berre .txt og .pdf filer for nå. */}
                     <input
                         type="file"
                         ref={documentFileRef}
@@ -240,8 +240,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         appearance="transparent"
                         icon={<AttachRegular />}
                         onClick={() => documentFileRef.current?.click()}
-                        title="Attach file"
-                        aria-label="Attach file button"
+                        title="Vedlegg fil"
+                        aria-label="Vedlegg fil-knapp"
                     />
                     {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
                 </div>
@@ -255,8 +255,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         />
                     )}
                     <Button
-                        title="Submit"
-                        aria-label="Submit message"
+                        title="Send inn"
+                        aria-label="Send inn melding"
                         appearance="transparent"
                         icon={<SendRegular />}
                         onClick={() => {

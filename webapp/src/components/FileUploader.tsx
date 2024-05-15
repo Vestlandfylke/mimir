@@ -45,7 +45,7 @@ export const FileUploader: React.FC<FileUploaderProps> = forwardRef<HTMLInputEle
                 className={classes.root}
                 accept={acceptedExtensions?.join(',')}
                 onChange={onChange}
-                title="Upload a .pdf, .txt, .jpg, .png or .tiff file"
+                title="Last opp ei .pdf, .txt, .jpg, .png eller .tiff fil"
             />
         );
     },

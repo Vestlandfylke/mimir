@@ -42,7 +42,7 @@ export const Alerts: React.FC = () => {
                                 <div className={classes.actionItems}>
                                     {onRetry && <div onClick={onRetry}>Retry</div>}
                                     <Dismiss16
-                                        aria-label="dismiss message"
+                                        aria-label="avvis melding"
                                         onClick={() => {
                                             dispatch(removeAlert(index));
                                         }}

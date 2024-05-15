@@ -130,12 +130,12 @@ export const DocumentsTab: React.FC = () => {
     const { columns, rows } = useTable(resources);
     return (
         <TabView
-            title="Documents"
-            learnMoreDescription="document embeddings"
+            title="Dokument"
+            learnMoreDescription="dokument innvevingar"
             learnMoreLink="https://aka.ms/sk-docs-vectordb"
         >
             <div className={classes.functional}>
-                {/* Hidden input for file upload. Only accept .txt and .pdf files for now. */}
+                {/* Skjult input for filopplasting. Godtar bare .txt og .pdf filer for nå. */}
                 <input
                     type="file"
                     ref={localDocumentFileRef}
@@ -158,7 +158,7 @@ export const DocumentsTab: React.FC = () => {
                 />
                 <Menu>
                     <MenuTrigger disableButtonEnhancement>
-                        <Tooltip content="Embed file into chat session" relationship="label">
+                        <Tooltip content="Bygg inn fil i chatøkta" relationship="label">
                             <Button
                                 className={classes.uploadButton}
                                 icon={<DocumentArrowUp20Regular />}
@@ -167,7 +167,7 @@ export const DocumentsTab: React.FC = () => {
                                     (importingDocuments && importingDocuments.length > 0)
                                 }
                             >
-                                Upload
+                                Last opp
                             </Button>
                         </Tooltip>
                     </MenuTrigger>
@@ -182,7 +182,7 @@ export const DocumentsTab: React.FC = () => {
                                     (importingDocuments && importingDocuments.length > 0)
                                 }
                             >
-                                New local chat document
+                                Nytt lokalt chatdokument
                             </MenuItem>
                             <MenuItem
                                 data-testid="addNewLocalDoc"
@@ -193,21 +193,22 @@ export const DocumentsTab: React.FC = () => {
                                     (importingDocuments && importingDocuments.length > 0)
                                 }
                             >
-                                New global document
+                                Nytt globalt dokument
                             </MenuItem>
                         </MenuList>
                     </MenuPopover>
                 </Menu>
                 {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
-                {/* Hardcode vector database as we don't support switching vector store dynamically now. */}
+                {/* Hardkoda vektor database siden vi ikke støtter å bytte vektorlager dynamisk nå. */}
                 <div className={classes.vectorDatabase}>
-                    <Label size="large">Vector Database:</Label>
+                    <Label size="large">Vektor Database:</Label>
                     <RadioGroup
                         defaultValue={serviceInfo.memoryStore.selectedType}
                         layout="horizontal"
                         disabled={conversations[selectedId].disabled}
                     >
                         {serviceInfo.memoryStore.types.map((storeType) => {
+    
                             return (
                                 <Radio
                                     key={storeType}
@@ -220,7 +221,7 @@ export const DocumentsTab: React.FC = () => {
                     </RadioGroup>
                 </div>
             </div>
-            <Table aria-label="External resource table" className={classes.table}>
+            <Table aria-label="Ekstern ressurs tabell" className={classes.table}>
                 <TableHeader>
                     <TableRow>{columns.map((column) => column.renderHeaderCell())}</TableRow>
                 </TableHeader>
@@ -247,7 +248,7 @@ function useTable(resources: ChatMemorySource[]) {
             columnId: 'name',
             renderHeaderCell: () => (
                 <TableHeaderCell key="name" {...headerSortProps('name')}>
-                    Name
+                    Namn
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
@@ -268,7 +269,7 @@ function useTable(resources: ChatMemorySource[]) {
             columnId: 'createdOn',
             renderHeaderCell: () => (
                 <TableHeaderCell key="createdOn" {...headerSortProps('createdOn')}>
-                    Created on
+                    Oppretta på
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
@@ -285,7 +286,7 @@ function useTable(resources: ChatMemorySource[]) {
             columnId: 'fileSize',
             renderHeaderCell: () => (
                 <TableHeaderCell key="fileSize" {...headerSortProps('fileSize')}>
-                    Size (bytes)
+                    Størrelse (bytes)
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
@@ -304,7 +305,7 @@ function useTable(resources: ChatMemorySource[]) {
             columnId: 'access',
             renderHeaderCell: () => (
                 <TableHeaderCell key="access" {...headerSortProps('access')}>
-                    Access
+                    Tilgang
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
@@ -321,7 +322,7 @@ function useTable(resources: ChatMemorySource[]) {
             columnId: 'progress',
             renderHeaderCell: () => (
                 <TableHeaderCell key="progress" {...headerSortProps('progress')}>
-                    Progress
+                    Framgang
                 </TableHeaderCell>
             ),
             renderCell: (item) => (

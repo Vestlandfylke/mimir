@@ -75,7 +75,7 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
 
     return (
         <div className={classes.container}>
-            <Text>Based on the request, Chat Copilot will run the following steps:</Text>
+            <Text>Basert på førespurnaden, vil Chat Copilot køyre følgjande steg:</Text>
             <PlanBody
                 plan={plan}
                 setPlan={setPlan}
@@ -88,7 +88,7 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
             />
             {planState === PlanState.PlanApprovalRequired && (
                 <>
-                    Would you like to proceed with the plan?
+                    Ønsker du å gå vidare med planen?
                     <div className={classes.buttons}>
                         <Button
                             data-testid="cancelPlanButton"
@@ -97,7 +97,7 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
                                 void onPlanAction(PlanState.Rejected);
                             }}
                         >
-                            No, cancel plan
+                            Nei, avbryt planen
                         </Button>
                         <Button
                             data-testid="proceedWithPlanButton"
@@ -107,7 +107,7 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
                                 void onPlanAction(PlanState.Approved);
                             }}
                         >
-                            Yes, proceed
+                            Ja, gå vidare
                         </Button>
                     </div>
                 </>
@@ -115,13 +115,13 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
             {(planState === PlanState.Approved || planState === PlanState.Derived) && (
                 <div className={mergeClasses(classes.buttons, classes.status)}>
                     <CheckmarkCircle24Regular />
-                    <Text className={classes.text}> Plan Executed</Text>
+                    <Text className={classes.text}> Plan Utført</Text>
                 </div>
             )}
             {planState === PlanState.Rejected && (
                 <div className={mergeClasses(classes.buttons, classes.status)}>
                     <DismissCircle24Regular />
-                    <Text className={classes.text}> Plan Cancelled</Text>
+                    <Text className={classes.text}> Plan Avbryt</Text>
                 </div>
             )}
             {(planState === PlanState.NoOp || planState === PlanState.Disabled) && (
@@ -129,8 +129,8 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
                     <Info24Regular />
                     <Text className={classes.text}>
                         {planState === PlanState.NoOp
-                            ? 'Your app state has changed since this plan was generated, making it unreliable for the planner. Please request a fresh plan to avoid potential conflicts.'
-                            : 'Only the person who prompted this plan can take action on it.'}
+                            ? 'Applikasjonstilstanden din har endra seg sidan denne planen vart generert, noko som gjer den upåliteleg for planleggjaren. Vennligst be om ein fersk plan for å unngå potensielle konflikter.'
+                            : 'Berre personen som initierte denne planen kan utføre handlingar på den.'}
                     </Text>
                 </div>
             )}

@@ -14,18 +14,19 @@ const MissingEnvVariablesError: FC<IData> = ({ missingVariables }) => {
     return (
         <div className={classes.container}>
             <div className={classes.header}>
-                <Subtitle1 as="h1">Copilot Chat</Subtitle1>
+                <Subtitle1 as="h1">Copilot-prat</Subtitle1>
             </div>
             <div style={{ padding: 80, gap: 20, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Title3>
                     {
-                        'Please ensure your ".env" file is set up correctly with all environment variables defined in ".env.example" then restart the app.'
+                        'Vennligst sørg for at din ".env"-fil er sett opp korrekt med alle miljøvariablar definert i ".env.example" og start appen på nytt.'
                     }
                 </Title3>
-                <Body1>You are missing the following variables: {missingVariables.join(', ')}</Body1>
+                <Body1>Du manglar følgjande variablar: {missingVariables.join(', ')}</Body1>
             </div>
         </div>
     );
+
 };
 
 export default MissingEnvVariablesError;

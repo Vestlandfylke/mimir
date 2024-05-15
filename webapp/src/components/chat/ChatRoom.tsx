@@ -91,15 +91,16 @@ export const ChatRoom: React.FC = () => {
                 <div className={classes.scroll}>
                     <div className={classes.history}>
                         <h3>
-                            This conversation is not visible in the app because{' '}
-                            {Features[FeatureKeys.MultiUserChat].label} is disabled. Please enable the feature in the
-                            settings to view the conversation, select a different one, or create a new conversation.
+                            Denne samtalen er ikkje synleg i appen fordi{' '}
+                            {Features[FeatureKeys.MultiUserChat].label} er deaktivert. Vennlegst aktiver funksjonen i
+                            innstillingane for å sjå samtalen, vel ein annan, eller lag ein ny samtale.
                         </h3>
                     </div>
                 </div>
             </div>
         );
     }
+    
 
     return (
         <div className={classes.root} onDragEnter={onDragEnter} onDragOver={onDragEnter} onDragLeave={onDragLeave}>

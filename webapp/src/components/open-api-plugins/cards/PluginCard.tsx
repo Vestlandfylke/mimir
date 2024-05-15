@@ -51,7 +51,7 @@ export const PluginCard: React.FC<PluginCardProps> = ({ plugin, isHosted }) => {
                         appearance="secondary"
                         onClick={onDisconnectClick}
                     >
-                        Disable
+                        Deaktiver
                     </Button>
                 ) : (
                     <PluginConnector

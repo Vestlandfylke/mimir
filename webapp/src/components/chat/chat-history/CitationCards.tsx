@@ -38,7 +38,7 @@ export const CitationCards: React.FC<ICitationCardsProps> = ({ message }) => {
     const [showSnippetStates, setShowSnippetStates] = useState<boolean[]>([]);
     React.useEffect(() => {
         initShowSnippetStates();
-        // This will only run once, when the component is mounted
+        // Dette vil berre køyre ein gong, når komponenten er montert
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -76,7 +76,7 @@ export const CitationCards: React.FC<ICitationCardsProps> = ({ message }) => {
                                 </Badge>
                             }
                             header={<Text weight="semibold">{citation.sourceName}</Text>}
-                            description={<Caption1>Relevance score: {citation.relevanceScore.toFixed(3)}</Caption1>}
+                            description={<Caption1>Relevanspoengsum: {citation.relevanceScore.toFixed(3)}</Caption1>}
                             action={
                                 <ToggleButton
                                     appearance="transparent"

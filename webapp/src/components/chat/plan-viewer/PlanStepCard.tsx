@@ -107,18 +107,18 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                     <CardHeader
                         header={
                             <Body1>
-                                <b className={classes.header}>Step {step.index + 1} •</b> {step.skill_name}.{step.name}
+                                <b className={classes.header}>Steg {step.index + 1} •</b> {step.skill_name}.{step.name}
                                 <br />
                             </Body1>
                         }
-                        action={
+                action={
                             enableEdits && enableStepDelete ? (
                                 <Dialog open={openDialog}>
                                     <DialogTrigger disableButtonEnhancement>
                                         <Button
                                             appearance="transparent"
                                             icon={<Dismiss12Regular />}
-                                            aria-label="Delete step"
+                                            aria-label="Slett steg"
                                             onClick={() => {
                                                 setOpenDialog(true);
                                             }}
@@ -126,10 +126,10 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                                     </DialogTrigger>
                                     <DialogSurface className={classes.dialog}>
                                         <DialogBody>
-                                            <DialogTitle>Are you sure you want to delete this step?</DialogTitle>
+                                            <DialogTitle>Er du sikker på at du vil slette dette steget?</DialogTitle>
                                             <DialogContent>
                                                 {
-                                                    "Deleting this step could disrupt the plan's initial logic and cause errors in subsequent steps. Make sure the next steps don't depend on this step's outputs."
+                                                    "Å slette dette steget kan forstyrre planens opprinnelige logikk og føre til feil i påfølgende steg. Sørg for at neste steg ikkje er avhengig av dette stegets utdata."
                                                 }
                                             </DialogContent>
                                             <DialogActions>
@@ -140,7 +140,7 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                                                             setOpenDialog(false);
                                                         }}
                                                     >
-                                                        Cancel
+                                                        Avbryt
                                                     </Button>
                                                 </DialogTrigger>
                                                 <Button
@@ -150,7 +150,7 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                                                         onDeleteStep(step.index);
                                                     }}
                                                 >
-                                                    Yes, Delete Step
+                                                    Ja, slett steg
                                                 </Button>
                                             </DialogActions>
                                         </DialogBody>
@@ -158,55 +158,55 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                                 </Dialog>
                             ) : undefined
                         }
-                    />
-                    {step.description && (
-                        <div className={classes.singleLine}>
-                            <Text weight="semibold">About: </Text> <Text>{step.description}</Text>
-                        </div>
-                    )}
-                    {inputs.length > 0 && (
-                        <div className={classes.parameters}>
-                            <div>
-                                <Text weight="semibold">Inputs: </Text>
-                                {enableEdits && validationErrors > 0 && (
-                                    <Text className={classes.errorMessage}>
-                                        This step needs some extra information to execute successfully. Please fix any
-                                        inputs containing interpolated variables or fields marked{' '}
-                                        <Text weight="bold"> $???</Text>.
-                                    </Text>
-                                )}
+                        />
+                        {step.description && (
+                            <div className={classes.singleLine}>
+                                <Text weight="semibold">Om: </Text> <Text>{step.description}</Text>
                             </div>
-                            {inputs.map((input: IPlanInput) => {
-                                const onEditInput = (newValue: string) => {
-                                    const inputIndex = step.parameters.findIndex(
-                                        (element: IPlanInput) => element.Key === input.Key,
-                                    );
-                                    step.parameters[inputIndex] = {
-                                        Key: input.Key,
-                                        Value: newValue,
+                        )}
+                        {inputs.length > 0 && (
+                            <div className={classes.parameters}>
+                                <div>
+                                    <Text weight="semibold">Inndata: </Text>
+                                    {enableEdits && validationErrors > 0 && (
+                                        <Text className={classes.errorMessage}>
+                                            Dette steget trenger ekstra informasjon for å kjøre vellykket. Vennligst fiks alle
+                                            inndata som inneholder interpolerte variabler eller felt markert
+                                            <Text weight="bold"> $???</Text>.
+                                        </Text>
+                                    )}
+                                </div>
+                                {inputs.map((input: IPlanInput) => {
+                                    const onEditInput = (newValue: string) => {
+                                        const inputIndex = step.parameters.findIndex(
+                                            (element: IPlanInput) => element.Key === input.Key,
+                                        );
+                                        step.parameters[inputIndex] = {
+                                            Key: input.Key,
+                                            Value: newValue,
+                                        };
                                     };
-                                };
-                                return (
-                                    <PlanStepInput
-                                        input={input}
-                                        key={input.Key}
-                                        onEdit={onEditInput}
-                                        enableEdits={enableEdits}
-                                        validationErrors={validationErrors}
-                                        setValidationErrors={setValidationErrors}
-                                    />
-                                );
-                            })}
-                        </div>
-                    )}
-                    {step.outputs.length > 0 && (
-                        <div className={classes.parameters}>
-                            <Text weight="semibold">Outputs: </Text>
-                            {step.outputs.map((output: string) => {
-                                return (
-                                    <Badge color="informative" shape="rounded" appearance="tint" key={output}>
-                                        {output}
-                                    </Badge>
+                                    return (
+                                        <PlanStepInput
+                                            input={input}
+                                            key={input.Key}
+                                            onEdit={onEditInput}
+                                            enableEdits={enableEdits}
+                                            validationErrors={validationErrors}
+                                            setValidationErrors={setValidationErrors}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {step.outputs.length > 0 && (
+                            <div className={classes.parameters}>
+                                <Text weight="semibold">Utdata: </Text>
+                                {step.outputs.map((output: string) => {
+                                    return (
+                                        <Badge color="informative" shape="rounded" appearance="tint" key={output}>
+                                            {output}
+                                        </Badge>
                                 );
                             })}
                         </div>

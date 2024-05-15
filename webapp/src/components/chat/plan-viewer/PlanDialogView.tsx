@@ -96,11 +96,11 @@ export const PlanDialogView: React.FC<IPlanDialogViewProps> = ({ goal, plan, set
                 </DialogTrigger>
                 <DialogSurface className={dialogClasses.surface}>
                     <DialogBody className={classes.body}>
-                        <DialogTitle>Plan Details</DialogTitle>
+                        <DialogTitle>Plan detaljar</DialogTitle>
                         <DialogContent className={dialogClasses.content}>
                             <TabList selectedValue={selectedTab} onTabSelect={onTabSelect}>
                                 <Tab data-testid="formatted" id="formatted" value="formatted">
-                                    Formatted
+                                    Formatert
                                 </Tab>
                                 <Tab data-testid="json" id="json" value="json">
                                     Original JSON
@@ -133,12 +133,12 @@ export const PlanDialogView: React.FC<IPlanDialogViewProps> = ({ goal, plan, set
                                             setOpenConfirmationDialog(true);
                                         }}
                                     >
-                                        Run Plan
+                                        Kjør plan
                                     </Button>
                                 </DialogTrigger>
                             )}
                             <DialogTrigger disableButtonEnhancement>
-                                <Button appearance="secondary">Close</Button>
+                                <Button appearance="secondary">Avbryt</Button>
                             </DialogTrigger>
                         </DialogActions>
                     </DialogBody>
@@ -148,9 +148,9 @@ export const PlanDialogView: React.FC<IPlanDialogViewProps> = ({ goal, plan, set
                 <DialogSurface className={classes.confirmationDialog}>
                     <DialogBody>
                         <DialogTitle>
-                            Are you sure you want to run this plan?
+                            Er du sikker på at du vil køyre denne planen?
                             <br />
-                            <Body1>Please ensure all required plugins are enabled before proceeding.</Body1>
+                            <Body1>Ver venleg og sørg for at alle naudsynte tillegg er aktiverte før du går vidare.</Body1>
                         </DialogTitle>
                         <DialogContent className={dialogClasses.content}>
                             <div className={classes.planView}>
@@ -164,7 +164,7 @@ export const PlanDialogView: React.FC<IPlanDialogViewProps> = ({ goal, plan, set
                         </DialogContent>
                         <DialogActions className={classes.confirmationDialogActions}>
                             <Button appearance="primary" onClick={() => void onPlanAction()}>
-                                Yes, proceed
+                                Ja, gå vidare
                             </Button>
                             <Button
                                 appearance="secondary"
@@ -172,7 +172,7 @@ export const PlanDialogView: React.FC<IPlanDialogViewProps> = ({ goal, plan, set
                                     setOpenConfirmationDialog(false);
                                 }}
                             >
-                                No, cancel
+                                Nei, avbryt
                             </Button>
                         </DialogActions>
                     </DialogBody>

@@ -38,7 +38,7 @@ export const InvitationCreateDialog: React.FC<InvitationCreateDialogProps> = ({ 
         });
     }, [chatId]);
 
-    // Copy the chatId to clipboard by default when component mounts.
+    // Kopier chatId til utklippstavlen som standard når komponenten monteres.
     useEffect(() => {
         copyId();
     }, [copyId]);
@@ -47,16 +47,16 @@ export const InvitationCreateDialog: React.FC<InvitationCreateDialogProps> = ({ 
         <div>
             <DialogSurface>
                 <DialogBody>
-                    <DialogTitle>Invite others to your Bot</DialogTitle>
+                    <DialogTitle>Inviter andre til botten din</DialogTitle>
                     <DialogContent className={classes.content}>
-                        <Label>Please provide the following Chat ID to your friends so they can join the chat.</Label>
+                        <Label>Vennligst oppgi følgjande Chat ID til vennene dine slik at dei kan bli med i chatten.</Label>
                         <Label data-testid="invitationDialogChatIDLabel" weight="semibold">
                             {chatId}
                         </Label>
                     </DialogContent>
                     <DialogActions>
                         <Button data-testid="invitationDialogCloseButton" appearance="secondary" onClick={onCancel}>
-                            Close
+                            Lukk
                         </Button>
                         <Button
                             data-testid="invitationDialogChatIDCopyButton"
@@ -64,7 +64,7 @@ export const InvitationCreateDialog: React.FC<InvitationCreateDialogProps> = ({ 
                             onClick={copyId}
                             icon={isIdCopied ? <Checkmark20Filled /> : null}
                         >
-                            {isIdCopied ? 'Copied' : 'Copy'}
+                            {isIdCopied ? 'Kopiert' : 'Kopier'}
                         </Button>
                     </DialogActions>
                 </DialogBody>

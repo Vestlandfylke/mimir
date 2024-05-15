@@ -100,7 +100,7 @@ export const ValidateManifestStep: React.FC<IValidateManifestStepProps> = ({
                 return (
                     <Spinner
                         labelPosition="after"
-                        label={`Validating ${fileType} file`}
+                        label={`Validerer ${fileType}-fil`}
                         size="tiny"
                         className={classes.start}
                     />
@@ -113,30 +113,30 @@ export const ValidateManifestStep: React.FC<IValidateManifestStepProps> = ({
                     ) : (
                         <DismissCircle20Regular color="red" />
                     );
-                const text =
-                    status === ValidationState.Success ? `Validated ${fileType}` : `Could not validate ${fileType}.`;
-
+                const tekst =
+                    status === ValidationState.Success ? `Validert ${fileType}` : `Kunne ikkje validere ${fileType}.`;
+    
                 return (
                     <AccordionItem value={fileType}>
                         <AccordionHeader expandIconPosition="end">
                             <div className={classes.status}>
                                 {icon}
-                                <Body2> {text}</Body2>
+                                <Body2> {tekst}</Body2>
                             </div>
                         </AccordionHeader>
                         <AccordionPanel className={classes.details}>
                             {
                                 status === ValidationState.Failed && <Body1 color="red">{errorMessage}</Body1>
-                                // TODO: [Issue #1973] Add Manifest details
+                                // TODO: [Issue #1973] Legg til manifestdetaljar
                             }
                             {status === ValidationState.Success &&
                                 (type === FileType.Manifest ? (
                                     <div>
                                         <Body1>Plugin: {pluginManifest?.name_for_human}</Body1>
                                         <br />
-                                        <Body1>Contact: {pluginManifest?.contact_email}</Body1>
+                                        <Body1>Kontakt: {pluginManifest?.contact_email}</Body1>
                                         <br />
-                                        <Body1>Auth: {pluginManifest?.auth.type}</Body1>
+                                        <Body1>Autentisering: {pluginManifest?.auth.type}</Body1>
                                     </div>
                                 ) : (
                                     <div>
@@ -150,7 +150,7 @@ export const ValidateManifestStep: React.FC<IValidateManifestStepProps> = ({
             default:
                 return;
         }
-    };
+    };    
 
     return (
         <Accordion collapsible multiple defaultOpenItems={[FileType.Manifest, FileType.OpenApiSpec]}>

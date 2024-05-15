@@ -58,8 +58,8 @@ export const PlansTab: React.FC<IPlansTabProps> = ({ setChatTab }) => {
 
     const { columns, rows } = useTable(planMessages, setChatTab);
     return (
-        <TabView title="Plans" learnMoreDescription="custom plans" learnMoreLink="https://aka.ms/sk-docs-planner">
-            <Table aria-label="Processes plan table" className={classes.table}>
+        <TabView title="Planar" learnMoreDescription="Tilpassa planar" learnMoreLink="https://aka.ms/sk-docs-planner">
+            <Table aria-label="Prosessar plantabell" className={classes.table}>
                 <TableHeader>
                     <TableRow>{columns.map((column) => column.renderHeaderCell())}</TableRow>
                 </TableHeader>
@@ -86,7 +86,7 @@ function useTable(planMessages: IChatMessage[], setChatTab: () => void) {
             columnId: 'goal',
             renderHeaderCell: () => (
                 <TableHeaderCell key="goal" {...headerSortProps('goal')}>
-                    Goal
+                    Mål
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
@@ -105,7 +105,7 @@ function useTable(planMessages: IChatMessage[], setChatTab: () => void) {
             columnId: 'createdOn',
             renderHeaderCell: () => (
                 <TableHeaderCell key="createdOn" {...headerSortProps('createdOn')}>
-                    Created on
+                    Oppretta
                 </TableHeaderCell>
             ),
             renderCell: (item) => (

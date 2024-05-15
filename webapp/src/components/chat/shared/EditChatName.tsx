@@ -68,17 +68,17 @@ export const EditChatName: React.FC<IEditChatNameProps> = ({ name, chatId, exitE
 
     const handleSave = () => {
         onSaveTitleChange().catch((e: any) => {
-            const errorMessage = `Unable to retrieve chat to change title. Details: ${getErrorDetails(e)}`;
+            const errorMessage = `Kan ikkje hente chatten for å endre tittel. Detaljar: ${getErrorDetails(e)}`;
             dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
         });
     };
-
+    
     const handleKeyDown: React.KeyboardEventHandler<HTMLElement> = (event) => {
         if (event.key === 'Enter') {
             handleSave();
         }
     };
-
+    
     return (
         <div
             className={classes.root}
@@ -87,17 +87,17 @@ export const EditChatName: React.FC<IEditChatNameProps> = ({ name, chatId, exitE
                 flexDirection: `${textButtons ? 'column' : 'row'}`,
                 gap: `${textButtons ? tokens.spacingVerticalS : tokens.spacingVerticalNone}`,
             }}
-            title={'Edit chat name'}
-            aria-label={`Edit chat name for "${name}"`}
+            title={'Rediger chattnamn'}
+            aria-label={`Rediger chattnamn for "${name}"`}
         >
             <Input value={title} onChange={onTitleChange} id={`input-${chatId}`} onKeyDown={handleKeyDown} autoFocus />
             {textButtons && (
                 <div className={mergeClasses(classes.buttons, classes.textButtons)}>
                     <Button appearance="secondary" onClick={onClose}>
-                        Cancel
+                        Avbryt
                     </Button>
                     <Button type="submit" appearance="primary" onClick={handleSave}>
-                        Save
+                        Lagre
                     </Button>
                 </div>
             )}
@@ -108,5 +108,5 @@ export const EditChatName: React.FC<IEditChatNameProps> = ({ name, chatId, exitE
                 </div>
             )}
         </div>
-    );
+    );    
 };

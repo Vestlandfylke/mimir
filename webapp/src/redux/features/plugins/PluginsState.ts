@@ -70,7 +70,7 @@ export const initialState: PluginsState = {
         [BuiltInPlugins.MsGraph]: {
             name: BuiltInPlugins.MsGraph,
             publisher: 'Microsoft',
-            description: 'Use your Microsoft Account to access your personal Graph information and Microsoft services.',
+            description: 'Bruk din Microsoft-konto for å få tilgang til din personlege Graph-informasjon og Microsoft-tenester.',
             enabled: false,
             authRequirements: {
                 Msal: true,
@@ -83,7 +83,7 @@ export const initialState: PluginsState = {
             name: BuiltInPlugins.Jira,
             publisher: 'Atlassian',
             description:
-                'Authorize Chat Copilot to link with Jira and retrieve specific issues by providing the issue key.',
+                'Autoriser Chat Copilot for å lenke med Jira og hente spesifikke saker ved å oppgi saksnøkkelen.',
             enabled: false,
             authRequirements: {
                 email: true,
@@ -94,7 +94,7 @@ export const initialState: PluginsState = {
             headerTag: AuthHeaderTags.Jira,
             apiProperties: {
                 'jira-server-url': {
-                    description: 'server url, i.e. "https://<your-domain>.atlassian.net/rest/api/latest/"',
+                    description: 'server-url, t.d. "https://<ditt-domene>.atlassian.net/rest/api/latest/"',
                     required: true,
                     helpLink:
                         'https://confluence.atlassian.com/adminjiraserver/configuring-the-base-url-938847830.html',
@@ -105,11 +105,11 @@ export const initialState: PluginsState = {
             name: BuiltInPlugins.GitHub,
             publisher: 'Microsoft',
             description:
-                'Integrate Github with Chat Copilot, i.e., allow Chat CopilotBot to list active Pull Requests for you.',
+                'Integrer Github med Chat Copilot, t.d., la Chat CopilotBot liste aktive Pull Requests for deg.',
             enabled: false,
             authRequirements: {
                 personalAccessToken: true,
-                scopes: ['Read and Write access to pull requests'],
+                scopes: ['Les- og skrivetilgang til pull-førespurnader'],
                 helpLink:
                     'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token',
             },
@@ -118,11 +118,11 @@ export const initialState: PluginsState = {
             apiProperties: {
                 owner: {
                     required: false,
-                    description: 'account owner of repository. i.e., "microsoft"',
+                    description: 'kontoeigar av repositoriet. t.d., "microsoft"',
                 },
                 repo: {
                     required: false,
-                    description: 'name of repository. i.e., "semantic-kernel"',
+                    description: 'namn på repositoriet. t.d., "semantic-kernel"',
                     helpLink: 'https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#list-pull-requests',
                 },
             },

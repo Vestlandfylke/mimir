@@ -30,7 +30,7 @@ export const PersonaTab: React.FC = () => {
                 }),
             ]);
         }
-        // We don't want to have chat as one of the dependencies as it will cause infinite loop.
+        // Vi vil ikke ha chat som en av avhengighetene siden det vil forårsake en uendelig løkke.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedId]);
 
@@ -41,7 +41,7 @@ export const PersonaTab: React.FC = () => {
                 chatId={selectedId}
                 prompt={chatState.systemDescription}
                 isEditable={true}
-                info="The prompt that defines the chat bot's persona."
+                info="Prompten som definerer chattebottens persona."
                 modificationHandler={async (newSystemDescription: string) => {
                     await chat
                         .editChat(selectedId, chatState.title, newSystemDescription, chatState.memoryBalance)
@@ -56,18 +56,18 @@ export const PersonaTab: React.FC = () => {
                 }}
             />
             <PromptEditor
-                title="Short Term Memory"
+                title="Kortsiktig Minne"
                 chatId={selectedId}
                 prompt={`<label>: <details>\n${shortTermMemory}`}
                 isEditable={false}
-                info="Extract information for a short period of time, such as a few seconds or minutes. It should be useful for performing complex cognitive tasks that require attention, concentration, or mental calculation."
+                info="Trekk ut informasjon for en kort periode, som noen sekunder eller minutter. Det bør være nyttig for å utføre komplekse kognitive oppgaver som krever oppmerksomhet, konsentrasjon eller mental beregning."
             />
             <PromptEditor
-                title="Long Term Memory"
+                title="Langsiktig Minne"
                 chatId={selectedId}
                 prompt={`<label>: <details>\n${longTermMemory}`}
                 isEditable={false}
-                info="Extract information that is encoded and consolidated from other memory types, such as working memory or sensory memory. It should be useful for maintaining and recalling one's personal identity, history, and knowledge over time."
+                info="Trekk ut informasjon som er kodet og konsolidert fra andre minnetyper, som arbeidsminne eller sensorisk minne. Det bør være nyttig for å opprettholde og gjenkalle ens personlige identitet, historie og kunnskap over tid."
             />
             <MemoryBiasSlider />
         </TabView>

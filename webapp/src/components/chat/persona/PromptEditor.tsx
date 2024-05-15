@@ -111,7 +111,7 @@ export const PromptEditor: React.FC<PromptEditorProps> = ({
                         onClick={onSaveButtonClick}
                         disabled={value.length <= 0 || value === prompt || conversations[chatId].disabled}
                     >
-                        Save
+                        Lagre
                     </Button>
                 </div>
             )}

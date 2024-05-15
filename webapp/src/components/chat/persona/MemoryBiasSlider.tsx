@@ -71,18 +71,18 @@ export const MemoryBiasSlider: React.FC = () => {
     return (
         <div className={classes.root}>
             <div className={classes.horizontal}>
-                <h3>Memory Bias</h3>
+                <h3>Minnejustering</h3>
                 <Popover withArrow>
                     <PopoverTrigger disableButtonEnhancement>
                         <Button icon={<Info16 />} appearance="transparent" />
                     </PopoverTrigger>
                     <PopoverSurface>
-                        This is a slider that allows the user to bias the chat bot towards short or long term memory.
+                        Dette er ein glidebrytar som lar brukaren justere chattebotten mot kort- eller langsiktig minne.
                     </PopoverSurface>
                 </Popover>
             </div>
             <div>
-                <Label>Short Term</Label>
+                <Label>Kortsiktig</Label>
                 <Slider
                     min={0}
                     max={100}
@@ -92,7 +92,7 @@ export const MemoryBiasSlider: React.FC = () => {
                     }}
                     disabled={conversations[selectedId].disabled}
                 />
-                <Label>Long Term</Label>
+                <Label>Langsiktig</Label>
             </div>
         </div>
     );

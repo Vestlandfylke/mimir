@@ -68,9 +68,9 @@ export const BaseCard: React.FC<IBaseCardProps> = ({
                         {helpText}{' '}
                         {helpLink && (
                             <>
-                                Click{' '}
+                                Trykk{' '}
                                 <a href={helpLink} target="_blank" rel="noreferrer noopener">
-                                    here
+                                    her
                                 </a>
                                 .
                             </>

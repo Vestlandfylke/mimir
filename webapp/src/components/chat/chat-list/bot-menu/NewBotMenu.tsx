@@ -19,8 +19,8 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
     const chat = useChat();
     const { features } = useAppSelector((state: RootState) => state.app);
 
-    // It needs to keep the menu open to keep the FileUploader reference
-    // when the file uploader is clicked.
+    // Det er nødvendig å halde menyen open for å behalde referansen til FileUploader
+    // når file uploader blir klikka på.
     const [isJoiningBot, setIsJoiningBot] = useState(false);
 
     const onAddChat = () => {
@@ -38,7 +38,7 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
         <div>
             <Menu>
                 <MenuTrigger disableButtonEnhancement>
-                    <Tooltip content="Create new conversation" relationship="label">
+                    <Tooltip content="Opprett ny samtale" relationship="label">
                         <Button
                             data-testid="createNewConversationButton"
                             icon={<BotAdd20 />}
@@ -49,7 +49,7 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
                 <MenuPopover>
                     <MenuList>
                         <MenuItem data-testid="addNewBotMenuItem" icon={<BotAdd20Regular />} onClick={onAddChat}>
-                            Add a new Bot
+                            Legg til ein ny bot
                         </MenuItem>
                         <MenuItem
                             data-testid="uploadABotMenuItem"
@@ -57,7 +57,7 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
                             icon={<ArrowUploadRegular />}
                             onClick={onFileUpload}
                         >
-                            <div>Upload a Bot</div>
+                            <div>Last opp ein bot</div>
                         </MenuItem>
                         <MenuItem
                             data-testid="joinABotMenuItem"
@@ -65,7 +65,7 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
                             icon={<PeopleTeamAddRegular />}
                             onClick={onJoinClick}
                         >
-                            Join a Bot
+                            Bli med i ein bot
                         </MenuItem>
                     </MenuList>
                 </MenuPopover>

@@ -31,12 +31,13 @@ export const TabView: React.FC<ITabViewProps> = ({ title, learnMoreDescription, 
             <h2>{title}</h2>
             {children}
             <Label size="small" color="brand" className={classes.footer}>
-                Want to learn more about {learnMoreDescription}? Click{' '}
+                Vil du lære meir om {learnMoreDescription}? Klikk{' '}
                 <Link href={learnMoreLink} target="_blank" rel="noreferrer">
-                    here
+                    her
                 </Link>
                 .
             </Label>
         </div>
     );
+    
 };

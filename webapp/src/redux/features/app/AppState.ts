@@ -75,53 +75,53 @@ export enum FeatureKeys {
 export const Features = {
     [FeatureKeys.DarkMode]: {
         enabled: false,
-        label: 'Dark Mode',
+        label: 'Mørk modus',
     },
     [FeatureKeys.SimplifiedExperience]: {
         enabled: true,
-        label: 'Simplified Chat Experience',
+        label: 'Forenkla pratoppleving',
     },
     [FeatureKeys.PluginsPlannersAndPersonas]: {
         enabled: true,
-        label: 'Plugins & Planners & Personas',
-        description: 'The Plans and Persona tabs are hidden until you turn this on',
+        label: 'Tillegg & Planleggjarar & Personar',
+        description: 'Planar- og personflikkane er skjulte inntil du slår dette på',
     },
     [FeatureKeys.AzureContentSafety]: {
         enabled: false,
-        label: 'Azure Content Safety',
+        label: 'Azure innhaldssikring',
         inactive: true,
     },
     [FeatureKeys.AzureAISearch]: {
         enabled: false,
-        label: 'Azure AI Search',
+        label: 'Azure AI-søk',
         inactive: true,
     },
     [FeatureKeys.BotAsDocs]: {
         enabled: false,
-        label: 'Export Chat Sessions',
+        label: 'Eksporter pratsesjonar',
     },
     [FeatureKeys.MultiUserChat]: {
         enabled: false,
-        label: 'Live Chat Session Sharing',
-        description: 'Enable multi-user chat sessions. Not available when authorization is disabled.',
+        label: 'Deling av live pratsesjonar',
+        description: 'Gjer det mogleg med flerbrukarpratsesjonar. Ikkje tilgjengeleg når autorisasjon er deaktivert.',
     },
     [FeatureKeys.RLHF]: {
         enabled: false,
-        label: 'Reinforcement Learning from Human Feedback',
-        description: 'Enable users to vote on model-generated responses. For demonstration purposes only.',
-        // TODO: [Issue #42] Send and store feedback in backend
+        label: 'Forsterka læring frå menneskeleg tilbakemelding',
+        description: 'Gjer det mogleg for brukarar å stemme på svar generert av modellen. Berre for demonstrasjonsformål.',
+        // TODO: [Issue #42] Send og lagra tilbakemelding i backend
     },
 };
 
 export const Settings = [
     {
-        // Basic settings has to stay at the first index. Add all new settings to end of array.
-        title: 'Basic',
+        // Grunnleggande innstillingar må stå først i indeksen. Legg alle nye innstillingar til slutten av arrayen.
+        title: 'Grunnleggande',
         features: [FeatureKeys.DarkMode, FeatureKeys.PluginsPlannersAndPersonas],
         stackVertically: true,
     },
     {
-        title: 'Display',
+        title: 'Visning',
         features: [FeatureKeys.SimplifiedExperience],
         stackVertically: true,
     },
@@ -131,8 +131,8 @@ export const Settings = [
         stackVertically: true,
     },
     {
-        title: 'Experimental',
-        description: 'The related icons and menu options are hidden until you turn this on',
+        title: 'Eksperimentell',
+        description: 'Dei relaterte ikona og menyvalga er skjulte inntil du slår dette på',
         features: [FeatureKeys.BotAsDocs, FeatureKeys.MultiUserChat, FeatureKeys.RLHF],
     },
 ];

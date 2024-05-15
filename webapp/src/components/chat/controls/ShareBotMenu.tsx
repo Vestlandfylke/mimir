@@ -22,10 +22,10 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
     const { features } = useAppSelector((state: RootState) => state.app);
 
     const onDownloadBotClick = useCallback(() => {
-        // TODO: [Issue #47] Add a loading indicator
+        // TODO: [Issue #47] Legg til ein lastingindikator
         void chat.downloadBot(chatId).then((content) => {
             downloadFile(
-                `chat-history-${chatTitle}-${new Date().toISOString()}.json`,
+                `chat-historikk-${chatTitle}-${new Date().toISOString()}.json`,
                 JSON.stringify(content),
                 'text/json',
             );
@@ -36,7 +36,7 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
         <div>
             <Menu>
                 <MenuTrigger disableButtonEnhancement>
-                    <Tooltip content="Share" relationship="label">
+                    <Tooltip content="Del" relationship="label">
                         <Button data-testid="shareButton" icon={<ShareRegular />} appearance="transparent" />
                     </Tooltip>
                 </MenuTrigger>
@@ -48,7 +48,7 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
                             onClick={onDownloadBotClick}
                             disabled={!features[FeatureKeys.BotAsDocs].enabled}
                         >
-                            Download your Bot
+                            Last ned botten din
                         </MenuItem>
 
                         <MenuItem
@@ -59,7 +59,7 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
                             }}
                             disabled={!features[FeatureKeys.MultiUserChat].enabled}
                         >
-                            Invite others to your Bot
+                            Inviter andre til botten din
                         </MenuItem>
                     </MenuList>
                 </MenuPopover>

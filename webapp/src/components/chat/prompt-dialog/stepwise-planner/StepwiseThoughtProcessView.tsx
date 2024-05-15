@@ -57,23 +57,23 @@ export const StepwiseThoughtProcessView: React.FC<IStepwiseThoughtProcessViewPro
                     expandIconPosition="end"
                     className={stepClasses.header}
                 >
-                    Explore how the stepwise planner reached this result! Click here to show the steps and logic.
+                    Utforsk korleis den stegvise planleggjaren kom fram til dette resultatet! Klikk her for å vise stega og logikken.
                 </AccordionHeader>
             )}
             {showthoughtProcess && (
                 <>
-                    <Body1Strong>Time Taken:</Body1Strong>
+                    <Body1Strong>Tid tatt:</Body1Strong>
                     <Body1>{stepwiseDetails.timeTaken}</Body1>
-                    <Body1Strong>Plugins Used:</Body1Strong>
+                    <Body1Strong>Plugins brukt:</Body1Strong>
                     <Body1>
-                        {!stepwiseDetails.functionsUsed.startsWith('0') ? stepwiseDetails.functionsUsed : 'None'}
+                        {!stepwiseDetails.functionsUsed.startsWith('0') ? stepwiseDetails.functionsUsed : 'Ingen'}
                     </Body1>
                 </>
             )}
             {(resultNotFound || showthoughtProcess) && (
                 <>
-                    {<Body1Strong>Steps taken:</Body1Strong>}
-                    <Body1>[THOUGHT PROCESS]</Body1>
+                    {<Body1Strong>Steg tatt:</Body1Strong>}
+                    <Body1>[TANKEPROSESS]</Body1>
                     <Accordion collapsible multiple className={classes.root}>
                         {steps.map((step: StepwiseStep, index: number) => {
                             return <StepwiseStepView step={step} key={`stepwise-thought-${index}`} index={index} />;
@@ -82,5 +82,5 @@ export const StepwiseThoughtProcessView: React.FC<IStepwiseThoughtProcessViewPro
                 </>
             )}
         </div>
-    );
+    );    
 };

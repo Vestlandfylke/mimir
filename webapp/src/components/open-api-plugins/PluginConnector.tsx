@@ -106,20 +106,20 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                     );
                 })
                 .catch(() => {
-                    setErrorMessage(`Could not authenticate to ${name}. Check your permissions and try again.`);
+                    setErrorMessage(`Kunne ikkje autentisere til ${name}. Sjekk dine tillatelser og prøv igjen.`);
                 });
         } else if (oauthRequired) {
-            // TODO: [Issue #44] implement OAuth Flow
+            // TODO: [Issue #44] implementer OAuth-flyt
         } else if (isHosted) {
             setPluginStateAsync(selectedId, name, true)
                 .then(() => {
-                    dispatch(addAlert({ message: `${name} enabled!`, type: AlertType.Success }));
+                    dispatch(addAlert({ message: `${name} aktivert!`, type: AlertType.Success }));
                 })
                 .catch((error: Error) => {
                     dispatch(addAlert({ message: error.message, type: AlertType.Error }));
                 });
         } else {
-            // Basic Auth or PAT
+            // Grunnleggande autentisering eller PAT
             dispatch(
                 connectPlugin({
                     plugin: name,
@@ -135,8 +135,9 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
         setOpen(false);
     };
 
+
     const inactive = msalRequired && !AuthHelper.isAuthAAD();
-    const inactiveReason = 'Only available when using Azure AD authorization.';
+    const inactiveReason = 'Berre tilgjengeleg når Azure AD-autorisasjon blir brukt.';
 
     return (
         <Dialog
@@ -150,12 +151,12 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
             <DialogTrigger>
                 <Button
                     data-testid="openPluginDialogButton"
-                    aria-label="Enable plugin"
+                    aria-label="Aktiver tillegg"
                     appearance="primary"
                     disabled={inactive}
                     title={inactive ? inactiveReason : ''}
                 >
-                    Enable
+                    Aktiver
                 </Button>
             </DialogTrigger>
             <DialogSurface>
@@ -164,7 +165,7 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                         <DialogTitle
                             action={
                                 <DialogTrigger action="close">
-                                    <Button appearance="subtle" aria-label="close" icon={<Dismiss20Regular />} />
+                                    <Button appearance="subtle" aria-label="lukk" icon={<Dismiss20Regular />} />
                                 </DialogTrigger>
                             }
                         >
@@ -175,17 +176,17 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                     image: {
                                         src: icon,
                                     },
-                                    initials: '', // Set to empty string so no initials are rendered behind image
+                                    initials: '', // Sett til tom streng slik at ingen initialar blir vist bak bildet
                                 }}
-                                secondaryText={`${publisher} | Semantic Kernel`}
+                                secondaryText={`${publisher} | Semantisk Kjerne`}
                             />
                         </DialogTitle>
                         <DialogContent className={classes.content}>
                             {errorMessage && <Body1 className={classes.error}>{errorMessage}</Body1>}
-                            You are about to enable {name}.{' '}
+                            Du er i ferd med å aktivere {name}.{' '}
                             {authRequirements.scopes && (
                                 <>
-                                    To continue, you will authorize the following:{' '}
+                                    For å halde fram, vil du autorisere følgjande:{' '}
                                     <div className={classes.scopes}>
                                         {authRequirements.scopes.map((scope) => {
                                             return <Text key={scope}>{scope}</Text>;
@@ -194,12 +195,12 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                 </>
                             )}
                             {(usernameRequired || emailRequired || accessTokenRequired) && (
-                                <Body1Strong> Log in to {name} to continue</Body1Strong>
+                                <Body1Strong> Logg inn på {name} for å halde fram</Body1Strong>
                             )}
                             {(msalRequired || oauthRequired) && (
                                 <Body1>
                                     {' '}
-                                    {`You will be prompted into sign in with ${publisher} on the next screen if you haven't already provided prior consent.`}
+                                    {`Du vil bli bedt om å logge inn med ${publisher} på neste skjerm om du ikkje allereie har gitt samtykke tidlegare.`}
                                 </Body1>
                             )}
                             {usernameRequired && (
@@ -212,7 +213,7 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                         onChange={(_e, input) => {
                                             setUsername(input.value);
                                         }}
-                                        placeholder={`Enter your ${name} username`}
+                                        placeholder={`Skriv inn ditt ${name} brukarnamn`}
                                     />
                                 </>
                             )}
@@ -226,7 +227,7 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                         onChange={(_e, input) => {
                                             setEmail(input.value);
                                         }}
-                                        placeholder={`Enter your ${name} email`}
+                                        placeholder={`Skriv inn din ${name} e-post`}
                                     />
                                 </>
                             )}
@@ -240,7 +241,7 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                         onChange={(_e, input) => {
                                             setPassword(input.value);
                                         }}
-                                        placeholder={`Enter your ${name} password`}
+                                        placeholder={`Skriv inn ditt ${name} passord`}
                                     />
                                 </>
                             )}
@@ -254,12 +255,12 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                         onChange={(_e, input) => {
                                             setAccessToken(input.value);
                                         }}
-                                        placeholder={`Enter your ${name} Personal Access Token`}
+                                        placeholder={`Skriv inn din ${name} personlege tilgangstoken`}
                                     />
                                     <Body1>
-                                        For more information on how to generate a PAT for {name},{' '}
+                                        For meir informasjon om korleis du genererer ein PAT for {name},{' '}
                                         <a href={authRequirements.helpLink} target="_blank" rel="noreferrer noopener">
-                                            click here
+                                            klikk her
                                         </a>
                                         .
                                     </Body1>
@@ -267,8 +268,8 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                             )}
                             {apiProperties && (
                                 <>
-                                    <Body1Strong> Configuration </Body1Strong>
-                                    <Body1>{`Some additional information is required to enable ${name}'s REST APIs.`}</Body1>
+                                    <Body1Strong> Konfigurasjon </Body1Strong>
+                                    <Body1>{`Nokre ytterlegare opplysningar er nødvendige for å aktivere ${name} sine REST APIar.`}</Body1>
                                     {Object.keys(apiProperties).map((property) => {
                                         const propertyDetails = apiPropertiesInput[property];
                                         return (
@@ -287,17 +288,17 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                                             },
                                                         });
                                                     }}
-                                                    placeholder={`Enter the ${propertyDetails.description ?? property}`}
+                                                    placeholder={`Skriv inn ${propertyDetails.description ?? property}`}
                                                 />
                                                 {propertyDetails.helpLink && (
                                                     <Body1>
-                                                        For more details on obtaining this information,{' '}
+                                                        For fleire detaljar om korleis ein får tak i denne informasjonen,{' '}
                                                         <a
                                                             href={propertyDetails.helpLink}
                                                             target="_blank"
                                                             rel="noreferrer noopener"
                                                         >
-                                                            click here
+                                                            klikk her
                                                         </a>
                                                         .
                                                     </Body1>
@@ -310,7 +311,7 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                         </DialogContent>
                         <DialogActions>
                             <DialogTrigger>
-                                <Button appearance="secondary">Cancel</Button>
+                                <Button appearance="secondary">Avbryt</Button>
                             </DialogTrigger>
                             <Button
                                 data-testid="enablePluginButton"
@@ -318,7 +319,7 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                 appearance="primary"
                                 disabled={!!errorMessage}
                             >
-                                Enable
+                                Aktiver
                             </Button>
                         </DialogActions>
                     </DialogBody>
