@@ -27,7 +27,11 @@ const Chat = ({
     return (
         <div className={classes.container}>
             <div className={classes.header}>
+<<<<<<< HEAD
                 <Subtitle1 as="h1">Mimir</Subtitle1>
+=======
+                <Subtitle1 as="h1">Chat Copilot</Subtitle1>
+>>>>>>> upstream/main
                 {appState > AppState.SettingUserInfo && (
                     <div className={classes.cornerItems}>
                         <div className={classes.cornerItems}>
