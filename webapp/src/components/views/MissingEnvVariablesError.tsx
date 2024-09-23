@@ -14,7 +14,7 @@ const MissingEnvVariablesError: FC<IData> = ({ missingVariables }) => {
     return (
         <div className={classes.container}>
             <div className={classes.header}>
-                <Subtitle1 as="h1">Copilot-prat</Subtitle1>
+                <Subtitle1 as="h1">Mimir-prat</Subtitle1>
             </div>
             <div style={{ padding: 80, gap: 20, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Title3>

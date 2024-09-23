@@ -50,7 +50,7 @@ export const DeleteChatDialog: React.FC<IEditChatNameProps> = ({ chatId }) => {
                     <DialogTitle>Er du sikker på at du vil slette samtalen: {chatName}?</DialogTitle>
                     <DialogContent>
                         Denne handlinga vil permanent slette samtalen, og alle tilknytta ressursar og minner, for alle
-                        deltakarar, inkludert VLFK Chat Copilot.
+                        deltakarar, inkludert Mimir.
                     </DialogContent>
                     <DialogActions className={classes.actions}>
                         <DialogTrigger action="close" disableButtonEnhancement>

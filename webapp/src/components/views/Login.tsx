@@ -15,8 +15,8 @@ export const Login: React.FC = () => {
         <div className={classes.informativeView}>
             <Title3>Logg inn med din Microsoft-konto</Title3>
             <Body1>
-                {"Har du ikkje ein konto? Opprett ein gratis på"}{' '}
-                <a href="https://account.microsoft.com/" target="_blank" rel="noreferrer">
+                {'Har du ikkje ein konto? Opprett ein gratis på'}{' '}
+                <a href="https://account.microsoft.com/" target="_blank" rel="noopener noreferrer">
                     https://account.microsoft.com/
                 </a>
             </Body1>

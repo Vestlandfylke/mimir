@@ -75,7 +75,7 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
 
     return (
         <div className={classes.container}>
-            <Text>Basert på førespurnaden, vil Chat Copilot køyre følgjande steg:</Text>
+            <Text>Basert på førespurnaden, vil Mimir køyre følgjande steg:</Text>
             <PlanBody
                 plan={plan}
                 setPlan={setPlan}

@@ -2,7 +2,7 @@ import botIcon1 from './assets/bot-icons/bot-icon-1.png';
 
 export const Constants = {
     app: {
-        name: 'Copilot',
+        name: 'Mimir',
         updateCheckIntervalSeconds: 60 * 5,
         CONNECTION_ALERT_ID: 'connection-alert',
         importTypes: '.txt,.pdf,.docx,.md,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.gif',
@@ -20,7 +20,7 @@ export const Constants = {
     bot: {
         profile: {
             id: 'bot',
-            fullName: 'Copilot',
+            fullName: 'Mimir',
             emailAddress: '',
             photo: botIcon1,
         },
@@ -45,6 +45,7 @@ export const Constants = {
         // For a list of Microsoft Graph permissions, see https://learn.microsoft.com/en-us/graph/permissions-reference.
         // Your application registration will need to be granted these permissions in Azure Active Directory.
         msGraphScopes: ['Calendars.Read', 'Mail.Read', 'Mail.Send', 'Tasks.ReadWrite', 'User.Read'],
+        msGraphOboScopes: ['[INCLUDE THE SCOPE FOR THE WEBAPI APP REGISTRATION HERE]'],
     },
     KEYSTROKE_DEBOUNCE_TIME_MS: 250,
 };

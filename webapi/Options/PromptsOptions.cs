@@ -26,19 +26,24 @@ public class PromptsOptions
     [Required, Range(0, int.MaxValue)] public int ResponseTokenLimit { get; set; }
 
     /// <summary>
+    /// The token count allowed for function calling responses.
+    /// </summary>
+    [Required, Range(0, int.MaxValue)] public int FunctionCallingTokenLimit { get; set; }
+
+    /// <summary>
     /// Weight of memories in the contextual part of the final prompt.
     /// Contextual prompt excludes all the system commands and user intent.
     /// </summary>
     internal double MemoriesResponseContextWeight { get; } = 0.6;
 
     /// <summary>
-    /// Upper bound of the relevancy score of a kernel memory to be included in the final prompt.
+    /// Upper bound of relevance score of a kernel memory to be included in the final prompt.
     /// The actual relevancy score is determined by the memory balance.
     /// </summary>
     internal float SemanticMemoryRelevanceUpper { get; } = 0.9F;
 
     /// <summary>
-    /// Lower bound of the relevancy score of a kernel memory to be included in the final prompt.
+    /// Lower bound of relevance score of a kernel memory to be included in the final prompt.
     /// The actual relevancy score is determined by the memory balance.
     /// </summary>
     internal float SemanticMemoryRelevanceLower { get; } = 0.6F;
@@ -47,7 +52,7 @@ public class PromptsOptions
     /// Minimum relevance of a document memory to be included in the final prompt.
     /// The higher the value, the answer will be more relevant to the user intent.
     /// </summary>
-    internal float DocumentMemoryMinRelevance { get; } = 0.8F;
+    internal float DocumentMemoryMinRelevance { get; } = 0.66F;
 
     // System
     [Required, NotEmptyOrWhitespace] public string KnowledgeCutoffDate { get; set; } = string.Empty;
