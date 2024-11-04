@@ -1,0 +1,6 @@
+build app:
+./package-webapi.ps1
+
+deploy: app
+./deploy-webapi.ps1 -Subscription 7f0cd1ae-9586-4d17-8093-8746bafbdc5a -ResourceGroupName RG-SK-Copilot-NPI -DeploymentName SK-Copilot-NPI-MIMIR
+
