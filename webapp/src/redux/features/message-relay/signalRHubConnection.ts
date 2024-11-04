@@ -92,7 +92,7 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
 
     hubConnection.onreconnected((connectionId = '') => {
         if (hubConnection.state === signalR.HubConnectionState.Connected) {
-            const message = 'Connection reestablished. Please refresh the page to ensure you have the latest data.';
+            const message = 'Tilkobling gjenoppretta. Oppdater sida for å sikre at du har dei nyaste dataene.';
             store.dispatch(addAlert({ message, type: AlertType.Success, id: Constants.app.CONNECTION_ALERT_ID }));
             console.log(message + ` Connected with connectionId ${connectionId}`);
         }

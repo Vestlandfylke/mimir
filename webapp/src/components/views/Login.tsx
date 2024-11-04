@@ -3,7 +3,7 @@
 import { useMsal } from '@azure/msal-react';
 import { Body1, Button, Image, Title3 } from '@fluentui/react-components';
 import React from 'react';
-import signInLogo from '../../ms-symbollockup_signin_light.svg';
+import signInLogo from '../../ms-symbollockup_signin_light.png';
 import { useSharedClasses } from '../../styles';
 import { getErrorDetails } from '../utils/TextUtils';
 
@@ -13,12 +13,13 @@ export const Login: React.FC = () => {
 
     return (
         <div className={classes.informativeView}>
-            <Title3>Logg inn med din Microsoft-konto</Title3>
+            <Title3>Velkommen til Mimir</Title3>
             <Body1>
-                {'Har du ikkje ein konto? Opprett ein gratis på'}{' '}
-                <a href="https://account.microsoft.com/" target="_blank" rel="noopener noreferrer">
-                    https://account.microsoft.com/
-                </a>
+                Den klokaste av alle gudar i norrøn mytologi! Mimir voktar kunnskapens brønn under
+                Yggdrasil, og no har du tilgang til visdommen hans.
+                <br />
+                <br />
+                Mimir er her for å gi deg verdifulle råd og innsikt – akkurat som han gjorde for Odin.
             </Body1>
 
             <Button

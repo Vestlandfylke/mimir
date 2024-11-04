@@ -122,14 +122,10 @@ export const ChatList: FC = () => {
     const sortConversations = (conversations: Conversations): ConversationsView => {
         // sort conversations by last activity
         const sortedIds = Object.keys(conversations).sort((a, b) => {
-            if (conversations[a].lastUpdatedTimestamp === undefined) {
-                return 1;
-            }
-            if (conversations[b].lastUpdatedTimestamp === undefined) {
-                return -1;
-            }
+            const timestampA = conversations[a].lastUpdatedTimestamp ?? 0; // Fallback to 0 if undefined
+            const timestampB = conversations[b].lastUpdatedTimestamp ?? 0; // Fallback to 0 if undefined
 
-            return conversations[a].lastUpdatedTimestamp - conversations[b].lastUpdatedTimestamp;
+            return timestampB - timestampA; // Sort from most recent to oldest
         });
 
         // Add conversations to sortedConversations in the order of sortedIds.
@@ -142,6 +138,7 @@ export const ChatList: FC = () => {
                 olderConversations[id] = conversations[id];
             }
         });
+
         return {
             latestConversations: latestConversations,
             olderConversations: olderConversations,

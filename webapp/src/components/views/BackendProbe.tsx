@@ -5,7 +5,7 @@ import { Body1, Spinner, Title3 } from '@fluentui/react-components';
 import { FC, useEffect, useMemo, useState } from 'react';
 import { renderApp } from '../../index';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
-import { BackendServiceUrl, NetworkErrorMessage } from '../../libs/services/BaseService';
+import { NetworkErrorMessage } from '../../libs/services/BaseService';
 import { MaintenanceService, MaintenanceStatus } from '../../libs/services/MaintenanceService';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
@@ -73,34 +73,26 @@ export const BackendProbe: FC<IData> = ({ onBackendFound }) => {
                     <Title3>{model?.title ?? 'Nettstaden har vedlikehald...'}</Title3>
                     <Spinner />
                     <Body1>
-                        {model?.message ?? 'Planlagt vedlikehald av nettstaden pågår. Vi beklagar for ulempene dette medfører.'}
+                        {model?.message ??
+                            'Planlagt vedlikehald av nettstaden pågår. Vi beklagar for ulempene dette medfører.'}
                     </Body1>
                     <Body1>
                         <strong>
                             {model?.note ??
-                                "Merk: Om denne meldinga ikkje forsvinn etter ein betydeleg periode, oppdater nettlesaren."}
+                                'Merk: Om denne meldinga ikkje forsvinn etter ein betydeleg periode, oppdater nettlesaren.'}
                         </strong>
                     </Body1>
                 </div>
             ) : (
                 <div className={classes.informativeView}>
-                    <Title3>Koblar til...</Title3>
-                    <Spinner />
+                    <Title3>Koblar til Mimir...</Title3>
+                        <Spinner />
+                        
                     <Body1>
-                        Denne appen forventar å finne ein server som køyrer på <strong>{BackendServiceUrl}</strong>
-                    </Body1>
-                    <Body1>
-                        For å køyre serveren lokalt, bruk Visual Studio, Visual Studio Code, eller skriv inn følgjande kommando:{' '}
-                        <code>
-                            <strong>dotnet run</strong>
-                        </code>
-                    </Body1>
-                    <Body1>
-                        Om du køyrer lokalt, sørg for at du har sett{' '}
-                        <code>
-                            <b>REACT_APP_BACKEND_URI</b>
-                        </code>{' '}
-                        variabelen i din <b>webapp/.env</b> fil
+                        Den klokaste av alle gudar i norrøn mytologi! Mimir voktar kunnskapens
+                        brønn under Yggdrasil, og no har du tilgang til visdommen hans.
+
+                        Vennligst vent medan tilkoblingen vert oppretta.    
                     </Body1>
                 </div>
             )}

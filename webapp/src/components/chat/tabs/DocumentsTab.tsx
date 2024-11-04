@@ -35,7 +35,7 @@ import {
     DocumentPdfRegular,
     DocumentTextRegular,
     FluentIconsProps,
-    GlobeAdd20Regular,
+    //GlobeAdd20Regular,
 } from '@fluentui/react-icons';
 import * as React from 'react';
 import { useRef } from 'react';
@@ -184,17 +184,17 @@ export const DocumentsTab: React.FC = () => {
                             >
                                 Nytt lokalt chatdokument
                             </MenuItem>
-                            <MenuItem
-                                data-testid="addNewLocalDoc"
-                                onClick={() => globalDocumentFileRef.current?.click()}
-                                icon={<GlobeAdd20Regular />}
-                                disabled={
-                                    conversations[selectedId].disabled ||
-                                    (importingDocuments && importingDocuments.length > 0)
-                                }
-                            >
-                                Nytt globalt dokument
-                            </MenuItem>
+{/*                         <MenuItem
+                            data-testid="addNewLocalDoc"
+                            onClick={() => globalDocumentFileRef.current?.click()}
+                            icon={<GlobeAdd20Regular />}
+                            disabled={
+                                conversations[selectedId].disabled ||
+                                (importingDocuments && importingDocuments.length > 0)
+                            }
+                        >
+                            Nytt globalt dokument
+                        </MenuItem> */}
                         </MenuList>
                     </MenuPopover>
                 </Menu>

@@ -97,11 +97,11 @@ export const Features = {
         inactive: true,
     },
     [FeatureKeys.BotAsDocs]: {
-        enabled: false,
+        enabled: true,
         label: 'Eksporter pratsesjonar',
     },
     [FeatureKeys.MultiUserChat]: {
-        enabled: false,
+        enabled: true,
         label: 'Deling av live pratsesjonar',
         description: 'Gjer det mogleg med flerbrukarpratsesjonar. Ikkje tilgjengeleg når autorisasjon er deaktivert.',
     },

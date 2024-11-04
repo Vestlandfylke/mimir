@@ -86,7 +86,8 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                                 </AccordionHeader>
                                 <AccordionPanel>
                                     <Body1 color={tokens.colorNeutralForeground3}>
-                                        Enkelte innstillingar er som standard deaktiverte då dei ikkje er fullstendig støtta enno.
+                                        Enkelte innstillingar er som standard deaktiverte då dei ikkje er fullstendig
+                                        støtta enno.
                                     </Body1>
                                     {settings.slice(1).map((setting) => {
                                         return <SettingSection key={setting.title} setting={setting} />;
@@ -100,9 +101,9 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                                 </AccordionHeader>
                                 <AccordionPanel>
                                     <Body1 color={tokens.colorNeutralForeground3}>
-                                        Bakandelsversjon: {serviceInfo.version}
+                                        Backend version: {serviceInfo.version}
                                         <br />
-                                        Framandelsversjon: {process.env.REACT_APP_SK_VERSION ?? '-'}
+                                        Frontend version: {process.env.REACT_APP_SK_VERSION ?? '-'}
                                         <br />
                                         {process.env.REACT_APP_SK_BUILD_INFO}
                                     </Body1>
@@ -115,7 +116,7 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                 <DialogActions position="start" className={dialogClasses.footer}>
                     <Label size="small" color="brand" className={classes.footer}>
                         Pilot prosjekt for VLFK{' '}
-                        <a href="https://www.vestlandfylke.no/" target="_blank" rel="noreferrer">
+                        <a href="https://vlfksky.sharepoint.com/sites/IT/SitePages/Kunstig-intelligens.aspx" target="_blank" rel="noreferrer">
                             Les meir
                         </a>
                     </Label>

@@ -23,7 +23,8 @@ import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { addAlert } from '../../redux/features/app/appSlice';
 import { Plugin, PluginAuthRequirements } from '../../redux/features/plugins/PluginsState';
-import { AppsAddIn24, Dismiss24 } from '../shared/BundledIcons';
+import { Dismiss24 } from '../shared/BundledIcons';
+// import { AppsAddIn24 } from '../shared/BundledIcons';
 import { AddPluginCard } from './cards/AddPluginCard';
 import { PluginCard } from './cards/PluginCard';
 
@@ -113,7 +114,7 @@ export const PluginGallery: React.FC = () => {
             }}
         >
             <DialogTrigger>
-                <Button
+{/*                 <Button
                     data-testid="pluginButton"
                     style={{ color: 'white' }}
                     appearance="transparent"
@@ -122,7 +123,7 @@ export const PluginGallery: React.FC = () => {
                     aria-label="Tilleggsgalleri"
                 >
                     Tillegg
-                </Button>
+                </Button> */}
             </DialogTrigger>
             <DialogSurface className={classes.root}>
                 <DialogBody>

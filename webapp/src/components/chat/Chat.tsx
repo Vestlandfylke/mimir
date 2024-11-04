@@ -27,11 +27,7 @@ const Chat = ({
     return (
         <div className={classes.container}>
             <div className={classes.header}>
-<<<<<<< HEAD
                 <Subtitle1 as="h1">Mimir</Subtitle1>
-=======
-                <Subtitle1 as="h1">Chat Copilot</Subtitle1>
->>>>>>> upstream/main
                 {appState > AppState.SettingUserInfo && (
                     <div className={classes.cornerItems}>
                         <div className={classes.cornerItems}>
@@ -47,15 +43,15 @@ const Chat = ({
             </div>
             {appState === AppState.ProbeForBackend && <BackendProbe onBackendFound={onBackendFound} />}
             {appState === AppState.SettingUserInfo && (
-                <Loading text={'Hang tight while we fetch your information...'} />
+                <Loading text={'Venligst vent, me henter informasjonen din...'} />
             )}
             {appState === AppState.ErrorLoadingUserInfo && (
-                <Error text={'Unable to load user info. Please try signing out and signing back in.'} />
+                <Error text={'Klarte ikkje å laste brukarinfo. Vennligst prøv å logge ut og inn igjen.'} />
             )}
             {appState === AppState.ErrorLoadingChats && (
-                <Error text={'Unable to load chats. Please try refreshing the page.'} />
+                <Error text={'Klarte ikkje å laste samtalar. Vennligst prøv å oppdatere sida.'} />
             )}
-            {appState === AppState.LoadingChats && <Loading text="Loading chats..." />}
+            {appState === AppState.LoadingChats && <Loading text="Laster inn..." />}
             {appState === AppState.Chat && <ChatView />}
         </div>
     );
