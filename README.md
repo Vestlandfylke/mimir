@@ -1,22 +1,19 @@
-**NOTE**: This is a **sample** application to help you understand how Semantic Kernel and AI can work in Web Applications. This sample is **NOT FOR PRODUCTION** deployments.
+# VLFK Chat Copilot Application (Mimir)
 
-# Chat Copilot Sample Application
-
-This sample allows you to build your own integrated large language model (LLM) chat copilot. The sample is built on Microsoft [Semantic Kernel](https://github.com/microsoft/semantic-kernel) and has three components:
+This application enables Vestland fylkeskommune (VLFK) to build and deploy a custom large language model (LLM) chat copilot.
+The application is based on Microsoft’s [Semantic Kernel](https://github.com/microsoft/semantic-kernel) and comprises three components:
 
 1. A frontend application [React web app](./webapp/)
 2. A backend REST API [.NET web API service](./webapi/)
 3. A [.NET worker service](./memorypipeline/) for processing semantic memory.
 
-These quick-start instructions run the sample locally. They can also be found on the official Chat Copilot Microsoft Learn documentation page for [getting started](https://learn.microsoft.com/semantic-kernel/chat-copilot/getting-started).
+These instructions will guide you on running the application locally.
+To deploy the application to Azure, please view [Deploying Chat Copilot](./scripts/deploy/README.md) after meeting the [requirements](#requirements) below.
 
-To deploy the sample to Azure, please view [Deploying Chat Copilot](./scripts/deploy/README.md) after meeting the [requirements](#requirements) described below.
+> **IMPORTANT:** Each chat interaction will call Azure OpenAI/OpenAI, which will consume tokens and may incur billing costs.
 
-> **IMPORTANT:** This sample is for educational purposes only and is not recommended for production deployments.
+![Chat Copilot answering a question](mimir-video3.gif)
 
-> **IMPORTANT:** Each chat interaction will call Azure OpenAI/OpenAI which will use tokens that you may be billed for.
-
-![Chat Copilot answering a question](https://learn.microsoft.com/en-us/semantic-kernel/media/chat-copilot-in-action.gif)
 
 # Requirements
 
@@ -89,37 +86,6 @@ You will need the following items to run the sample:
      ```powershell
      .\Start-Backend.ps1
      ```
-
-## Linux/macOS
-
-1. Open Bash as an Administrator.
-1. Clone this repository
-   ```bash
-   git clone https://github.com/microsoft/chat-copilot
-   ```
-1. Configure environment.
-
-   The following is a script to help you install the dependencies required. Feel free to install `dotnet`, `nodejs`, and `yarn` with your method of choice or use this script.
-
-   ```bash
-   cd <path to chat-copilot>/scripts/
-   ```
-
-   **Ubuntu/Debian Linux**
-
-   ```bash
-   ./install-apt.sh
-   ```
-
-   > NOTE: This script uses `apt` to install `dotnet-sdk-7.0`, `nodejs`, and `yarn`.
-
-   **macOS**
-
-   ```bash
-   ./install-brew.sh
-   ```
-
-   > NOTE: This script uses `homebrew` to install `dotnet-sdk`, `nodejs`, and `yarn`.
 
 1. Configure Chat Copilot.
 
@@ -364,36 +330,6 @@ Backend authentication via Azure AD must be enabled. Detailed instructions for e
    sudo apt update;
    sudo apt install --assume-yes dotnet-sdk-7.0;
    ```
-
-# A note on branches
-
-Every release is associated with a release branch. For instance, release [v0.9](https://github.com/microsoft/chat-copilot/releases/tag/v0.9) is on a branch called [0.9](https://github.com/microsoft/chat-copilot/tree/0.9).
-Once a release is out, its branch will no longer be updated. The exception to this is the latest release branch, which will only receive bug fixes.
-This is to provide some stability to those for whom breaking changes and being on the bleeding edge (with the bugs it can entail) is not a desirable option.
-
-# Check out our other repos!
-
-If you would like to learn more about Semantic Kernel and AI, you may also be interested in other repos the Semantic Kernel team supports:
-
-| Repo                                                                              | Description                                                                                      |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [Semantic Kernel](https://github.com/microsoft/semantic-kernel)                   | A lightweight SDK that integrates cutting-edge LLM technology quickly and easily into your apps. |
-| [Semantic Kernel Docs](https://github.com/MicrosoftDocs/semantic-kernel-docs)     | The home for Semantic Kernel documentation that appears on the Microsoft learn site.             |
-| [Semantic Kernel Starters](https://github.com/microsoft/semantic-kernel-starters) | Starter projects for Semantic Kernel to make it easier to get started.                           |
-| [Semantic Memory](https://github.com/microsoft/semantic-memory)                   | A service that allows you to create pipelines for ingesting, storing, and querying knowledge.    |
-
-## Join the community
-
-We welcome your contributions and suggestions to the Chat Copilot Sample App! One of the easiest
-ways to participate is to engage in discussions in the GitHub repository.
-Bug reports and fixes are welcome!
-
-To learn more and get started:
-
-- Read the [documentation](https://learn.microsoft.com/semantic-kernel/chat-copilot/)
-- Join the [Discord community](https://aka.ms/SKDiscord)
-- [Contribute](CONTRIBUTING.md) to the project
-- Follow the team on our [blog](https://aka.ms/sk/blog)
 
 ## Code of Conduct
 
