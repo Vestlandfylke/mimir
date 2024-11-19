@@ -38,7 +38,7 @@ export const CitationCards: React.FC<ICitationCardsProps> = ({ message }) => {
     const [showSnippetStates, setShowSnippetStates] = useState<boolean[]>([]);
     React.useEffect(() => {
         initShowSnippetStates();
-        // Dette vil berre køyre ein gong, når komponenten er montert
+        // This will only run once, when the component is mounted
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

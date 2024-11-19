@@ -188,7 +188,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         if (chatInput) {
                             setValue((chatInput as HTMLTextAreaElement).value);
                         }
-                        // Brukeren er ansett som skrivande hvis input er i fokus
+                        // User is considered typing if the input is in focus
                         if (activeUserInfo) {
                             dispatch(
                                 updateUserIsTyping({ userId: activeUserInfo.id, chatId: selectedId, isTyping: true }),
@@ -210,7 +210,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         }
                     }}
                     onBlur={() => {
-                        // Brukeren er ansett som ikkje skrivande hvis input ikkje er i fokus
+                        // User is considered not typing if the input is not  in focus
                         if (activeUserInfo) {
                             dispatch(
                                 updateUserIsTyping({ userId: activeUserInfo.id, chatId: selectedId, isTyping: false }),

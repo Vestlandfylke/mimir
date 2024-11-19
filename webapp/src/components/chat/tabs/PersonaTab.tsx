@@ -30,7 +30,7 @@ export const PersonaTab: React.FC = () => {
                 }),
             ]);
         }
-        // Vi vil ikke ha chat som en av avhengighetene siden det vil forårsake en uendelig løkke.
+        // We don't want to have chat as one of the dependencies as it will cause infinite loop.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedId]);
 

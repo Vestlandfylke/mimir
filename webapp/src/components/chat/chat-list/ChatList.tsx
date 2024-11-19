@@ -28,7 +28,6 @@ import { NewBotMenu } from './bot-menu/NewBotMenu';
 import { SimplifiedNewBotMenu } from './bot-menu/SimplifiedNewBotMenu';
 import { ChatListSection } from './ChatListSection';
 
-
 const useClasses = makeStyles({
     root: {
         display: 'flex',
@@ -122,10 +121,14 @@ export const ChatList: FC = () => {
     const sortConversations = (conversations: Conversations): ConversationsView => {
         // sort conversations by last activity
         const sortedIds = Object.keys(conversations).sort((a, b) => {
-            const timestampA = conversations[a].lastUpdatedTimestamp ?? 0; // Fallback to 0 if undefined
-            const timestampB = conversations[b].lastUpdatedTimestamp ?? 0; // Fallback to 0 if undefined
+            if (conversations[a].lastUpdatedTimestamp === undefined) {
+                return 1;
+            }
+            if (conversations[b].lastUpdatedTimestamp === undefined) {
+                return -1;
+            }
 
-            return timestampB - timestampA; // Sort from most recent to oldest
+            return conversations[a].lastUpdatedTimestamp - conversations[b].lastUpdatedTimestamp;
         });
 
         // Add conversations to sortedConversations in the order of sortedIds.
@@ -138,7 +141,6 @@ export const ChatList: FC = () => {
                 olderConversations[id] = conversations[id];
             }
         });
-
         return {
             latestConversations: latestConversations,
             olderConversations: olderConversations,

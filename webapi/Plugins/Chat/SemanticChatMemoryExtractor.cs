@@ -1,16 +1,13 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
-using System;
 using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
 using CopilotChat.WebApi.Extensions;
 using CopilotChat.WebApi.Models.Request;
 using CopilotChat.WebApi.Options;
 using CopilotChat.WebApi.Plugins.Utils;
-using Microsoft.Extensions.Logging;
 using Microsoft.KernelMemory;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace CopilotChat.WebApi.Plugins.Chat;
 
@@ -61,9 +58,9 @@ internal static class SemanticChatMemoryExtractor
             }
         }
 
-        /// <summary>
-        /// Extracts the semantic chat memory from the chat session.
-        /// </summary>
+        // <summary>
+        // Extracts the semantic chat memory from the chat session.
+        // </summary>
         async Task<SemanticChatMemory> ExtractCognitiveMemoryAsync(string memoryType, string memoryName, ILogger logger)
         {
             if (!options.MemoryMap.TryGetValue(memoryName, out var memoryPrompt))
@@ -78,7 +75,13 @@ internal static class SemanticChatMemoryExtractor
                 options.ResponseTokenLimit -
                 TokenUtils.TokenCount(memoryPrompt);
 
-            var memoryExtractionArguments = new KernelArguments(kernelArguments);
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            var memoryExtractionArguments = new KernelArguments(kernelArguments, executionSettings: new Dictionary<string, PromptExecutionSettings>
+            {
+                { PromptExecutionSettings.DefaultServiceId, new OpenAIPromptExecutionSettings { ResponseFormat = "json_object" } }
+            });
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
             memoryExtractionArguments["tokenLimit"] = remainingToken.ToString(new NumberFormatInfo());
             memoryExtractionArguments["memoryName"] = memoryName;
             memoryExtractionArguments["format"] = options.MemoryFormat;
@@ -107,10 +110,10 @@ internal static class SemanticChatMemoryExtractor
             return memory;
         }
 
-        /// <summary>
-        /// Create a memory item in the memory collection.
-        /// If there is already a memory item that has a high similarity score with the new item, it will be skipped.
-        /// </summary>
+        // <summary>
+        // Create a memory item in the memory collection.
+        // If there is already a memory item that has a high similarity score with the new item, it will be skipped.
+        // </summary>
         async Task CreateMemoryAsync(string memoryName, string memory)
         {
             try
@@ -120,7 +123,7 @@ internal static class SemanticChatMemoryExtractor
                     await memoryClient.SearchMemoryAsync(
                         options.MemoryIndexName,
                         memory,
-                        options.SemanticMemoryRelevanceUpper,
+                        options.KernelMemoryRelevanceUpper,
                         resultCount: 1,
                         chatId,
                         memoryName,

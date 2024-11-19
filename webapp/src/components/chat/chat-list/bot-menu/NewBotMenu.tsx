@@ -19,8 +19,8 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
     const chat = useChat();
     const { features } = useAppSelector((state: RootState) => state.app);
 
-    // Det er nødvendig å halde menyen open for å behalde referansen til FileUploader
-    // når file uploader blir klikka på.
+    // It needs to keep the menu open to keep the FileUploader reference
+    // when the file uploader is clicked.
     const [isJoiningBot, setIsJoiningBot] = useState(false);
 
     const onAddChat = () => {

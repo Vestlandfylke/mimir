@@ -1,96 +1,100 @@
-# VLFK Chat Copilot Application (Mimir)
+# Copilot Chat Sample Application
 
-This application enables Vestland fylkeskommune (VLFK) to build and deploy a custom large language model (LLM) chat copilot.
-The application is based on Microsoft’s [Semantic Kernel](https://github.com/microsoft/semantic-kernel) and comprises three components:
+> This sample is for educational purposes only and is not recommended for production deployments.
 
-1. A frontend application [React web app](./webapp/)
-2. A backend REST API [.NET web API service](./webapi/)
-3. A [.NET worker service](./memorypipeline/) for processing semantic memory.
+# About Copilot Chat
 
-These instructions will guide you on running the application locally.
-To deploy the application to Azure, please view [Deploying Chat Copilot](./scripts/deploy/README.md) after meeting the [requirements](#requirements) below.
+This sample allows you to build your own integrated large language model chat copilot.
+This is an enriched intelligence app, with multiple dynamic components including
+command messages, user intent, and memories.
 
-> **IMPORTANT:** Each chat interaction will call Azure OpenAI/OpenAI, which will consume tokens and may incur billing costs.
+The chat prompt and response will evolve as the conversation between the user and the application proceeds.
+This chat experience is orchestrated with Semantic Kernel and a Copilot Chat skill containing numerous
+functions that work together to construct each response.
 
-![Chat Copilot answering a question](mimir-video3.gif)
+![UI Sample](images/UI-Sample.png)
 
+# Automated Setup and Local Deployment
 
-# Requirements
+Refer to [./scripts/README.md](./scripts/README.md) for local configuration and deployment.
 
-You will need the following items to run the sample:
+Refer to [./deploy/README.md](./deploy/README.md) for Azure configuration and deployment.
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) _(via Setup install.\* script)_
-- [Node.js](https://nodejs.org/en/download) _(via Setup install.\* script)_
-- [Yarn](https://classic.yarnpkg.com/docs/install) _(via Setup install.\* script)_
-- [Git](https://www.git-scm.com/downloads)
-- AI Service (one of the following is required)
+# Manual Setup and Local Deployment
 
-| AI Service   | Requirement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Azure OpenAI | - [Access](https://aka.ms/oai/access)<br>- [Resource](https://learn.microsoft.com/azure/ai-services/openai/how-to/create-resource?pivots=web-portal#create-a-resource)<br>- [Deployed models](https://learn.microsoft.com/azure/ai-services/openai/how-to/create-resource?pivots=web-portal#deploy-a-model) (`gpt-4o` and `text-embedding-ada-002`) <br>- [Endpoint](https://learn.microsoft.com/azure/ai-services/openai/tutorials/embeddings?tabs=command-line#retrieve-key-and-endpoint)<br>- [API key](https://learn.microsoft.com/azure/ai-services/openai/tutorials/embeddings?tabs=command-line#retrieve-key-and-endpoint) |
-| OpenAI       | - [Account](https://platform.openai.com/docs/overview)<br>- [API key](https://platform.openai.com/api-keys)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+## Configure your environment
 
-# Instructions
+Before you get started, make sure you have the following requirements in place:
 
-## Windows
+- [.NET 6.0 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
+- [Node.js](https://nodejs.org/)
+- [Yarn](https://classic.yarnpkg.com/lang/en/docs/install) - After installation, run `yarn --version` in a terminal window to ensure you are running v1.22.19.
+- [Azure OpenAI](https://aka.ms/oai/access) resource or an account with [OpenAI](https://platform.openai.com).
+- [Visual Studio Code](https://code.visualstudio.com/Download) **(Optional)** 
 
-1. Open PowerShell as an administrator.
-   > NOTE: Ensure that you have [PowerShell Core 6+](https://github.com/PowerShell/PowerShell) installed. This is different from the default PowerShell installed on Windows.
-1. Clone this repository
-   ```powershell
-   git clone https://github.com/microsoft/chat-copilot
-   ```
-1. Setup your environment.
+## Start the WebApi Backend Server
 
-   The following is a script to help you install the dependencies required. Feel free to install `dotnet`, `nodejs`, and `yarn` with your method of choice or use this script.
+The sample uses two applications, a front-end web UI, and a back-end API server.
+First, let’s set up and verify the back-end API server is running.
 
-   ```powershell
-   cd <path to chat-copilot>\scripts\
-   .\Install.ps1
-   ```
+1. Generate and trust a localhost developer certificate. Open a terminal and run:
+   - For Windows and Mac run `dotnet dev-certs https --trust` and select `Yes` when asked if you want to install this certificate.
+   - For Linux run `dotnet dev-certs https`
+   > **Note:** It is recommended you close all instances of your web browser after installing the developer certificates.
 
-   > NOTE: This script will install `Chocolatey`, `dotnet-7.0-sdk`, `nodejs`, and `yarn`.
+2. Navigate to `webapi/` and open `appsettings.json`
+   - Update the `AIService` configuration section:
+     - Update `Type` to the AI service you will be using (i.e., `AzureOpenAI` or `OpenAI`).
+     - If your are using Azure OpenAI, update `Endpoint` to your Azure OpenAI resource Endpoint address (e.g.,
+       `http://contoso.openai.azure.com`).
+        > If you are using OpenAI, this property will be ignored.
+     - Set your Azure OpenAI or OpenAI key by opening a terminal in the webapi project directory and using `dotnet user-secrets`
+       ```bash
+       cd webapi
+       dotnet user-secrets set "AIService:Key" "MY_AZUREOPENAI_OR_OPENAI_KEY"
+       ```
+     - **(Optional)** Update `Models` to the Azure OpenAI deployment or OpenAI models you want to use. 
+       - For `Completion` and `Planner`, CopilotChat is optimized for Chat completion models, such as gpt-3.5-turbo and gpt-4.
+         > **Important:** gpt-3.5-turbo is normally labelled as "`gpt-35-turbo`" (no period) in Azure OpenAI and "`gpt-3.5-turbo`" (with a period) in OpenAI.
+       - For `Embedding`, `text-embedding-ada-002` is sufficient and cost-effective for generating embeddings.
+       > **Important:** If you are using Azure OpenAI, please use [deployment names](https://learn.microsoft.com/azure/cognitive-services/openai/how-to/create-resource). If you are using OpenAI, please use [model names](https://platform.openai.com/docs/models).
+   
+   - **(Optional)** To enable speech-to-text for chat input, update the `AzureSpeech` configuration section:
+     > If you have not already, you will need to [create an Azure Speech resource](https://ms.portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices)
+       (see [./webapi/appsettings.json](webapi/appsettings.json) for more details).
+     - Update `Region` to whichever region is appropriate for your speech sdk instance.
+     - Set your Azure speech key by opening a terminal in the webapi project directory and setting
+       a dotnet user-secrets value for `AzureSpeech:Key`
+       ```bash
+       dotnet user-secrets set "AzureSpeech:Key" "MY_AZURE_SPEECH_KEY" 
+       ```
 
-   > NOTE: If you receive an error that the script is not digitally signed or cannot execute on the system, you may need to [change the execution policy](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.3#change-the-execution-policy) (see list of [policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.3#powershell-execution-policies) and [scopes](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.3#execution-policy-scope)) or [unblock the script](https://learn.microsoft.com/powershell/module/microsoft.powershell.security/get-executionpolicy?view=powershell-7.3#example-4-unblock-a-script-to-run-it-without-changing-the-execution-policy).
+3. Build and run the back-end API server
+    1. Open a terminal and navigate to `webapi/`
+    
+    2. Run `dotnet build` to build the project.
+    
+    3. Run `dotnet run` to start the server.
+    
+    4. Verify the back-end server is responding, open a web browser and navigate to `https://localhost:40443/healthz`
+       > The first time accessing the probe you may get a warning saying that there is a problem with website's certificate.
+         Select the option to accept/continue - this is expected when running a service on `localhost`
+         It is important to do this, as your browser may need to accept the certificate before allowing the frontend to communicate with the backend.
 
-1. Configure Chat Copilot.
+      > You may also need to acknowledge the Windows Defender Firewall, and allow the app to communicate over private or public networks as appropriate.
 
-   ```powershell
-   .\Configure.ps1 -AIService {AI_SERVICE} -APIKey {API_KEY} -Endpoint {AZURE_OPENAI_ENDPOINT}
-   ```
+## Start the WebApp FrontEnd application
 
-   - `AI_SERVICE`: `AzureOpenAI` or `OpenAI`.
-   - `API_KEY`: The `API key` for Azure OpenAI or for OpenAI.
-   - `AZURE_OPENAI_ENDPOINT`: The Azure OpenAI resource `Endpoint` address. This is only required when using Azure OpenAI, omit `-Endpoint` if using OpenAI.
+1. Build and start the front-end application
+   1. You will need an Azure Active Directory (AAD) application registration. 
+      > For more details on creating an application registration, go [here](https://learn.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
+      - Select `Single-page application (SPA)` as platform type, and set the Web redirect URI to `http://localhost:3000`
+      - Select `Accounts in any organizational directory and personal Microsoft Accounts` as supported account types for this sample.
+      - Make a note of the `Application (client) ID` from the Azure Portal, we will use of it later.
 
-   - > **IMPORTANT:** For `AzureOpenAI`, if you deployed models `gpt-4o` and `text-embedding-ada-002` with custom names (instead of the default names), also use the parameters:
-
-     ```powershell
-     -CompletionModel {DEPLOYMENT_NAME} -EmbeddingModel {DEPLOYMENT_NAME}
-     ```
-
-     Open the `.\Configure.ps1` script to see all of the available parameters.
-
-1. Run Chat Copilot locally. This step starts both the backend API and frontend application.
-
-   ```powershell
-   .\Start.ps1
-   ```
-
-   It may take a few minutes for Yarn packages to install on the first run.
-
-   > NOTE: Confirm pop-ups are not blocked and you are logged in with the same account used to register the application.
-
-   - (Optional) To start ONLY the backend:
-
-     ```powershell
-     .\Start-Backend.ps1
-     ```
-
-1. Configure Chat Copilot.
-
-   1. For OpenAI
-
+   2. Open a terminal and navigate to `webapp/` Copy `.env.example` into a new
+      file `.env` and update the `REACT_APP_AAD_CLIENT_ID` with the AAD application (Client) ID created above.
+      For example:
       ```bash
       ./configure.sh --aiservice OpenAI --apikey {API_KEY}
       ```
@@ -309,39 +313,8 @@ Backend authentication via Azure AD must be enabled. Detailed instructions for e
    yarn set version classic
    ```
 
-5. **_Issue:_** Missing `/usr/share/dotnet/host/fxr` folder.
+You can confirm the active Yarn version by running `yarn --version`.
 
-   _Details_: "A fatal error occurred. The folder [/usr/share/dotnet/host/fxr] does not exist" when running dotnet commands on Linux.
+# Additional resources
 
-   _Explanation_: When .NET (Core) was first released for Linux, it was not yet available in the official Ubuntu repo. So instead, many of us added the Microsoft APT repo in order to install it. Now, the packages are part of the Ubuntu repo, and they are conflicting with the Microsoft packages. This error is a result of mixed packages. ([Source: StackOverflow](https://stackoverflow.com/questions/73753672/a-fatal-error-occurred-the-folder-usr-share-dotnet-host-fxr-does-not-exist))
-
-   _Solution_:
-
-   ```bash
-   # Remove all existing packages to get to a clean state:
-   sudo apt remove --assume-yes dotnet*;
-   sudo apt remove --assume-yes aspnetcore*;
-   sudo apt remove --assume-yes netstandard*;
-
-   # Set the Microsoft package provider priority
-   echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1001" | sudo tee /etc/apt/preferences.d/99microsoft-dotnet.pref;
-
-   # Update and install dotnet
-   sudo apt update;
-   sudo apt install --assume-yes dotnet-sdk-7.0;
-   ```
-
-## Code of Conduct
-
-This project has adopted the
-[Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the
-[Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
-or contact [opencode@microsoft.com](mailto:opencode@microsoft.com)
-with any additional questions or comments.
-
-## License
-
-Copyright (c) Microsoft Corporation. All rights reserved.
-
-Licensed under the [MIT](LICENSE) license.
+1. [Import Document Application](./importdocument/README.md): Import a document to the memory store.

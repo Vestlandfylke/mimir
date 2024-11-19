@@ -22,7 +22,7 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
     const { features } = useAppSelector((state: RootState) => state.app);
 
     const onDownloadBotClick = useCallback(() => {
-        // TODO: [Issue #47] Legg til ein lastingindikator
+        // TODO: [Issue #47] Add a loading indicator
         void chat.downloadBot(chatId).then((content) => {
             downloadFile(
                 `chat-historikk-${chatTitle}-${new Date().toISOString()}.json`,
