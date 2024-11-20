@@ -1,11 +1,5 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
-<<<<<<<< HEAD:webapi/Extensions/IAsyncEnumerableExtensions.cs
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-========
->>>>>>>> upstream/main:webapi/Extensions/AsyncEnumerableExtensions.cs
 namespace CopilotChat.WebApi.Extensions;
 
 /// <summary>

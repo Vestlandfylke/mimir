@@ -17,3 +17,5 @@ $Env:ASPNETCORE_ENVIRONMENT=$varASPNetCore
 Join-Path "$PSScriptRoot" '../webapi' | Set-Location
 dotnet build
 dotnet run
+
+Read-Host "Backend process complete. Press Enter to close this window."

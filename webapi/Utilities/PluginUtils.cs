@@ -25,11 +25,18 @@ internal static class PluginUtils
     /// <returns>The plugin manifest URI.</returns>
     public static Uri GetPluginManifestUri(Uri manifestDomain)
     {
+        UriBuilder uriBuilder = new(manifestDomain)
+        {
+            // Expected manifest path as defined by OpenAI: https://platform.openai.com/docs/plugins/getting-started/plugin-manifest
+            Path = "/.well-known/ai-plugin.json"
+        };
+
         return uriBuilder.Uri;
     }
 
     /// <summary>
     /// Sanitizes the plugin name by removing spaces.
+    /// </summary>
     /// <param name="name">The plugin name.</param>
     /// <returns>The sanitized plugin name.</returns>
     public static string SanitizePluginName(string name)
