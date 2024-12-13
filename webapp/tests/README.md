@@ -1,4 +1,4 @@
-﻿# Copilot Chat Web App Scenario Tests
+﻿﻿# Copilot Chat Web App Scenario Tests
 
 ## How to set up the tests to run locally
 
@@ -14,12 +14,12 @@ Follow the [instructions](https://github.com/microsoft/chat-copilot#optional-ena
 
 ### Configure the environment
 
--   Follow the [instructions](https://github.com/microsoft/chat-copilot#optional-enable-backend-authentication-via-azure-ad) to configure the `/webapi/appsettings.json` file.
+- Follow the [instructions](https://github.com/microsoft/chat-copilot#optional-enable-backend-authentication-via-azure-ad) to configure the `/webapi/appsettings.json` file.
 
--   You need two test accounts to run the multi-user chat. Make sure the two accounts are under the correct tenant. Enter the account credentials in the .env file.
+- You need two test accounts to run the multi-user chat. Make sure the two accounts are under the correct tenant. Enter the account credentials in the .env file.
 
 ### Running the tests
 
--   Open a terminal window to start the webapi.
+- Open a terminal window to start the webapi.
 
--   Once the webapi is ready, run `yarn playwright test` in another terminal or use the [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright).
+- Once the webapi is ready, run `yarn playwright test` in another terminal or use the [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright).

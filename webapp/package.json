@@ -1,7 +1,7 @@
 {
-  "name": "copilot-chat",
+  "name": "mimir",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.2.1",
   "type": "module",
   "scripts": {
     "format": "prettier src --check",
