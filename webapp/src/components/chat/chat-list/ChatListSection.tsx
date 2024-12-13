@@ -12,8 +12,10 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'column',
         ...shorthands.gap(tokens.spacingVerticalXXS),
-        paddingBottom: tokens.spacingVerticalXS,
+        paddingBottom: 0,
+        overflowY: 'hidden',
     },
+
     header: {
         marginTop: 0,
         paddingBottom: tokens.spacingVerticalXS,

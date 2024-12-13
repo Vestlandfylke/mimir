@@ -39,12 +39,15 @@ const useClasses = makeStyles({
         position: 'relative',
         ...shorthands.overflow('hidden'),
         ...Breakpoints.small({
-            width: '64px',
+            width: '80px',
         }),
     },
     list: {
+        flexGrow: 1,
         overflowY: 'auto',
         overflowX: 'hidden',
+        height: 'calc(100% - 200px)',
+        maxHeight: 'calc(100% - 200px)',
         '&:hover': {
             '&::-webkit-scrollbar-thumb': {
                 backgroundColor: tokens.colorScrollbarOverlay,
@@ -56,6 +59,7 @@ const useClasses = makeStyles({
         },
         alignItems: 'stretch',
     },
+
     header: {
         display: 'flex',
         flexDirection: 'row',
@@ -83,18 +87,57 @@ const useClasses = makeStyles({
         fontSize: tokens.fontSizeBase500,
     },
     logoContainer: {
-        ...shorthands.padding(tokens.spacingVerticalM),
         display: 'flex',
-        justifyContent: 'left',
-        alignItems: 'left',
-        position: 'absolute', 
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
+        height: '100px',
+        ...shorthands.padding(tokens.spacingVerticalM),
+        ...Breakpoints.small({
+            padding: '0',
+        }),
     },
     logo: {
         maxWidth: '80%',
         maxHeight: '80%',
+        ...Breakpoints.small({
+            width: '97%',
+            maxWidth: '80px',
+            padding: '0',
+        }),
+    },
+    feedbackContainer: {
+        width: '80%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: tokens.spacingVerticalM,
+    },
+    feedbackButton: {
+        width: '80%',
+        maxWidth: '200px',
+        padding: tokens.spacingVerticalM,
+        fontSize: 'calc(0.8rem + 0.5vw)',
+        marginBottom: '50%',
+        ...Breakpoints.small({
+            width: '50%',
+            maxWidth: '80px',
+            fontSize: 'calc(0.4rem + 0.4vw)',
+            padding: '8px',
+        }),
+        backgroundColor: tokens.colorBrandBackground,
+        color: tokens.colorNeutralForegroundOnBrand,
+        borderRadius: tokens.borderRadiusMedium,
+        textAlign: 'center',
+        boxShadow: tokens.shadow4,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+            backgroundColor: tokens.colorBrandBackgroundHover,
+        },
     },
 });
 
@@ -119,7 +162,6 @@ export const ChatList: FC = () => {
     const dispatch = useAppDispatch();
 
     const sortConversations = (conversations: Conversations): ConversationsView => {
-        // sort conversations by last activity
         const sortedIds = Object.keys(conversations).sort((a, b) => {
             if (conversations[a].lastUpdatedTimestamp === undefined) {
                 return 1;
@@ -131,7 +173,6 @@ export const ChatList: FC = () => {
             return conversations[a].lastUpdatedTimestamp - conversations[b].lastUpdatedTimestamp;
         });
 
-        // Add conversations to sortedConversations in the order of sortedIds.
         const latestConversations: Conversations = {};
         const olderConversations: Conversations = {};
         sortedIds.forEach((id) => {
@@ -148,7 +189,6 @@ export const ChatList: FC = () => {
     };
 
     useEffect(() => {
-        // Ensure local component state is in line with app state.
         const nonHiddenConversations: Conversations = {};
         for (const key in conversations) {
             const conversation = conversations[key];
@@ -234,11 +274,18 @@ export const ChatList: FC = () => {
                     <ChatListSection header="Eldre" conversations={conversationsView.olderConversations} />
                 )}
             </div>
-            {/* Plasserer logoen her */}
+            <div className={classes.feedbackContainer}>
+                <Button
+                    appearance="primary"
+                    className={classes.feedbackButton}
+                    onClick={() => window.open('https://forms.office.com/e/nPZciRWFFc', '_blank')}
+                >
+                    Tilbakemelding
+                </Button>
+            </div>
             <div className={classes.logoContainer}>
                 <img src={logo} alt="Logo" className={classes.logo} />
             </div>
         </div>
     );
-    
 };

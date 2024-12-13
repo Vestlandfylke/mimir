@@ -16,12 +16,12 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'row',
         width: '100%',
-        ...Breakpoints.small({
-            justifyContent: 'center',
-        }),
         cursor: 'pointer',
         ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalXL),
+        flexShrink: 0,
+        overflow: 'hidden',
     },
+
     avatar: {
         flexShrink: 0,
         width: '32px',
