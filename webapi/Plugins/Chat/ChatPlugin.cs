@@ -245,14 +245,14 @@ public class ChatPlugin
         if (!PassThroughAuthenticationHandler.IsDefaultUser(userId))
         {
             // Get the audience
-            await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting audience", cancellationToken);
+            await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir definerer målgruppa..", cancellationToken);
             audience = await AsyncUtils.SafeInvokeAsync(
                 () => this.GetAudienceAsync(chatContext, cancellationToken), nameof(this.GetAudienceAsync));
             metaPrompt.AddSystemMessage(audience);
         }
 
         // Extract user intent from the conversation history.
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting user intent", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir henter brukaren sin intensjon..", cancellationToken);
         var userIntent = await AsyncUtils.SafeInvokeAsync(
             () => this.GetUserIntentAsync(chatContext, cancellationToken), nameof(this.GetUserIntentAsync));
         metaPrompt.AddSystemMessage(userIntent);
@@ -267,7 +267,7 @@ public class ChatPlugin
         chatMemoryTokenBudget = (int)(chatMemoryTokenBudget * this._promptOptions.MemoriesResponseContextWeight);
 
         // Query relevant semantic and document memories
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting semantic and document memories", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir søker i kunskapen sin..", cancellationToken);
         (var memoryText, var citationMap) = await this._kernelMemoryRetriever.QueryMemoriesAsync(userIntent, chatId, chatMemoryTokenBudget);
         if (!string.IsNullOrWhiteSpace(memoryText))
         {
@@ -276,7 +276,7 @@ public class ChatPlugin
         }
 
         // Add as many chat history messages to meta-prompt as the token budget will allow
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting chat history", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir henter samtale-historikken..", cancellationToken);
         string allowedChatHistory = await this.GetAllowedChatHistoryAsync(chatId, maxRequestTokenBudget - tokensUsed, metaPrompt, cancellationToken);
 
         // Store token usage of prompt template
@@ -323,16 +323,16 @@ public class ChatPlugin
         CancellationToken cancellationToken)
     {
         // Get bot response and stream to client
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Generating bot response", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv..", cancellationToken);
         CopilotChatMessage chatMessage = await AsyncUtils.SafeInvokeAsync(
             () => this.StreamResponseToClientAsync(chatId, userId, promptView, cancellationToken, citations), nameof(this.StreamResponseToClientAsync));
 
         // Save the message into chat history
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Saving message to chat history", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir oppdaterer kunskapen sin..", cancellationToken);
         await this._chatMessageRepository.UpsertAsync(chatMessage);
 
         // Extract semantic chat memory
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Generating semantic chat memory", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir henter ut samtale-historikken..", cancellationToken);
         await AsyncUtils.SafeInvokeAsync(
             () => SemanticChatMemoryExtractor.ExtractSemanticChatMemoryAsync(
                 chatId,

@@ -29,12 +29,12 @@ export interface BotResponsePrompt {
 }
 
 export const PromptSectionsNameMap: Record<string, string> = {
-    systemPersona: 'System Persona',
-    audience: 'Audience',
-    userIntent: 'User Intent',
-    chatMemories: 'Chat Memories',
-    chatHistory: 'Chat History',
-    externalInformation: 'Planner Results',
+    systemPersona: 'Systempersonlighet',
+    audience: 'Målgruppe',
+    userIntent: 'Brukarintensjon',
+    chatMemories: 'Chatminne',
+    chatHistory: 'Chat-historikk',
+    externalInformation: 'Planner-resultat',
 };
 
 // Information about semantic dependencies of the prompt.

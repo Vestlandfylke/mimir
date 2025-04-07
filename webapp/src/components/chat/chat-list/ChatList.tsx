@@ -1,5 +1,4 @@
 // Copyright (c) Microsoft. All rights reserved.
-import logo from '../../../assets/logo.png';
 import {
     Button,
     Input,
@@ -11,6 +10,7 @@ import {
     tokens,
 } from '@fluentui/react-components';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
+import logo from '../../../assets/logo.png';
 import { useChat, useFile } from '../../../libs/hooks';
 import { getFriendlyChatName } from '../../../libs/hooks/useChat';
 import { AlertType } from '../../../libs/models/AlertType';
@@ -237,7 +237,10 @@ export const ChatList: FC = () => {
         <div className={classes.root}>
             <div className={classes.header}>
                 {features[FeatureKeys.SimplifiedExperience].enabled ? (
-                    <SimplifiedNewBotMenu onFileUpload={() => fileUploaderRef.current?.click()} />
+                    <>
+                        <SimplifiedNewBotMenu onFileUpload={() => fileUploaderRef.current?.click()} />
+                        <FileUploader ref={fileUploaderRef} acceptedExtensions={['.json']} onSelectedFile={onUpload} />
+                    </>
                 ) : (
                     <>
                         {!isFiltering && (

@@ -23,7 +23,7 @@ interface SimplifiedNewBotMenuProps {
     onFileUpload: () => void;
 }
 
-export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = () => {
+export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUpload }) => {
     const chat = useChat();
     const { features } = useAppSelector((state: RootState) => state.app);
 
@@ -62,6 +62,13 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = () => {
                             onClick={onJoinClick}
                         >
                             Bli med i delt samtaleøkt
+                        </MenuItem>
+                        <MenuItem
+                            data-testid="uploadABotMenuItem"
+                            disabled={!features[FeatureKeys.BotAsDocs].enabled}
+                            onClick={onFileUpload}
+                        >
+                            Last opp ein bot
                         </MenuItem>
                     </MenuList>
                 </MenuPopover>
