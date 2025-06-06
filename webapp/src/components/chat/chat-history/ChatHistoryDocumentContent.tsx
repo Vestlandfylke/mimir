@@ -108,7 +108,7 @@ export const ChatHistoryDocumentContent: React.FC<ChatHistoryDocumentContentProp
                         <ProgressBar thickness="large" color={isUploaded ? 'success' : 'error'} value={1} />
                     </Card>
                     <span className={isMe ? classes.footer : mergeClasses(classes.footer, classes.floatLeft)}>
-                        {isUploaded ? 'Success: memory established' : 'Failed: memory not established'}
+                        {isUploaded ? 'Suksess: minne etablert' : 'Feilet: minne ikkje etablert'}
                     </span>
                 </div>
             ))}

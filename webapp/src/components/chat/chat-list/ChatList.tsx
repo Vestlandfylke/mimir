@@ -283,7 +283,7 @@ export const ChatList: FC = () => {
                     className={classes.feedbackButton}
                     onClick={() => window.open('https://forms.office.com/e/nPZciRWFFc', '_blank')}
                 >
-                    Tilbakemelding
+                    Innspel
                 </Button>
             </div>
             <div className={classes.logoContainer}>

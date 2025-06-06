@@ -116,7 +116,11 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                 <DialogActions position="start" className={dialogClasses.footer}>
                     <Label size="small" color="brand" className={classes.footer}>
                         Pilot prosjekt for VLFK{' '}
-                        <a href="https://vlfksky.sharepoint.com/sites/IT/SitePages/Kunstig-intelligens.aspx" target="_blank" rel="noreferrer">
+                        <a
+                            href="https://vlfksky.sharepoint.com/sites/IT/SitePages/Kunstig-intelligens.aspx"
+                            target="_blank"
+                            rel="noreferrer noopener"
+                        >
                             Les meir
                         </a>
                     </Label>
@@ -129,5 +133,4 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
             </DialogSurface>
         </Dialog>
     );
-    
 };

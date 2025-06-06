@@ -35,7 +35,6 @@ import {
     DocumentPdfRegular,
     DocumentTextRegular,
     FluentIconsProps,
-/*     GlobeAdd20Regular, */
 } from '@fluentui/react-icons';
 import * as React from 'react';
 import { useRef } from 'react';
@@ -65,6 +64,9 @@ const useClasses = makeStyles({
         alignItems: 'baseline',
         marginLeft: 'auto',
         ...shorthands.gap(tokens.spacingHorizontalSNudge),
+    },
+    hiddenFileInput: {
+        display: 'none',
     },
     table: {
         backgroundColor: tokens.colorNeutralBackground1,
@@ -139,7 +141,8 @@ export const DocumentsTab: React.FC = () => {
                 <input
                     type="file"
                     ref={localDocumentFileRef}
-                    style={{ display: 'none' }}
+                    className={classes.hiddenFileInput}
+                    aria-label="Lokal dokument opplasting input"
                     accept={Constants.app.importTypes}
                     multiple={true}
                     onChange={() => {
@@ -149,7 +152,8 @@ export const DocumentsTab: React.FC = () => {
                 <input
                     type="file"
                     ref={globalDocumentFileRef}
-                    style={{ display: 'none' }}
+                    className={classes.hiddenFileInput}
+                    aria-label="Global dokument opplasting input"
                     accept={Constants.app.importTypes}
                     multiple={true}
                     onChange={() => {
@@ -184,7 +188,7 @@ export const DocumentsTab: React.FC = () => {
                             >
                                 Nytt lokalt chatdokument
                             </MenuItem>
-{/*                             { <MenuItem
+                            {/*                             { <MenuItem
                             data-testid="addNewLocalDoc"
                             onClick={() => globalDocumentFileRef.current?.click()}
                             icon={<GlobeAdd20Regular />}
@@ -208,7 +212,6 @@ export const DocumentsTab: React.FC = () => {
                         disabled={conversations[selectedId].disabled}
                     >
                         {serviceInfo.memoryStore.types.map((storeType) => {
-    
                             return (
                                 <Radio
                                     key={storeType}
@@ -385,7 +388,7 @@ function useTable(resources: ChatMemorySource[]) {
 }
 
 function getAccessString(chatId: string) {
-    return chatId === EmptyGuid ? 'Global' : 'This chat';
+    return chatId === EmptyGuid ? 'Global' : 'Denne samtalen';
 }
 
 export function getFileIconByFileExtension(fileName: string, props: FluentIconsProps = {}) {

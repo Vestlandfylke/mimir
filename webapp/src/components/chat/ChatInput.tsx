@@ -60,6 +60,9 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'row',
     },
+    hiddenFileInput: {
+        display: 'none',
+    },
     dragAndDrop: {
         ...shorthands.border(tokens.strokeWidthThick, ' solid', tokens.colorBrandStroke1),
         ...shorthands.padding('8px'),
@@ -225,7 +228,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                     <input
                         type="file"
                         ref={documentFileRef}
-                        style={{ display: 'none' }}
+                        className={classes.hiddenFileInput}
+                        aria-label="Fil opplasting input"
                         accept={Constants.app.importTypes}
                         multiple={true}
                         onChange={() => {
