@@ -111,6 +111,7 @@ public sealed class AzureContentSafety : IContentSafetyService
         {
             throw new KernelException($"[Content Safety] Failed to analyze image. Details: {body}");
         }
+
         return result;
     }
 

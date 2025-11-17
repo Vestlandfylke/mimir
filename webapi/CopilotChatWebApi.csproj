@@ -16,6 +16,8 @@
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.KernelMemory.Abstractions" />
     <PackageReference Include="Microsoft.SemanticKernel" />
@@ -27,6 +29,7 @@
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.MsGraph" />
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.OpenApi" />
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" />
+    <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="SharpToken" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
@@ -45,14 +48,6 @@
     <None Update="data\eng.traineddata">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!--
-    <Content Include="Plugins\NativePlugins\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Plugins\SemanticPlugins\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    -->
   </ItemGroup>
 
   <ItemGroup>

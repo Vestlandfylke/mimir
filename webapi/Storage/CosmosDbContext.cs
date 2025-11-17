@@ -17,6 +17,11 @@ public class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : ISto
     private readonly CosmosClient _client;
 
     /// <summary>
+    /// Whether this instance owns the CosmosClient and should dispose it.
+    /// </summary>
+    private readonly bool _ownsClient;
+
+    /// <summary>
     /// CosmosDB container.
     /// </summary>
 #pragma warning disable CA1051 // Do not declare visible instance fields
@@ -24,7 +29,7 @@ public class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : ISto
 #pragma warning restore CA1051 // Do not declare visible instance fields
 
     /// <summary>
-    /// Initializes a new instance of the CosmosDbContext class.
+    /// Initializes a new instance of the CosmosDbContext class with a connection string.
     /// </summary>
     /// <param name="connectionString">The CosmosDB connection string.</param>
     /// <param name="database">The CosmosDB database name.</param>
@@ -40,6 +45,21 @@ public class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : ISto
             },
         };
         this._client = new CosmosClient(connectionString, options);
+        this._ownsClient = true;
+        this.Container = this._client.GetContainer(database, container);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the CosmosDbContext class with a shared CosmosClient.
+    /// This is the preferred constructor for production use as it allows connection pooling.
+    /// </summary>
+    /// <param name="cosmosClient">A shared CosmosClient instance.</param>
+    /// <param name="database">The CosmosDB database name.</param>
+    /// <param name="container">The CosmosDB container name.</param>
+    public CosmosDbContext(CosmosClient cosmosClient, string database, string container)
+    {
+        this._client = cosmosClient ?? throw new ArgumentNullException(nameof(cosmosClient));
+        this._ownsClient = false; // Don't dispose shared client
         this.Container = this._client.GetContainer(database, container);
     }
 
@@ -110,8 +130,9 @@ public class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : ISto
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing && this._ownsClient)
         {
+            // Only dispose the client if we own it
             this._client.Dispose();
         }
     }
@@ -123,13 +144,24 @@ public class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : ISto
 public class CosmosDbCopilotChatMessageContext : CosmosDbContext<CopilotChatMessage>, ICopilotChatMessageStorageContext
 {
     /// <summary>
-    /// Initializes a new instance of the CosmosDbCopilotChatMessageContext class.
+    /// Initializes a new instance of the CosmosDbCopilotChatMessageContext class with a connection string.
     /// </summary>
     /// <param name="connectionString">The CosmosDB connection string.</param>
     /// <param name="database">The CosmosDB database name.</param>
     /// <param name="container">The CosmosDB container name.</param>
     public CosmosDbCopilotChatMessageContext(string connectionString, string database, string container) :
         base(connectionString, database, container)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the CosmosDbCopilotChatMessageContext class with a shared CosmosClient.
+    /// </summary>
+    /// <param name="cosmosClient">A shared CosmosClient instance.</param>
+    /// <param name="database">The CosmosDB database name.</param>
+    /// <param name="container">The CosmosDB container name.</param>
+    public CosmosDbCopilotChatMessageContext(CosmosClient cosmosClient, string database, string container) :
+        base(cosmosClient, database, container)
     {
     }
 

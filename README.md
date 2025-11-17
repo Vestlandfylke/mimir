@@ -14,7 +14,22 @@ functions that work together to construct each response.
 
 ![UI Sample](images/UI-Sample.png)
 
+## 🎉 NEW: MCP Integration with 25 Additional Tools!
+
+This fork includes full **Model Context Protocol (MCP)** integration, giving your chat assistant 25 additional tools from a FastMCP server:
+
+- **Math operations** (add, multiply, divide, average)
+- **String manipulation** (reverse, count words, case conversion, find/replace)
+- **File operations** (read, write, list directories)
+- **Date/time utilities** (current time, format dates, calculate days)
+- **RAG capabilities** (ingest documents, semantic search)
+- And more!
+
+**Quick Start:** See [QUICK_START.md](./QUICK_START.md) or [WHATS_NEW.md](./WHATS_NEW.md)
+
 # Automated Setup and Local Deployment
+
+> **NEW:** Run `.\scripts\Start.ps1` to start everything (MCP Bridge + Backend + Frontend)!
 
 Refer to [./scripts/README.md](./scripts/README.md) for local configuration and deployment.
 

@@ -258,8 +258,7 @@ public class ChatController : ControllerBase, IDisposable
     private Task RegisterMicrosoftGraphPlugins(Kernel kernel, string graphAuthHeader)
     {
         this._logger.LogInformation("Enabling Microsoft Graph plugin(s).");
-        BearerAuthenticationProvider authenticationProvider = new(() => Task.FromResult(graphAuthHeader));
-        GraphServiceClient graphServiceClient = this.CreateGraphServiceClient(authenticationProvider.GraphClientAuthenticateRequestAsync);
+        GraphServiceClient graphServiceClient = this.CreateGraphServiceClient(graphAuthHeader);
 
         kernel.ImportPluginFromObject(new TaskListPlugin(new MicrosoftToDoConnector(graphServiceClient)), "todo");
         kernel.ImportPluginFromObject(new CalendarPlugin(new OutlookCalendarConnector(graphServiceClient)), "calendar");
@@ -279,20 +278,18 @@ public class ChatController : ControllerBase, IDisposable
     /// <summary>
     /// Create a Microsoft Graph service client.
     /// </summary>
-    /// <param name="authenticateRequestAsyncDelegate">The delegate to authenticate the request.</param>
-    private GraphServiceClient CreateGraphServiceClient(AuthenticateRequestAsyncDelegate authenticateRequestAsyncDelegate)
+    /// <param name="accessToken">The bearer token for authentication.</param>
+    private GraphServiceClient CreateGraphServiceClient(string accessToken)
     {
+        // Create HTTP client with bearer token authentication
+        HttpClient httpClient = new();
+        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
         MsGraphClientLoggingHandler graphLoggingHandler = new(this._logger);
         this._disposables.Add(graphLoggingHandler);
+        this._disposables.Add(httpClient);
 
-        IList<DelegatingHandler> graphMiddlewareHandlers =
-            GraphClientFactory.CreateDefaultHandlers(new DelegateAuthenticationProvider(authenticateRequestAsyncDelegate));
-        graphMiddlewareHandlers.Add(graphLoggingHandler);
-
-        HttpClient graphHttpClient = GraphClientFactory.Create(graphMiddlewareHandlers);
-        this._disposables.Add(graphHttpClient);
-
-        GraphServiceClient graphServiceClient = new(graphHttpClient);
+        GraphServiceClient graphServiceClient = new(httpClient);
         return graphServiceClient;
     }
 

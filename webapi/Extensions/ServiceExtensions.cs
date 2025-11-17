@@ -54,6 +54,9 @@ public static class CopilotChatServiceExtensions
 
         AddOptions<MsGraphOboPluginOptions>(MsGraphOboPluginOptions.PropertyName);
 
+        // MCP configuration
+        AddOptions<McpServerOptions>(McpServerOptions.PropertyName);
+
         return services;
 
         void AddOptions<TOptions>(string propertyName)
@@ -102,6 +105,7 @@ public static class CopilotChatServiceExtensions
                 {
                     throw new InvalidOperationException($"Plugin '{plugin.Name}' at '{pluginManifestUrl}' returned status code '{response.StatusCode}'.");
                 }
+
                 validatedPlugins.Add(plugin.Name, plugin);
                 logger.LogInformation("Added plugin: {0}.", plugin.Name);
             }
@@ -202,15 +206,26 @@ public static class CopilotChatServiceExtensions
                 {
                     throw new InvalidOperationException("ChatStore:Cosmos is required when ChatStore:Type is 'Cosmos'");
                 }
+
+                // Create a single shared CosmosClient with optimized settings for all containers
+                // This is more efficient than creating separate clients per container
+                var cosmosClientOptions = CosmosDbExtensions.GetOptimizedCosmosClientOptions();
+                var sharedCosmosClient = new Microsoft.Azure.Cosmos.CosmosClient(
+                    chatStoreConfig.Cosmos.ConnectionString,
+                    cosmosClientOptions);
+
+                // Register the shared CosmosClient as a singleton so it can be reused
+                services.AddSingleton(sharedCosmosClient);
+
 #pragma warning disable CA2000 // Dispose objects before losing scope - objects are singletons for the duration of the process and disposed when the process exits.
                 chatSessionStorageContext = new CosmosDbContext<ChatSession>(
-                    chatStoreConfig.Cosmos.ConnectionString, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatSessionsContainer);
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatSessionsContainer);
                 chatMessageStorageContext = new CosmosDbCopilotChatMessageContext(
-                    chatStoreConfig.Cosmos.ConnectionString, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatMessagesContainer);
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatMessagesContainer);
                 chatMemorySourceStorageContext = new CosmosDbContext<MemorySource>(
-                    chatStoreConfig.Cosmos.ConnectionString, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatMemorySourcesContainer);
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatMemorySourcesContainer);
                 chatParticipantStorageContext = new CosmosDbContext<ChatParticipant>(
-                    chatStoreConfig.Cosmos.ConnectionString, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatParticipantsContainer);
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatParticipantsContainer);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 break;
             }

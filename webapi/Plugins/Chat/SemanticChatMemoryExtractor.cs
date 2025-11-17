@@ -43,6 +43,7 @@ internal static class SemanticChatMemoryExtractor
                     logger.LogInformation("Unable to extract kernel memory for invalid memory type {0}. Continuing...", memoryType);
                     continue;
                 }
+
                 var semanticMemory = await ExtractCognitiveMemoryAsync(memoryType, memoryName, logger);
                 foreach (var item in semanticMemory.Items)
                 {

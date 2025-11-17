@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>CopilotChat.Shared</RootNamespace>
@@ -21,4 +21,4 @@
     <PackageReference Include="Tesseract" />
   </ItemGroup>
 
-</Project>
+</Project> 

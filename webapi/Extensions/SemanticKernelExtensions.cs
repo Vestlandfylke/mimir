@@ -116,7 +116,7 @@ internal static class SemanticKernelExtensions
     /// <summary>
     /// Register functions with the main kernel responsible for handling Chat Copilot requests.
     /// </summary>
-    private static Task RegisterChatCopilotFunctionsAsync(IServiceProvider sp, Kernel kernel)
+    private static async Task RegisterChatCopilotFunctionsAsync(IServiceProvider sp, Kernel kernel)
     {
         // Chat Copilot functions
         kernel.RegisterChatPlugin(sp);
@@ -124,7 +124,8 @@ internal static class SemanticKernelExtensions
         // Time plugin
         kernel.ImportPluginFromObject(new TimePlugin(), nameof(TimePlugin));
 
-        return Task.CompletedTask;
+        // MCP plugins - Register MCP tools as plugins
+        await kernel.RegisterMcpPluginsAsync(sp);
     }
 
     /// <summary>

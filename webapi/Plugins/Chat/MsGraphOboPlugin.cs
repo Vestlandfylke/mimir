@@ -115,6 +115,7 @@ public sealed class MsGraphOboPlugin
                 }
             }
         }
+
         return graphResponseContent;
     }
 

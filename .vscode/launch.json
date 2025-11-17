@@ -10,7 +10,7 @@
             "program": "${workspaceFolder}/webapi/bin/Debug/net6.0/CopilotChatWebApi.dll",
             "cwd": "${workspaceFolder}/webapi",
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Production"
             },
         }
     ]

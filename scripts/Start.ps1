@@ -27,10 +27,24 @@ if (!$cmd) {
     return
 }
 
+$BridgeScript = Join-Path "$PSScriptRoot" 'Start-Bridge.ps1'
 $BackendScript = Join-Path "$PSScriptRoot" 'Start-Backend.ps1'
 $FrontendScript = Join-Path "$PSScriptRoot" 'Start-Frontend.ps1'
 
+# Start MCP bridge (in new PS process)
+Write-Host "Starting MCP Bridge..." -ForegroundColor Cyan
+try {
+    Start-Process pwsh -ArgumentList "-command ""& '$BridgeScript'"""
+} catch {
+    Log-Error "Failed to start MCP bridge script: $($_.Exception.Message)"
+    Write-Warning "MCP Bridge failed to start. Backend will continue without MCP tools."
+}
+
+# Wait a moment for the bridge to initialize
+Start-Sleep -Seconds 3
+
 # Start backend (in new PS process)
+Write-Host "Starting Backend..." -ForegroundColor Cyan
 try {
     Start-Process pwsh -ArgumentList "-command ""& '$BackendScript'"""
 } catch {
@@ -88,5 +102,19 @@ the maximum number of retries. Exiting.
     Log-Error "Backend failed to start after $maxRetries retries."
 }
 
+Write-Host ""
+Write-Host "========================================"
+Write-Host "Chat Copilot is starting up!" -ForegroundColor Green
+Write-Host "========================================"
+Write-Host ""
+Write-Host "Services:" -ForegroundColor Cyan
+Write-Host "  - MCP Bridge:  http://localhost:8002" -ForegroundColor White
+Write-Host "  - Backend:     https://localhost:40443" -ForegroundColor White
+Write-Host "  - Frontend:    http://localhost:3000" -ForegroundColor White
+Write-Host ""
+Write-Host "MCP Tools Available:" -ForegroundColor Cyan
+Write-Host "  25 tools from your Azure FastMCP server" -ForegroundColor White
+Write-Host "  (Math, Strings, Files, Dates, RAG, and more!)" -ForegroundColor Gray
+Write-Host ""
 Write-Host "Script execution complete. Press Enter to close."
 Read-Host
