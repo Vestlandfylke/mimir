@@ -128,7 +128,6 @@ jobs:
   deployment-summary:
     needs:
       [
-        deploy-infra,
         deploy-backend,
         deploy-memorypipeline,
         deploy-mcp-bridge,
