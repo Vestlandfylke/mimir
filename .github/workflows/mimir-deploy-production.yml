@@ -58,7 +58,7 @@ jobs:
     needs: [build-backend]
     uses: ./.github/workflows/copilot-deploy-backend.yml
     with:
-      ARTIFACT_NAME: backend
+      ARTIFACT_NAME: ${{ needs.build-backend.outputs.artifact }}
       ENVIRONMENT: production
       DEPLOYMENT_NAME: ${{ vars.CC_DEPLOYMENT_NAME }}
     secrets: inherit
