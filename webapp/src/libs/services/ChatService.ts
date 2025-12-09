@@ -13,10 +13,14 @@ import { ICustomPlugin } from '../semantic-kernel/model/CustomPlugin';
 import { BaseService } from './BaseService';
 
 export class ChatService extends BaseService {
-    public createChatAsync = async (title: string, accessToken: string): Promise<ICreateChatSessionResponse> => {
-        const body = {
+    public createChatAsync = async (title: string, accessToken: string, template?: string): Promise<ICreateChatSessionResponse> => {
+        const body: { title: string; template?: string } = {
             title,
         };
+
+        if (template) {
+            body.template = template;
+        }
 
         const result = await this.getResponseAsync<ICreateChatSessionResponse>(
             {

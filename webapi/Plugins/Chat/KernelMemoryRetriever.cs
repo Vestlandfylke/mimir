@@ -21,6 +21,8 @@ public class KernelMemoryRetriever
 
     private readonly ChatSessionRepository _chatSessionRepository;
 
+    private readonly ChatMemorySourceRepository _sourceRepository;
+
     private readonly IKernelMemory _memoryClient;
 
     private readonly List<string> _memoryNames;
@@ -36,11 +38,13 @@ public class KernelMemoryRetriever
     public KernelMemoryRetriever(
         IOptions<PromptsOptions> promptOptions,
         ChatSessionRepository chatSessionRepository,
+        ChatMemorySourceRepository sourceRepository,
         IKernelMemory memoryClient,
         ILogger logger)
     {
         this._promptOptions = promptOptions.Value;
         this._chatSessionRepository = chatSessionRepository;
+        this._sourceRepository = sourceRepository;
         this._memoryClient = memoryClient;
         this._logger = logger;
 
@@ -83,6 +87,9 @@ public class KernelMemoryRetriever
         tasks.Add(SearchMemoryAsync(this._promptOptions.DocumentMemoryName, isGlobalMemory: true));
         // Wait for all tasks to complete.
         await Task.WhenAll(tasks);
+
+        // ALWAYS include pinned documents (regardless of relevance search)
+        await AddPinnedDocumentsAsync();
 
         var builderMemory = new StringBuilder();
         IDictionary<string, CitationSource> citationMap = new Dictionary<string, CitationSource>(StringComparer.OrdinalIgnoreCase);
@@ -139,6 +146,78 @@ public class KernelMemoryRetriever
         }
 
         return (builderMemory.Length == 0 ? string.Empty : builderMemory.ToString(), citationMap);
+
+        // <summary>
+        // Add pinned documents to relevant memories (always included regardless of search relevance).
+        // </summary>
+        async Task AddPinnedDocumentsAsync()
+        {
+            try
+            {
+                // Get all memory sources for this chat
+                var memorySources = await this._sourceRepository.FindByChatIdAsync(chatId);
+
+                // Filter to only pinned documents
+                var pinnedDocs = memorySources.Where(s => s.IsPinned).ToList();
+
+                if (!pinnedDocs.Any())
+                {
+                    return; // No pinned documents
+                }
+
+                this._logger.LogInformation("Including {Count} pinned document(s) in context for chat {ChatId}",
+                    pinnedDocs.Count, chatId);
+
+                // For each pinned document, fetch its content from memory
+                foreach (var pinnedDoc in pinnedDocs)
+                {
+                    try
+                    {
+                        // Search for this specific document in memory
+                        var searchResult = await this._memoryClient.SearchMemoryAsync(
+                            this._promptOptions.MemoryIndexName,
+                            query, // Use the user's query
+                            this._promptOptions.DocumentMemoryMinRelevance, // Relevance filter
+                            chatId, // Chat filter
+                            this._promptOptions.DocumentMemoryName); // Memory type
+
+                        // Add memories from this pinned document
+                        foreach (var memory in searchResult.Results)
+                        {
+                            // Check if this memory is from the pinned document
+                            if (memory.Partitions.Any(p => p.Tags.Any(t =>
+                                t.Key == "__document_id" && t.Value.Contains(pinnedDoc.Id))))
+                            {
+                                foreach (var partition in memory.Partitions)
+                                {
+                                    relevantMemories.Add((Citation: memory, Memory: partition));
+
+                                    // Reduce remaining token budget
+                                    int tokenCount = TokenUtils.TokenCount(partition.Text);
+                                    remainingToken -= tokenCount;
+
+                                    if (remainingToken <= 0)
+                                    {
+                                        this._logger.LogWarning(
+                                            "Pinned document {DocumentName} exceeded token budget. Some pinned content may be excluded.",
+                                            pinnedDoc.Name);
+                                        return; // Stop if we run out of tokens
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this._logger.LogError(ex, "Error adding pinned document {DocumentId} to context", pinnedDoc.Id);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Error retrieving pinned documents for chat {ChatId}", chatId);
+            }
+        }
 
         // <summary>
         // Search the memory for relevant memories by memory name.

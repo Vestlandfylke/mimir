@@ -77,11 +77,13 @@ export const useChat = () => {
         return users.find((user) => user.id === id);
     };
 
-    const createChat = async () => {
-        const chatTitle = `Mimir @ ${new Date().toLocaleString()}`;
+    const createChat = async (template?: string) => {
+        const chatTitle = template === 'klarsprak' 
+            ? `Klarspråk-assistent @ ${new Date().toLocaleString()}`
+            : `Mimir @ ${new Date().toLocaleString()}`;
         try {
             await chatService
-                .createChatAsync(chatTitle, await AuthHelper.getSKaaSAccessToken(instance, inProgress))
+                .createChatAsync(chatTitle, await AuthHelper.getSKaaSAccessToken(instance, inProgress), template)
                 .then((result: ICreateChatSessionResponse) => {
                     const newChat: ChatState = {
                         id: result.chatSession.id,
@@ -434,10 +436,10 @@ const loadChats = async () => {
         let message = 'Run plan' + (planGoal ? ` with goal of: ${planGoal}` : '');
         switch (planState) {
             case PlanState.Rejected:
-                message = 'No, cancel';
+                message = 'Nei, Avbryt';
                 break;
             case PlanState.Approved:
-                message = 'Yes, proceed';
+                message = 'Ja, Fortsett';
                 break;
         }
 

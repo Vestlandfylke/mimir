@@ -10,6 +10,7 @@ import { store } from './redux/app/store';
 
 import React from 'react';
 import { BackendServiceUrl } from './libs/services/BaseService';
+import { EmbeddedAppHelper } from './libs/utils/EmbeddedAppHelper';
 import { setAuthConfig } from './redux/features/app/appSlice';
 
 if (!localStorage.getItem('debug')) {
@@ -33,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 export function renderApp() {
+    // Log the app context for debugging
+    console.log(`Mimir running in: ${EmbeddedAppHelper.getAppContext()}`);
+    console.log(`Auth method: ${Constants.msal.method}`);
+
     fetch(new URL('authConfig', BackendServiceUrl))
         .then((response) => (response.ok ? (response.json() as Promise<AuthConfig>) : Promise.reject()))
         .then(async (authConfig: AuthConfig) => {

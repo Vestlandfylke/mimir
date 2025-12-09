@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Options;
+using CopilotChat.WebApi.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using ModelContextProtocol.Client;
@@ -23,15 +24,22 @@ internal static class McpExtensions
     // Register MCP client manager as singleton
     services.AddSingleton<IMcpClientManager, McpClientManager>();
 
+    // Register MCP plan service for handling tool approval workflow
+    services.AddSingleton<McpPlanService>();
+
     return services;
   }
 
   /// <summary>
   /// Register MCP tools as Semantic Kernel plugins.
   /// </summary>
-  internal static async Task RegisterMcpPluginsAsync(this Kernel kernel, IServiceProvider sp)
+  /// <param name="kernel">The kernel to register plugins with.</param>
+  /// <param name="sp">The service provider.</param>
+  /// <param name="chatTemplate">Optional chat template to filter MCP servers (e.g., "klarsprak").</param>
+  internal static async Task RegisterMcpPluginsAsync(this Kernel kernel, IServiceProvider sp, string? chatTemplate = null)
   {
     var mcpClientManager = sp.GetRequiredService<IMcpClientManager>();
+    var mcpOptions = sp.GetRequiredService<IOptions<McpServerOptions>>();
     var logger = sp.GetRequiredService<ILogger<Kernel>>();
 
     try
@@ -39,8 +47,27 @@ internal static class McpExtensions
       await mcpClientManager.InitializeAsync();
       var mcpClients = mcpClientManager.GetAllClients();
 
+      // Get server configurations to check template restrictions (use first occurrence if duplicates exist)
+      var serverConfigs = mcpOptions.Value.Servers?
+          .GroupBy(s => s.Name)
+          .ToDictionary(g => g.Key, g => g.First()) ?? new();
+
       foreach (var (serverName, mcpClient) in mcpClients)
       {
+        // Check if this server should be available for the current chat template
+        if (serverConfigs.TryGetValue(serverName, out var serverConfig))
+        {
+          if (!serverConfig.IsAvailableForTemplate(chatTemplate))
+          {
+            logger.LogInformation("Skipping MCP server '{ServerName}' - not configured for template '{Template}'",
+                serverName, chatTemplate ?? "default");
+            continue;
+          }
+        }
+
+        logger.LogInformation("MCP server '{ServerName}' is available for template '{Template}'",
+            serverName, chatTemplate ?? "default");
+
         try
         {
           logger.LogInformation("Registering MCP plugin: {ServerName}", serverName);
@@ -150,10 +177,26 @@ internal class McpClientManager : IMcpClientManager
       }
 
       var servers = _options.Value.Servers ?? new List<McpServer>();
-      _logger.LogInformation("Initializing {Count} MCP server connections", servers.Count);
 
-      foreach (var server in servers.Where(s => s.Enabled))
+      // Get unique servers by name (in case of duplicates in config)
+      var uniqueServers = servers
+          .Where(s => s.Enabled)
+          .GroupBy(s => s.Name)
+          .Select(g => g.First())
+          .ToList();
+
+      _logger.LogInformation("Initializing {Count} MCP server connections (from {TotalCount} configured)",
+          uniqueServers.Count, servers.Count);
+
+      foreach (var server in uniqueServers)
       {
+        // Skip if already connected (in case of retry)
+        if (_clients.ContainsKey(server.Name))
+        {
+          _logger.LogDebug("MCP server '{Name}' already connected, skipping", server.Name);
+          continue;
+        }
+
         try
         {
           _logger.LogInformation("Connecting to MCP server: {Name} (Transport: {Transport})",
@@ -218,11 +261,14 @@ internal class McpClientManager : IMcpClientManager
         catch (Exception ex)
         {
           _logger.LogError(ex, "Failed to connect to MCP server '{Name}'. It will be unavailable.", server.Name);
+          // Continue to next server - don't let one failure stop all connections
         }
       }
 
+      // Mark as initialized even if some servers failed - we don't want to retry on every request
       _initialized = true;
-      _logger.LogInformation("MCP initialization complete. {Count} servers connected successfully", _clients.Count);
+      _logger.LogInformation("MCP initialization complete. {Count}/{TotalCount} servers connected successfully",
+          _clients.Count, uniqueServers.Count);
     }
     finally
     {

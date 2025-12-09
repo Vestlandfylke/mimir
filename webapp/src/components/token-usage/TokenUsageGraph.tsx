@@ -140,7 +140,7 @@ export const TokenUsageGraph: React.FC<ITokenUsageGraph> = ({ promptView, tokenU
             <div className={classes.content}>
                 {loadingResponse ? (
                     <Body1>
-                        Endeleg tokenbruk vil bli tilgjengeleg ein gong bot-svar er generert.
+                        Endeleg tokenbruk vil bli tilgjengeleg når bot-svaret er generert.
                         <TypingIndicator />
                     </Body1>
                 ) : (

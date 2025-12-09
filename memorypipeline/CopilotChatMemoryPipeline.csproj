@@ -13,6 +13,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.KernelMemory.Core" />
+    <PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" />
+    <PackageReference Include="Microsoft.KernelMemory.AI.OpenAI" />
+    <PackageReference Include="Microsoft.KernelMemory.DataFormats.AzureAIDocIntel" />
+    <PackageReference Include="Microsoft.KernelMemory.DocumentStorage.AzureBlobs" />
+    <PackageReference Include="Microsoft.KernelMemory.MemoryDb.AzureAISearch" />
+    <PackageReference Include="Microsoft.KernelMemory.Orchestration.AzureQueues" />
     <PackageReference Include="Microsoft.SemanticKernel" />
   </ItemGroup>
 

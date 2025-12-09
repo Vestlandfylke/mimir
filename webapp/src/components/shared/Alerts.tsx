@@ -40,7 +40,7 @@ export const Alerts: React.FC = () => {
                         action={{
                             children: (
                                 <div className={classes.actionItems}>
-                                    {onRetry && <div onClick={onRetry}>Retry</div>}
+                                    {onRetry && <div onClick={onRetry}>Prøv igjen</div>}
                                     <Dismiss16
                                         aria-label="avvis melding"
                                         onClick={() => {

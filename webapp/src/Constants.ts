@@ -1,14 +1,22 @@
 import botIcon1 from './assets/bot-icons/bot-icon-1.png';
+import { EmbeddedAppHelper } from './libs/utils/EmbeddedAppHelper';
 
 export const Constants = {
     app: {
         name: 'Mimir',
         updateCheckIntervalSeconds: 60 * 5,
         CONNECTION_ALERT_ID: 'connection-alert',
-        importTypes: '.txt,.pdf,.docx,.md,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.gif',
+        // Supported file types for document import
+        // Text documents: .txt, .pdf, .docx, .doc, .md, .html, .htm, .json, .csv, .xml, .rtf
+        // Office documents: .xlsx, .xls, .pptx, .ppt
+        // Images (require OCR): .jpg, .jpeg, .png, .tif, .tiff, .bmp, .gif, .webp
+        importTypes:
+            '.txt,.pdf,.docx,.doc,.md,.html,.htm,.json,.csv,.xml,.rtf,.xlsx,.xls,.pptx,.ppt,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.gif,.webp',
     },
     msal: {
-        method: 'redirect', // 'redirect' | 'popup'
+        // DYNAMIC: Use popup in embedded contexts (Teams, SharePoint, iframes),
+        // redirect in normal browser (better UX, more reliable)
+        method: EmbeddedAppHelper.getRecommendedAuthMethod(),
         cache: {
             cacheLocation: 'localStorage',
             storeAuthStateInCookie: false,

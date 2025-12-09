@@ -155,10 +155,18 @@ public class CopilotChatMessage : IStorageEntity
     /// <param name="chatId">The chat ID that this message belongs to</param>
     /// <param name="content">The message</param>
     /// <param name="prompt">The prompt used to generate the message</param>
+    /// <param name="citations">Citations for the message</param>
     /// <param name="tokenUsage">Total token usage of response completion</param>
-    public static CopilotChatMessage CreateBotResponseMessage(string chatId, string content, string prompt, IEnumerable<CitationSource>? citations, IDictionary<string, int>? tokenUsage = null)
+    /// <param name="messageType">Type of the message (default: Message)</param>
+    public static CopilotChatMessage CreateBotResponseMessage(
+        string chatId,
+        string content,
+        string prompt,
+        IEnumerable<CitationSource>? citations,
+        IDictionary<string, int>? tokenUsage = null,
+        ChatMessageType messageType = ChatMessageType.Message)
     {
-        return new CopilotChatMessage("Bot", "Bot", chatId, content, prompt, citations, AuthorRoles.Bot, ChatMessageType.Message, tokenUsage);
+        return new CopilotChatMessage("Bot", "Bot", chatId, content, prompt, citations, AuthorRoles.Bot, messageType, tokenUsage);
     }
 
     /// <summary>

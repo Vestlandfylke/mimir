@@ -31,7 +31,7 @@ export const PlanBody: React.FC<IPlanBodyProps> = ({ plan, setPlan, planState, d
 
     return (
         <div className={classes.root}>
-            <Text weight="bold">{`Goal: ${description}`}</Text>
+            <Text weight="bold">{`Mål: ${description}`}</Text>
             {plan.steps.map((step: any, index: number) => {
                 return (
                     <PlanStepCard

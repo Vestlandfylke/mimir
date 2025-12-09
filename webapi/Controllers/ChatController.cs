@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CopilotChat.WebApi.Auth;
+using CopilotChat.WebApi.Extensions;
 using CopilotChat.WebApi.Hubs;
 using CopilotChat.WebApi.Models.Request;
 using CopilotChat.WebApi.Models.Response;
@@ -19,6 +20,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Plugins.MsGraph;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors.Client;
@@ -110,6 +113,10 @@ public class ChatController : ControllerBase, IDisposable
             return this.Forbid("User does not have access to the chatId specified in variables.");
         }
 
+        // Register MCP plugins based on chat template
+        // This allows filtering MCP servers by chat type (e.g., klarsprak-specific servers only for klarsprak chats)
+        await kernel.RegisterMcpPluginsAsync(this.HttpContext.RequestServices, chat!.Template);
+
         // Register plugins that have been enabled
         var openApiPluginAuthHeaders = this.GetPluginAuthHeaders(this.HttpContext.Request.Headers);
         await this.RegisterFunctionsAsync(kernel, openApiPluginAuthHeaders, contextVariables);
@@ -134,6 +141,9 @@ public class ChatController : ControllerBase, IDisposable
         }
         catch (Exception ex)
         {
+            // Always clear the bot response status on error to prevent "Kallar på kjernen" from hanging
+            await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(GeneratingResponseClientCall, chatIdString, null);
+
             if (ex is OperationCanceledException || ex.InnerException is OperationCanceledException)
             {
                 // Log the timeout and return a 504 response
@@ -152,7 +162,7 @@ public class ChatController : ControllerBase, IDisposable
             Variables = contextVariables.Select(v => new KeyValuePair<string, object?>(v.Key, v.Value))
         };
 
-        // Broadcast AskResult to all users
+        // Broadcast AskResult to all users - clear the bot response status
         await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(GeneratingResponseClientCall, chatIdString, null);
 
         return this.Ok(chatAskResult);
@@ -403,6 +413,192 @@ public class ChatController : ControllerBase, IDisposable
     private static string GetPluginFullPath(string pluginPath)
     {
         return Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "Plugins", pluginPath);
+    }
+
+    /// <summary>
+    /// Execute an approved MCP plan.
+    /// </summary>
+    /// <param name="kernel">Semantic kernel obtained through dependency injection.</param>
+    /// <param name="messageRelayHubContext">Message Hub that performs the real time relay service.</param>
+    /// <param name="chatSessionRepository">Repository of chat sessions.</param>
+    /// <param name="chatParticipantRepository">Repository of chat participants.</param>
+    /// <param name="chatMessageRepository">Repository of chat messages.</param>
+    /// <param name="mcpPlanService">Service for handling MCP plan execution.</param>
+    /// <param name="authInfo">Auth info for the current request.</param>
+    /// <param name="ask">Prompt along with plan data.</param>
+    /// <param name="chatId">Chat ID.</param>
+    /// <returns>Results containing the response from the executed plan.</returns>
+    [Route("chats/{chatId:guid}/plan")]
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status504GatewayTimeout)]
+    public async Task<IActionResult> ExecutePlanAsync(
+        [FromServices] Kernel kernel,
+        [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
+        [FromServices] ChatSessionRepository chatSessionRepository,
+        [FromServices] ChatParticipantRepository chatParticipantRepository,
+        [FromServices] ChatMessageRepository chatMessageRepository,
+        [FromServices] McpPlanService mcpPlanService,
+        [FromServices] IAuthInfo authInfo,
+        [FromBody] Ask ask,
+        [FromRoute] Guid chatId)
+    {
+        this._logger.LogDebug("Plan execution request received.");
+
+        string chatIdString = chatId.ToString();
+
+        // Verify that the chat exists and that the user has access to it.
+        ChatSession? chat = null;
+        if (!(await chatSessionRepository.TryFindByIdAsync(chatIdString, callback: c => chat = c)))
+        {
+            return this.NotFound("Failed to find chat session for the chatId specified in variables.");
+        }
+
+        if (!(await chatParticipantRepository.IsUserInChatAsync(authInfo.UserId, chatIdString)))
+        {
+            return this.Forbid("User does not have access to the chatId specified in variables.");
+        }
+
+        // Get the proposed plan from the ask variables
+        if (!ask.Variables.Any(v => v.Key == "proposedPlan"))
+        {
+            return this.BadRequest("No proposed plan found in request.");
+        }
+
+        var proposedPlanJson = ask.Variables.First(v => v.Key == "proposedPlan").Value;
+        Models.Response.ProposedMcpPlan? proposedPlan;
+        try
+        {
+            proposedPlan = JsonSerializer.Deserialize<Models.Response.ProposedMcpPlan>(proposedPlanJson);
+        }
+        catch (JsonException ex)
+        {
+            this._logger.LogError(ex, "Failed to deserialize proposed plan.");
+            return this.BadRequest("Invalid plan format.");
+        }
+
+        if (proposedPlan == null)
+        {
+            return this.BadRequest("Invalid plan data.");
+        }
+
+        // Check plan state
+        var planStateVar = ask.Variables.FirstOrDefault(v => v.Key == "planState");
+        if (planStateVar.Value != null)
+        {
+            if (Enum.TryParse<Models.Response.PlanState>(planStateVar.Value, out var planState))
+            {
+                if (planState == Models.Response.PlanState.Rejected)
+                {
+                    // User rejected the plan - send a message indicating rejection
+                    await messageRelayHubContext.Clients.Group(chatIdString)
+                        .SendAsync(GeneratingResponseClientCall, chatIdString, "Plan avvist av bruker");
+
+                    return this.Ok(new AskResult
+                    {
+                        Value = "Planen ble avvist.",
+                        Variables = new List<KeyValuePair<string, object?>>()
+                    });
+                }
+            }
+        }
+
+        // Register MCP plugins for plan execution
+        await kernel.RegisterMcpPluginsAsync(this.HttpContext.RequestServices, chat!.Template);
+
+        // Execute the approved plan
+        try
+        {
+            await messageRelayHubContext.Clients.Group(chatIdString)
+                .SendAsync(GeneratingResponseClientCall, chatIdString, "Utfører godkjent plan...");
+
+            var results = await mcpPlanService.ExecuteApprovedPlanAsync(
+                kernel,
+                proposedPlan.ProposedPlan,
+                this.HttpContext.RequestAborted);
+
+            // Combine tool results
+            var toolResultsBuilder = new StringBuilder();
+            foreach (var result in results)
+            {
+                var resultValue = result.GetValue<object>();
+                if (resultValue != null)
+                {
+                    toolResultsBuilder.AppendLine(resultValue.ToString());
+                }
+            }
+            var toolResults = toolResultsBuilder.ToString();
+
+            // Generate a natural language response using the LLM
+            await messageRelayHubContext.Clients.Group(chatIdString)
+                .SendAsync(GeneratingResponseClientCall, chatIdString, "Genererer svar...");
+
+            var chatCompletion = kernel.GetRequiredService<IChatCompletionService>();
+            var chatHistory = new ChatHistory();
+
+            // Add context about what was done
+            chatHistory.AddSystemMessage(
+                "Du er ein hjelpsom assistent. Brukaren ba deg utføre ei oppgåve, og verktøyet har returnert følgjande resultat. " +
+                "Presenter resultatet på ein klar og forståeleg måte for brukaren. Ikkje vis rå JSON - formater det pent.");
+
+            chatHistory.AddUserMessage($"Brukarens førespurnad: {proposedPlan.OriginalUserInput ?? proposedPlan.UserIntent ?? "Utfør planen"}");
+            chatHistory.AddAssistantMessage($"Eg har utført verktøyet og fått følgjande resultat:\n\n{toolResults}");
+            chatHistory.AddUserMessage("Kan du presentere dette resultatet på ein klar og forståeleg måte?");
+
+            var llmResponse = await chatCompletion.GetChatMessageContentAsync(
+                chatHistory,
+                new OpenAIPromptExecutionSettings
+                {
+                    MaxTokens = this._promptsOptions.ResponseTokenLimit,
+                    Temperature = 0.7
+                },
+                kernel,
+                this.HttpContext.RequestAborted);
+
+            var response = llmResponse.Content ?? toolResults;
+
+            // Save the response as a bot message
+            var chatMessage = CopilotChatMessage.CreateBotResponseMessage(
+                chatIdString,
+                response,
+                string.Empty,
+                null,
+                null);
+
+            await chatMessageRepository.CreateAsync(chatMessage);
+
+            // Send the message to clients
+            await messageRelayHubContext.Clients.Group(chatIdString)
+                .SendAsync("ReceiveMessage", chatIdString, authInfo.UserId, chatMessage);
+
+            // Clear the bot response status
+            await messageRelayHubContext.Clients.Group(chatIdString)
+                .SendAsync(GeneratingResponseClientCall, chatIdString, null);
+
+            this._telemetryService.TrackPluginFunction("McpPlan", "ExecutePlan", true);
+
+            return this.Ok(new AskResult
+            {
+                Value = response,
+                Variables = new List<KeyValuePair<string, object?>>()
+            });
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Failed to execute MCP plan.");
+
+            // Clear the bot response status on error
+            await messageRelayHubContext.Clients.Group(chatIdString)
+                .SendAsync(GeneratingResponseClientCall, chatIdString, null);
+
+            this._telemetryService.TrackPluginFunction("McpPlan", "ExecutePlan", false);
+
+            return this.StatusCode(StatusCodes.Status500InternalServerError,
+                $"Failed to execute plan: {ex.Message}");
+        }
     }
 
     /// <summary>

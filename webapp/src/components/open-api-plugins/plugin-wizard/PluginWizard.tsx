@@ -104,14 +104,14 @@ export const PluginWizard: React.FC = () => {
             header: (
                 <Persona
                     size="huge"
-                    name="Custom plugin"
+                    name="Eigendefinert tillegg"
                     avatar={{
                         image: {
                             src: AddPluginIcon,
                         },
                         initials: '', // Set to empty string so no initials are rendered behind image
                     }}
-                    secondaryText="Connect an OpenAI Plugin to expose Chat Copilot to third-party applications."
+                    secondaryText="Kopla til eit OpenAI-tillegg for å eksponere Mimir til tredjepartsapplikasjonar."
                 />
             ),
             body: (
@@ -124,7 +124,7 @@ export const PluginWizard: React.FC = () => {
             buttons: (
                 <>
                     <DialogTrigger>
-                        <Button appearance="secondary">Cancel</Button>
+                        <Button appearance="secondary">Avbryt</Button>
                     </DialogTrigger>
                     <Button
                         data-testid="find-manifest-button"
@@ -134,14 +134,14 @@ export const PluginWizard: React.FC = () => {
                             setActiveStep(CreatePluginSteps.ValidateManifest);
                         }}
                     >
-                        Find manifest file
+                        Finn manifestfil
                     </Button>
                 </>
             ),
         },
         {
             id: CreatePluginSteps.ValidateManifest,
-            header: <>Verify Plugin</>,
+            header: <>Stadfest tillegg</>,
             body: (
                 <ValidateManifestStep
                     manifestDomain={manifestDomain ?? ''}
@@ -159,7 +159,7 @@ export const PluginWizard: React.FC = () => {
                             setActiveStep(CreatePluginSteps.EnterManifest);
                         }}
                     >
-                        Back
+                        Tilbake
                     </Button>
                     <Button
                         data-testid="add-plugin-button"
@@ -167,7 +167,7 @@ export const PluginWizard: React.FC = () => {
                         disabled={!pluginValidated}
                         onClick={onAddPlugin}
                     >
-                        Add Plugin
+                        Legg til tillegg
                     </Button>
                 </>
             ),
@@ -178,14 +178,14 @@ export const PluginWizard: React.FC = () => {
                 <div className={classes.center}>
                     <CheckmarkCircle48Regular color="green" />
                     <Text size={600} align="center">
-                        Your plugin has been added successfully!
+                        Tillegget ditt er lagt til!
                     </Text>
                     <Body2 align="center">
-                        You have to enable it from the plugin gallery before it can be used in your chats.
+                        Du må aktivere det frå tilleggsgalleriet før det kan brukast i samtalane dine.
                     </Body2>
                     <DialogTrigger disableButtonEnhancement>
-                        <Button data-testid="close-plugin-wizard" aria-label="Close Wizard" appearance="secondary">
-                            Close
+                        <Button data-testid="close-plugin-wizard" aria-label="Lukk vegvisar" appearance="secondary">
+                            Lukk
                         </Button>
                     </DialogTrigger>
                 </div>
@@ -203,8 +203,12 @@ export const PluginWizard: React.FC = () => {
             modalType="alert"
         >
             <DialogTrigger>
-                <Button data-testid="add-custom-plugin" aria-label="Add Custom Plugin" appearance="primary">
-                    Add
+                <Button
+                    data-testid="add-custom-plugin"
+                    aria-label="Legg til eigendefinert tillegg"
+                    appearance="primary"
+                >
+                    Legg til
                 </Button>
             </DialogTrigger>
             <DialogSurface className={classes.surface}>
@@ -216,7 +220,7 @@ export const PluginWizard: React.FC = () => {
                                     <Button
                                         data-testid="closeEnableCCPluginsPopUp"
                                         appearance="subtle"
-                                        aria-label="close"
+                                        aria-label="lukk"
                                         icon={<Dismiss24Regular />}
                                     />
                                 </DialogTrigger>

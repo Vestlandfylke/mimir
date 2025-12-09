@@ -1,0 +1,125 @@
+name: mimir-deploy-mcp-bridge
+
+on:
+  workflow_call:
+    inputs:
+      ARTIFACT_NAME:
+        required: true
+        type: string
+      ENVIRONMENT:
+        required: true
+        type: string
+    outputs:
+      mcp-bridge-url:
+        description: "URL to the deployed MCP Bridge"
+        value: ${{jobs.deploy.outputs.mcp-url}}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    environment: ${{inputs.ENVIRONMENT}}
+    runs-on: ubuntu-latest
+    outputs:
+      mcp-url: ${{steps.get-url.outputs.mcp_url}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download MCP Bridge artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{inputs.ARTIFACT_NAME}}
+          path: ./mcp-bridge-artifact
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{vars.AZURE_GITHUB_ACCESS_APP_ID}}
+          tenant-id: ${{vars.AZURE_GITHUB_ACCESS_TENANT_ID}}
+          subscription-id: ${{vars.AZURE_GITHUB_ACCESS_SUB_ID}}
+
+      - name: Extract artifact
+        run: |
+          cd mcp-bridge-artifact
+          unzip -o mcp-bridge.zip -d ./mcp-bridge
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ca084982694cacr
+
+      - name: Build and push Docker image
+        run: |
+          cd mcp-bridge-artifact/mcp-bridge
+
+          # Build the image
+          docker build -t ca084982694cacr.azurecr.io/mcp-bridge:${{ github.sha }} .
+          docker build -t ca084982694cacr.azurecr.io/mcp-bridge:latest .
+
+          # Push to ACR
+          docker push ca084982694cacr.azurecr.io/mcp-bridge:${{ github.sha }}
+          docker push ca084982694cacr.azurecr.io/mcp-bridge:latest
+
+      - name: Deploy to Container Apps
+        run: |
+          # Check if container app exists
+          APP_EXISTS=$(az containerapp show \
+            --name mcp-bridge-mimir \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --query name -o tsv 2>/dev/null || echo "")
+
+          if [ -z "$APP_EXISTS" ]; then
+            echo "Creating new Container App..."
+            az containerapp create \
+              --name mcp-bridge-mimir \
+              --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+              --environment mimir-mcp-env \
+              --image ca084982694cacr.azurecr.io/mcp-bridge:latest \
+              --registry-server ca084982694cacr.azurecr.io \
+              --target-port 8002 \
+              --ingress external \
+              --min-replicas 1 \
+              --max-replicas 3 \
+              --cpu 0.5 \
+              --memory 1.0Gi \
+              --env-vars \
+                AZURE_OPENAI_ENDPOINT=${{vars.AZURE_OPENAI_ENDPOINT}} \
+                AZURE_OPENAI_DEPLOYMENT=${{vars.AZURE_OPENAI_DEPLOYMENT}} \
+                AZURE_OPENAI_EMBEDDING_DEPLOYMENT=${{vars.AZURE_OPENAI_EMBEDDING_DEPLOYMENT}}
+          else
+            echo "Updating existing Container App..."
+            az containerapp update \
+              --name mcp-bridge-mimir \
+              --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+              --image ca084982694cacr.azurecr.io/mcp-bridge:latest
+          fi
+
+      - name: Get MCP Bridge URL
+        id: get-url
+        run: |
+          MCP_URL=$(az containerapp show \
+            --name mcp-bridge-mimir \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --query properties.configuration.ingress.fqdn -o tsv)
+
+          echo "MCP Bridge deployed to: https://$MCP_URL"
+          echo "mcp_url=https://$MCP_URL" >> $GITHUB_OUTPUT
+
+      - name: Set ACR admin credentials for Container App
+        run: |
+          # Enable admin user on ACR
+          az acr update --name ca084982694cacr --admin-enabled true
+
+          # Get ACR credentials
+          ACR_USERNAME=$(az acr credential show --name ca084982694cacr --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name ca084982694cacr --query "passwords[0].value" -o tsv)
+
+          # Update container app to use ACR credentials
+          az containerapp registry set \
+            --name mcp-bridge-mimir \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --server ca084982694cacr.azurecr.io \
+            --username $ACR_USERNAME \
+            --password $ACR_PASSWORD

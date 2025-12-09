@@ -32,8 +32,8 @@ const useClasses = makeStyles({
 });
 
 enum FileType {
-    Manifest = 'OpenAI manifest',
-    OpenApiSpec = 'OpenAPI spec',
+    Manifest = 'OpenAI-manifest',
+    OpenApiSpec = 'OpenAPI-spesifikasjon',
 }
 
 enum ValidationState {
@@ -115,7 +115,7 @@ export const ValidateManifestStep: React.FC<IValidateManifestStepProps> = ({
                     );
                 const tekst =
                     status === ValidationState.Success ? `Validert ${fileType}` : `Kunne ikkje validere ${fileType}.`;
-    
+
                 return (
                     <AccordionItem value={fileType}>
                         <AccordionHeader expandIconPosition="end">
@@ -132,7 +132,7 @@ export const ValidateManifestStep: React.FC<IValidateManifestStepProps> = ({
                             {status === ValidationState.Success &&
                                 (type === FileType.Manifest ? (
                                     <div>
-                                        <Body1>Plugin: {pluginManifest?.name_for_human}</Body1>
+                                        <Body1>Tillegg: {pluginManifest?.name_for_human}</Body1>
                                         <br />
                                         <Body1>Kontakt: {pluginManifest?.contact_email}</Body1>
                                         <br />
@@ -150,7 +150,7 @@ export const ValidateManifestStep: React.FC<IValidateManifestStepProps> = ({
             default:
                 return;
         }
-    };    
+    };
 
     return (
         <Accordion collapsible multiple defaultOpenItems={[FileType.Manifest, FileType.OpenApiSpec]}>

@@ -100,7 +100,7 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                 value &&
                 !(value as string).includes('User has also shared some document snippets:')
             ) {
-                value = (value as string) + '\nNo relevant document memories.';
+                value = (value as string) + '\nIngen relevante dokumentminner.';
             }
 
             return value && key !== 'metaPromptTemplate' ? (
@@ -165,7 +165,11 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                     <DialogActions position="start" className={dialogClasses.footer}>
                         <Label size="small" color="brand">
                             Vil du lære meir om prompts? Klikk{' '}
-                            <Link href="https://aka.ms/sk-about-prompts" target="_blank" rel="noreferrer">
+                            <Link
+                                href="https://learn.microsoft.com/en-us/semantic-kernel/concepts/prompts/"
+                                target="_blank"
+                                rel="noreferrer"
+                            >
                                 her
                             </Link>
                             .
@@ -177,5 +181,5 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                 </DialogBody>
             </DialogSurface>
         </Dialog>
-    );    
+    );
 };

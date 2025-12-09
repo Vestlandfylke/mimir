@@ -58,6 +58,9 @@ public class PromptsOptions
     [Required, NotEmptyOrWhitespace] public string SystemDescription { get; set; } = string.Empty;
     [Required, NotEmptyOrWhitespace] public string SystemResponse { get; set; } = string.Empty;
 
+    // Templates for specialized chat types
+    public Dictionary<string, ChatTemplate>? Templates { get; set; }
+
     internal string[] SystemAudiencePromptComponents => new string[]
     {
         this.SystemAudience,

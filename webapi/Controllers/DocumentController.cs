@@ -113,6 +113,193 @@ public class DocumentController : ControllerBase
             documentImportForm);
     }
 
+    /// <summary>
+    /// Service API for deleting a document from a chat session.
+    /// This removes the document from both the memory store and the source repository.
+    /// </summary>
+    [Route("chats/{chatId}/documents/{documentId}")]
+    [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteDocumentAsync(
+        [FromServices] IKernelMemory memoryClient,
+        [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
+        [FromRoute] Guid chatId,
+        [FromRoute] string documentId)
+    {
+        this._logger.LogInformation("Deleting document {DocumentId} from chat {ChatId}", documentId, chatId);
+
+        // Verify user has access to the chat
+        if (!await this.UserHasAccessToChatAsync(this._authInfo.UserId, chatId))
+        {
+            return this.Forbid("User does not have access to this chat session.");
+        }
+
+        try
+        {
+            // Find the memory source by document ID
+            var memorySources = await this._sourceRepository.FindByChatIdAsync(chatId.ToString());
+            var memorySource = memorySources.FirstOrDefault(s => s.Id == documentId);
+
+            if (memorySource == null)
+            {
+                this._logger.LogWarning("Document {DocumentId} not found in chat {ChatId}", documentId, chatId);
+                return this.NotFound($"Document with ID {documentId} not found.");
+            }
+
+            // Delete from Kernel Memory (vector store)
+            try
+            {
+                await memoryClient.DeleteDocumentAsync(documentId, this._promptOptions.MemoryIndexName);
+                this._logger.LogInformation("Deleted document {DocumentId} from memory index", documentId);
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogWarning(ex, "Failed to delete document {DocumentId} from memory index. It may not exist.", documentId);
+                // Continue even if memory deletion fails - the source record should still be removed
+            }
+
+            // Delete the memory source record
+            await this._sourceRepository.DeleteAsync(memorySource);
+            this._logger.LogInformation("Deleted memory source record for document {DocumentId}", documentId);
+
+            // Notify other clients about the deletion
+            await messageRelayHubContext.Clients.Group(chatId.ToString())
+                .SendAsync("DocumentDeleted", chatId.ToString(), documentId, memorySource.Name);
+
+            return this.Ok(new { message = $"Document '{memorySource.Name}' deleted successfully.", documentId });
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Error deleting document {DocumentId} from chat {ChatId}", documentId, chatId);
+            return this.BadRequest($"Failed to delete document: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Service API for getting all documents in a chat session.
+    /// </summary>
+    [Route("chats/{chatId}/documents")]
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetDocumentsAsync(
+        [FromRoute] Guid chatId)
+    {
+        // Verify user has access to the chat
+        if (!await this.UserHasAccessToChatAsync(this._authInfo.UserId, chatId))
+        {
+            return this.Forbid("User does not have access to this chat session.");
+        }
+
+        var memorySources = await this._sourceRepository.FindByChatIdAsync(chatId.ToString());
+
+        var documents = memorySources.Select(s => new
+        {
+            s.Id,
+            s.Name,
+            s.Size,
+            s.CreatedOn,
+            s.IsPinned,
+            Type = s.SourceType.ToString()
+        });
+
+        return this.Ok(documents);
+    }
+
+    /// <summary>
+    /// Pin a document to always include it in chat context.
+    /// </summary>
+    [Route("chats/{chatId}/documents/{documentId}/pin")]
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> PinDocumentAsync(
+        [FromRoute] Guid chatId,
+        [FromRoute] string documentId)
+    {
+        try
+        {
+            // Verify user has access to the chat
+            if (!await this.UserHasAccessToChatAsync(this._authInfo.UserId, chatId))
+            {
+                return this.Forbid("User does not have access to this chat session.");
+            }
+
+            var memorySource = await this._sourceRepository.FindByIdAsync(documentId);
+            if (memorySource == null)
+            {
+                return this.NotFound($"Document med ID {documentId} finst ikkje");
+            }
+
+            if (memorySource.ChatId != chatId.ToString())
+            {
+                return this.Forbid("Document belongs to a different chat");
+            }
+
+            memorySource.IsPinned = true;
+            await this._sourceRepository.UpsertAsync(memorySource);
+
+            this._logger.LogInformation("Document {DocumentId} pinned in chat {ChatId}", documentId, chatId);
+
+            return this.Ok(new { message = "Dokument er festa", isPinned = true });
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Error pinning document {DocumentId}", documentId);
+            return this.StatusCode(StatusCodes.Status500InternalServerError,
+                $"Feil ved festing av dokument: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Unpin a document to remove it from always being included in context.
+    /// </summary>
+    [Route("chats/{chatId}/documents/{documentId}/unpin")]
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UnpinDocumentAsync(
+        [FromRoute] Guid chatId,
+        [FromRoute] string documentId)
+    {
+        try
+        {
+            // Verify user has access to the chat
+            if (!await this.UserHasAccessToChatAsync(this._authInfo.UserId, chatId))
+            {
+                return this.Forbid("User does not have access to this chat session.");
+            }
+
+            var memorySource = await this._sourceRepository.FindByIdAsync(documentId);
+            if (memorySource == null)
+            {
+                return this.NotFound($"Document med ID {documentId} finst ikkje");
+            }
+
+            if (memorySource.ChatId != chatId.ToString())
+            {
+                return this.Forbid("Document belongs to a different chat");
+            }
+
+            memorySource.IsPinned = false;
+            await this._sourceRepository.UpsertAsync(memorySource);
+
+            this._logger.LogInformation("Document {DocumentId} unpinned in chat {ChatId}", documentId, chatId);
+
+            return this.Ok(new { message = "Dokument er løyst", isPinned = false });
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Error unpinning document {DocumentId}", documentId);
+            return this.StatusCode(StatusCodes.Status500InternalServerError,
+                $"Feil ved løysing av dokument: {ex.Message}");
+        }
+    }
+
     private async Task<IActionResult> DocumentImportAsync(
         IKernelMemory memoryClient,
         IHubContext<MessageRelayHub> messageRelayHubContext,

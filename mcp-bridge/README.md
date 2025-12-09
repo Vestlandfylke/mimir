@@ -110,7 +110,38 @@ The bridge:
 python bridge.py
 ```
 
-### Option 2: Deploy to Azure Container Apps (Production)
+### Option 2: Deploy to Azure App Service (Recommended for Production)
+
+Use the included deployment script:
+
+```powershell
+cd mcp-bridge
+.\deploy-bridge.ps1
+```
+
+This will:
+1. Create an App Service `app-mcp-bridge-mimir`
+2. Configure environment variables
+3. Deploy the bridge code
+4. Output the URL to use
+
+**After deployment**, update WebAPI to use the bridge URL:
+
+```json
+// webapi/appsettings.json
+"McpServers": {
+  "Servers": [
+    {
+      "Name": "CustomMcpServer",
+      "Transport": "Http",
+      "Url": "https://app-mcp-bridge-mimir.azurewebsites.net/mcp",
+      "Enabled": true
+    }
+  ]
+}
+```
+
+### Option 3: Deploy to Azure Container Apps
 
 Create `Dockerfile`:
 
@@ -128,7 +159,7 @@ ENV BRIDGE_PORT=8080
 
 EXPOSE 8080
 
-CMD ["python", "bridge.py"]
+CMD ["gunicorn", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8080", "bridge:app"]
 ```
 
 Deploy:
@@ -139,7 +170,7 @@ docker build -t mcp-bridge .
 docker tag mcp-bridge:latest <your-registry>/mcp-bridge:latest
 docker push <your-registry>/mcp-bridge:latest
 
-# Deploy to Azure Container Apps (same as your FastMCP server)
+# Deploy to Azure Container Apps
 az containerapp create \
   --name mcp-bridge \
   --resource-group <your-rg> \

@@ -18,6 +18,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using CopilotChatMessage = CopilotChat.WebApi.Models.Storage.CopilotChatMessage;
+using FunctionCallContent = Microsoft.SemanticKernel.FunctionCallContent;
 
 namespace CopilotChat.WebApi.Plugins.Chat;
 
@@ -74,6 +75,11 @@ public class ChatPlugin
     private readonly AzureContentSafety? _contentSafety = null;
 
     /// <summary>
+    /// Service for handling MCP tool plan approval workflow.
+    /// </summary>
+    private readonly McpPlanService? _mcpPlanService;
+
+    /// <summary>
     /// Create a new instance of <see cref="ChatPlugin"/>.
     /// </summary>
     public ChatPlugin(
@@ -81,11 +87,13 @@ public class ChatPlugin
         IKernelMemory memoryClient,
         ChatMessageRepository chatMessageRepository,
         ChatSessionRepository chatSessionRepository,
+        ChatMemorySourceRepository sourceRepository,
         IHubContext<MessageRelayHub> messageRelayHubContext,
         IOptions<PromptsOptions> promptOptions,
         IOptions<DocumentMemoryOptions> documentImportOptions,
         ILogger logger,
-        AzureContentSafety? contentSafety = null)
+        AzureContentSafety? contentSafety = null,
+        McpPlanService? mcpPlanService = null)
     {
         this._logger = logger;
         this._kernel = kernel;
@@ -96,9 +104,10 @@ public class ChatPlugin
         // Clone the prompt options to avoid modifying the original prompt options.
         this._promptOptions = promptOptions.Value.Copy();
 
-        this._kernelMemoryRetriever = new KernelMemoryRetriever(promptOptions, chatSessionRepository, memoryClient, logger);
+        this._kernelMemoryRetriever = new KernelMemoryRetriever(promptOptions, chatSessionRepository, sourceRepository, memoryClient, logger);
 
         this._contentSafety = contentSafety;
+        this._mcpPlanService = mcpPlanService;
     }
 
     /// <summary>
@@ -202,7 +211,7 @@ public class ChatPlugin
         await this.SetSystemDescriptionAsync(chatId, cancellationToken);
 
         // Save this new message to memory such that subsequent chat responses can use it
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Saving user message to chat history", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Lagrar brukarmelding i pratehistorikk", cancellationToken);
         var newUserMessage = await this.SaveNewMessageAsync(message, userId, userName, chatId, messageType, cancellationToken);
 
         // Clone the context to avoid modifying the original context variables.
@@ -240,21 +249,39 @@ public class ChatPlugin
             () => this.RenderSystemInstructionsAsync(chatId, chatContext, cancellationToken), nameof(this.RenderSystemInstructionsAsync));
         ChatHistory metaPrompt = new(systemInstructions);
 
-        // Bypass audience extraction if Auth is disabled
+        // Extract audience and user intent IN PARALLEL using the fast model
+        // This significantly reduces latency by running both extractions simultaneously
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Analyserer melding (rask modell)", cancellationToken);
+
         var audience = string.Empty;
-        if (!PassThroughAuthenticationHandler.IsDefaultUser(userId))
+        string userIntent;
+
+        // Check if we need to extract audience (only if Auth is enabled)
+        bool needsAudience = !PassThroughAuthenticationHandler.IsDefaultUser(userId);
+
+        if (needsAudience)
         {
-            // Get the audience
-            await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting audience", cancellationToken);
-            audience = await AsyncUtils.SafeInvokeAsync(
+            // Run both extractions in parallel using the fast kernel
+            var audienceTask = AsyncUtils.SafeInvokeAsync(
                 () => this.GetAudienceAsync(chatContext, cancellationToken), nameof(this.GetAudienceAsync));
+            var intentTask = AsyncUtils.SafeInvokeAsync(
+                () => this.GetUserIntentAsync(chatContext, cancellationToken), nameof(this.GetUserIntentAsync));
+
+            // Wait for both to complete
+            await Task.WhenAll(audienceTask, intentTask);
+
+            audience = await audienceTask;
+            userIntent = await intentTask;
+
             metaPrompt.AddSystemMessage(audience);
         }
+        else
+        {
+            // Only extract user intent (no audience needed)
+            userIntent = await AsyncUtils.SafeInvokeAsync(
+                () => this.GetUserIntentAsync(chatContext, cancellationToken), nameof(this.GetUserIntentAsync));
+        }
 
-        // Extract user intent from the conversation history.
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting user intent", cancellationToken);
-        var userIntent = await AsyncUtils.SafeInvokeAsync(
-            () => this.GetUserIntentAsync(chatContext, cancellationToken), nameof(this.GetUserIntentAsync));
         metaPrompt.AddSystemMessage(userIntent);
 
         // Calculate max amount of tokens to use for memories
@@ -267,7 +294,7 @@ public class ChatPlugin
         chatMemoryTokenBudget = (int)(chatMemoryTokenBudget * this._promptOptions.MemoriesResponseContextWeight);
 
         // Query relevant semantic and document memories
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting semantic and document memories", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Henter kontekst- og dokumentminne", cancellationToken);
         (var memoryText, var citationMap) = await this._kernelMemoryRetriever.QueryMemoriesAsync(userIntent, chatId, chatMemoryTokenBudget);
         if (!string.IsNullOrWhiteSpace(memoryText))
         {
@@ -276,7 +303,7 @@ public class ChatPlugin
         }
 
         // Add as many chat history messages to meta-prompt as the token budget will allow
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Extracting chat history", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Henter historikken", cancellationToken);
         string allowedChatHistory = await this.GetAllowedChatHistoryAsync(chatId, maxRequestTokenBudget - tokensUsed, metaPrompt, cancellationToken);
 
         // Store token usage of prompt template
@@ -285,7 +312,7 @@ public class ChatPlugin
         // Stream the response to the client
         var promptView = new BotResponsePrompt(systemInstructions, audience, userIntent, memoryText, allowedChatHistory, metaPrompt);
 
-        return await this.HandleBotResponseAsync(chatId, userId, chatContext, promptView, citationMap.Values.AsEnumerable(), cancellationToken);
+        return await this.HandleBotResponseAsync(chatId, userId, chatContext, promptView, citationMap.Values.AsEnumerable(), cancellationToken, userIntent);
     }
 
     /// <summary>
@@ -297,7 +324,7 @@ public class ChatPlugin
     private async Task<string> RenderSystemInstructionsAsync(string chatId, KernelArguments context, CancellationToken cancellationToken)
     {
         // Render system instruction components
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Initializing prompt", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Førebur spørsmål", cancellationToken);
 
         var promptTemplateFactory = new KernelPromptTemplateFactory();
         var promptTemplate = promptTemplateFactory.Create(new PromptTemplateConfig(this._promptOptions.SystemPersona));
@@ -314,25 +341,27 @@ public class ChatPlugin
     /// <param name="promptView">The prompt view.</param>
     /// <param name="citations">Citation sources.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="userIntent">The extracted user intent for plan creation.</param>
     private async Task<CopilotChatMessage> HandleBotResponseAsync(
         string chatId,
         string userId,
         KernelArguments chatContext,
         BotResponsePrompt promptView,
         IEnumerable<CitationSource>? citations,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? userIntent = null)
     {
         // Get bot response and stream to client
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Generating bot response", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Genererer botsvar", cancellationToken);
         CopilotChatMessage chatMessage = await AsyncUtils.SafeInvokeAsync(
-            () => this.StreamResponseToClientAsync(chatId, userId, promptView, cancellationToken, citations), nameof(this.StreamResponseToClientAsync));
+            () => this.StreamResponseToClientAsync(chatId, userId, promptView, cancellationToken, citations, userIntent), nameof(this.StreamResponseToClientAsync));
 
         // Save the message into chat history
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Saving message to chat history", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Lagrar melding i historikken", cancellationToken);
         await this._chatMessageRepository.UpsertAsync(chatMessage);
 
         // Extract semantic chat memory
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Generating semantic chat memory", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Genererer kontekstminne", cancellationToken);
         await AsyncUtils.SafeInvokeAsync(
             () => SemanticChatMemoryExtractor.ExtractSemanticChatMemoryAsync(
                 chatId,
@@ -344,7 +373,7 @@ public class ChatPlugin
                 cancellationToken), nameof(SemanticChatMemoryExtractor.ExtractSemanticChatMemoryAsync));
 
         // Calculate total token usage for dependency functions and prompt template
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Saving token usage", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Lagrar tokenbruk", cancellationToken);
         chatMessage.TokenUsage = this.GetTokenUsages(chatContext, chatMessage.Content);
 
         // Update the message on client and in chat history with final completion token usage
@@ -376,9 +405,14 @@ public class ChatPlugin
 
         audienceContext["tokenLimit"] = historyTokenBudget.ToString(new NumberFormatInfo());
 
+        // Use fast model service for audience extraction (faster model like gpt-4o-mini)
+        // If "fast" service is not available, Semantic Kernel will automatically use the default service
+        var settings = this.CreateIntentCompletionSettings();
+        settings.ServiceId = "fast";
+
         var completionFunction = this._kernel.CreateFunctionFromPrompt(
             this._promptOptions.SystemAudienceExtraction,
-            this.CreateIntentCompletionSettings(),
+            settings,
             functionName: "SystemAudienceExtraction",
             description: "Extract audience");
 
@@ -422,9 +456,14 @@ public class ChatPlugin
         intentContext["tokenLimit"] = tokenBudget.ToString(new NumberFormatInfo());
         intentContext["knowledgeCutoff"] = this._promptOptions.KnowledgeCutoffDate;
 
+        // Use fast model service for intent extraction (faster model like gpt-4o-mini)
+        // If "fast" service is not available, Semantic Kernel will automatically use the default service
+        var settings = this.CreateIntentCompletionSettings();
+        settings.ServiceId = "fast";
+
         var completionFunction = this._kernel.CreateFunctionFromPrompt(
             this._promptOptions.SystemIntentExtraction,
-            this.CreateIntentCompletionSettings(),
+            settings,
             functionName: "UserIntentExtraction",
             description: "Extract user intent");
 
@@ -542,7 +581,8 @@ public class ChatPlugin
     /// <summary>
     /// Create `OpenAIPromptExecutionSettings` for chat response. Parameters are read from the PromptSettings class.
     /// </summary>
-    private OpenAIPromptExecutionSettings CreateChatRequestSettings()
+    /// <param name="requireApproval">If true, enables kernel functions without auto-invoke to allow plan approval.</param>
+    private OpenAIPromptExecutionSettings CreateChatRequestSettings(bool requireApproval = false)
     {
         return new OpenAIPromptExecutionSettings
         {
@@ -551,7 +591,11 @@ public class ChatPlugin
             TopP = this._promptOptions.ResponseTopP,
             FrequencyPenalty = this._promptOptions.ResponseFrequencyPenalty,
             PresencePenalty = this._promptOptions.ResponsePresencePenalty,
-            ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+            // When approval is required, enable functions but don't auto-invoke them
+            // This allows us to intercept the function calls and show them to the user for approval
+            ToolCallBehavior = requireApproval
+                ? ToolCallBehavior.EnableKernelFunctions
+                : ToolCallBehavior.AutoInvokeKernelFunctions
         };
     }
 
@@ -626,22 +670,34 @@ public class ChatPlugin
     /// <param name="prompt">Prompt used to generate the response</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <param name="citations">Citations for the message</param>
+    /// <param name="userIntent">The extracted user intent for plan creation</param>
     /// <returns>The created chat message</returns>
     private async Task<CopilotChatMessage> StreamResponseToClientAsync(
         string chatId,
         string userId,
         BotResponsePrompt prompt,
         CancellationToken cancellationToken,
-        IEnumerable<CitationSource>? citations = null)
+        IEnumerable<CitationSource>? citations = null,
+        string? userIntent = null)
     {
-        // Create the stream
         var chatCompletion = this._kernel.GetRequiredService<IChatCompletionService>();
-        var stream =
-            chatCompletion.GetStreamingChatMessageContentsAsync(
-                prompt.MetaPromptTemplate,
-                this.CreateChatRequestSettings(),
-                this._kernel,
-                cancellationToken);
+
+        // Check if MCP plan approval is required
+        bool requireApproval = this._mcpPlanService?.AnyServerRequiresApproval() ?? false;
+
+        if (requireApproval)
+        {
+            // Use non-streaming to detect function calls for plan approval
+            return await this.GetResponseWithPlanApprovalAsync(
+                chatId, userId, prompt, chatCompletion, cancellationToken, citations, userIntent);
+        }
+
+        // Standard streaming response (auto-invoke functions)
+        var stream = chatCompletion.GetStreamingChatMessageContentsAsync(
+            prompt.MetaPromptTemplate,
+            this.CreateChatRequestSettings(requireApproval: false),
+            this._kernel,
+            cancellationToken);
 
         // Create message on client
         var chatMessage = await this.CreateBotMessageOnClient(
@@ -664,6 +720,109 @@ public class ChatPlugin
     }
 
     /// <summary>
+    /// Get response with plan approval flow for MCP tools.
+    /// When the LLM wants to call MCP tools, we intercept and create a plan for user approval.
+    /// </summary>
+    private async Task<CopilotChatMessage> GetResponseWithPlanApprovalAsync(
+        string chatId,
+        string userId,
+        BotResponsePrompt prompt,
+        IChatCompletionService chatCompletion,
+        CancellationToken cancellationToken,
+        IEnumerable<CitationSource>? citations = null,
+        string? userIntent = null)
+    {
+        // Get response without auto-invoking functions
+        var settings = this.CreateChatRequestSettings(requireApproval: true);
+        var result = await chatCompletion.GetChatMessageContentAsync(
+            prompt.MetaPromptTemplate,
+            settings,
+            this._kernel,
+            cancellationToken);
+
+        // Check if the response contains function calls
+        var functionCalls = result.Items
+            .OfType<FunctionCallContent>()
+            .ToList();
+
+        if (functionCalls.Count > 0)
+        {
+            // Filter to only MCP tool calls that require approval
+            var mcpFunctionCalls = functionCalls
+                .Where(fc => this._mcpPlanService!.RequiresApproval(fc.PluginName ?? string.Empty))
+                .ToList();
+
+            if (mcpFunctionCalls.Count > 0)
+            {
+                this._logger.LogInformation(
+                    "MCP tool calls detected requiring approval: {Tools}",
+                    string.Join(", ", mcpFunctionCalls.Select(fc => $"{fc.PluginName}.{fc.FunctionName}")));
+
+                // Create a proposed plan for user approval
+                var proposedPlan = this._mcpPlanService!.CreateProposedPlan(
+                    this._kernel,
+                    mcpFunctionCalls,
+                    prompt.MetaPromptTemplate.LastOrDefault()?.Content ?? string.Empty,
+                    userIntent);
+
+                // Create bot message with the proposed plan (type = Plan)
+                var planJson = JsonSerializer.Serialize(proposedPlan);
+                var chatMessage = await this.CreateBotMessageOnClient(
+                    chatId,
+                    userId,
+                    JsonSerializer.Serialize(prompt),
+                    planJson,
+                    cancellationToken,
+                    citations,
+                    tokenUsage: null,
+                    messageType: CopilotChatMessage.ChatMessageType.Plan
+                );
+
+                return chatMessage;
+            }
+        }
+
+        // No MCP tools requiring approval - return the response content directly
+        var responseContent = result.Content ?? string.Empty;
+
+        // Create message on client
+        var normalMessage = await this.CreateBotMessageOnClient(
+            chatId,
+            userId,
+            JsonSerializer.Serialize(prompt),
+            string.Empty,
+            cancellationToken,
+            citations
+        );
+
+        // If there are non-MCP function calls, we need to handle them with auto-invoke
+        if (functionCalls.Count > 0)
+        {
+            // Re-run with auto-invoke for non-MCP functions
+            var autoInvokeSettings = this.CreateChatRequestSettings(requireApproval: false);
+            var autoInvokeStream = chatCompletion.GetStreamingChatMessageContentsAsync(
+                prompt.MetaPromptTemplate,
+                autoInvokeSettings,
+                this._kernel,
+                cancellationToken);
+
+            await foreach (var contentPiece in autoInvokeStream)
+            {
+                normalMessage.Content += contentPiece;
+                await this.UpdateMessageOnClient(normalMessage, cancellationToken);
+            }
+        }
+        else
+        {
+            // No function calls - just use the response content
+            normalMessage.Content = responseContent;
+            await this.UpdateMessageOnClient(normalMessage, cancellationToken);
+        }
+
+        return normalMessage;
+    }
+
+    /// <summary>
     /// Create an empty message on the client to begin the response.
     /// </summary>
     /// <param name="chatId">The chat ID</param>
@@ -673,6 +832,7 @@ public class ChatPlugin
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <param name="citations">Citations for the message</param>
     /// <param name="tokenUsage">Total token usage of response completion</param>
+    /// <param name="messageType">Type of the message (default: Message)</param>
     /// <returns>The created chat message</returns>
     private async Task<CopilotChatMessage> CreateBotMessageOnClient(
         string chatId,
@@ -681,9 +841,10 @@ public class ChatPlugin
         string content,
         CancellationToken cancellationToken,
         IEnumerable<CitationSource>? citations = null,
-        Dictionary<string, int>? tokenUsage = null)
+        Dictionary<string, int>? tokenUsage = null,
+        CopilotChatMessage.ChatMessageType messageType = CopilotChatMessage.ChatMessageType.Message)
     {
-        var chatMessage = CopilotChatMessage.CreateBotResponseMessage(chatId, content, prompt, citations, tokenUsage);
+        var chatMessage = CopilotChatMessage.CreateBotResponseMessage(chatId, content, prompt, citations, tokenUsage, messageType);
         await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveMessage", chatId, userId, chatMessage, cancellationToken);
         return chatMessage;
     }

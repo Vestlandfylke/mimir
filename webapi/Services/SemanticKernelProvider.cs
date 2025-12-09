@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using CopilotChat.WebApi.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
 using Microsoft.SemanticKernel;
@@ -40,11 +41,27 @@ public sealed class SemanticKernelProvider
             case string y when y.Equals("AzureOpenAIText", StringComparison.OrdinalIgnoreCase):
                 var azureAIOptions = memoryOptions.GetServiceConfig<AzureOpenAIConfig>(configuration, "AzureOpenAIText");
 #pragma warning disable CA2000 // No need to dispose of HttpClient instances from IHttpClientFactory
+                // Add main model as DEFAULT (no serviceId = default service)
                 builder.AddAzureOpenAIChatCompletion(
                     azureAIOptions.Deployment,
                     azureAIOptions.Endpoint,
                     azureAIOptions.APIKey,
                     httpClient: httpClientFactory.CreateClient());
+
+                // Add fast model as NAMED service if configured
+                var fastModelOptions = configuration.GetSection(FastModelOptions.PropertyName).Get<FastModelOptions>();
+                if (fastModelOptions?.Enabled == true && !string.IsNullOrEmpty(fastModelOptions.Deployment))
+                {
+                    var fastEndpoint = string.IsNullOrEmpty(fastModelOptions.Endpoint) ? azureAIOptions.Endpoint : fastModelOptions.Endpoint;
+                    var fastApiKey = string.IsNullOrEmpty(fastModelOptions.ApiKey) ? azureAIOptions.APIKey : fastModelOptions.ApiKey;
+
+                    builder.AddAzureOpenAIChatCompletion(
+                        fastModelOptions.Deployment,
+                        fastEndpoint,
+                        fastApiKey,
+                        serviceId: "fast", // Named service for quick tasks
+                        httpClient: httpClientFactory.CreateClient());
+                }
                 break;
 
             case string x when x.Equals("OpenAI", StringComparison.OrdinalIgnoreCase):
@@ -62,4 +79,5 @@ public sealed class SemanticKernelProvider
 
         return builder.Build();
     }
+
 }

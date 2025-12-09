@@ -9,4 +9,5 @@ export interface ChatMemorySource {
     sharedBy: string;
     createdOn: number;
     size: number;
+    isPinned?: boolean;
 }

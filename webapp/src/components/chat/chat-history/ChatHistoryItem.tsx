@@ -188,8 +188,8 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                     {!isMe && <Text weight="semibold">{fullName}</Text>}
                     <Text className={classes.time}>{timestampToDateString(message.timestamp, true)}</Text>
                     {isBot && <PromptDialog message={message} />}
-                    {isBot && message.prompt && (
-                        <Tooltip content={messagedCopied ? 'Copied' : 'Copy text'} relationship="label">
+                    {isBot && (
+                        <Tooltip content={messagedCopied ? 'Kopiert' : 'Kopier tekst'} relationship="label">
                             <Button
                                 icon={messagedCopied ? <ClipboardTask20Regular /> : <Clipboard20Regular />}
                                 appearance="transparent"
@@ -215,9 +215,7 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                                 }}
                                 size="small"
                             >
-                                {`${messageCitations.length} ${
-                                    messageCitations.length === 1 ? 'sitat' : 'sitater'
-                                }`}
+                                {`${messageCitations.length} ${messageCitations.length === 1 ? 'sitat' : 'sitater'}`}
                             </ToggleButton>
                         )}
                         {showShowRLHFMessage && (

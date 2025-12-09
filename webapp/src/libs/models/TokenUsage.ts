@@ -16,10 +16,10 @@ export interface FunctionDetails {
 }
 
 export const TokenUsageFunctionNameMap: Record<string, string> = {
-    audienceExtraction: 'Audience Extraction',
-    userIntentExtraction: 'User Intent Extraction',
-    metaPromptTemplate: 'Meta Prompt Template',
-    responseCompletion: 'Response Completion',
-    workingMemoryExtraction: 'Working Memory Generation',
-    longTermMemoryExtraction: 'Long Term Memory Generation',
+    audienceExtraction: 'Målgruppeuthenting',
+    userIntentExtraction: 'Brukarintentuthenting',
+    metaPromptTemplate: 'Meta-promptmal',
+    responseCompletion: 'Svarfullføring',
+    workingMemoryExtraction: 'Arbeidsminne-generering',
+    longTermMemoryExtraction: 'Langtidsminne-generering',
 };

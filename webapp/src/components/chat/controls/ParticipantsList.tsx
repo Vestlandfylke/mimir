@@ -13,8 +13,8 @@ import {
     shorthands,
     tokens,
 } from '@fluentui/react-components';
-import { IChatUser } from '../../../libs/models/ChatUser';
 import { useGraph } from '../../../libs/hooks';
+import { IChatUser } from '../../../libs/models/ChatUser';
 import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { setUsersLoaded } from '../../../redux/features/conversations/conversationsSlice';
@@ -70,7 +70,7 @@ export const ParticipantsList: FC<ShareBotMenuProps> = ({ participants }) => {
     return (
         <Popover positioning={'below-end'} size="small">
             <PopoverTrigger>
-                <Tooltip content="Chat participants" relationship="label">
+                <Tooltip content="Deltakarar i samtalen" relationship="label">
                     <Avatar initials={`+${Math.min(participants.length, 100)}`} />
                 </Tooltip>
             </PopoverTrigger>

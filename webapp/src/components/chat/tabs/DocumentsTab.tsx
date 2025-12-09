@@ -1,7 +1,15 @@
 // Copyright (c) Microsoft. All rights reserved.
 
+import { useMsal } from '@azure/msal-react';
 import {
     Button,
+    Dialog,
+    DialogActions,
+    DialogBody,
+    DialogContent,
+    DialogSurface,
+    DialogTitle,
+    DialogTrigger,
     Label,
     Menu,
     MenuItem,
@@ -31,18 +39,25 @@ import {
     useTableSort,
 } from '@fluentui/react-components';
 import {
+    DeleteRegular,
     DocumentArrowUp20Regular,
     DocumentPdfRegular,
     DocumentTextRegular,
     FluentIconsProps,
+    Pin20Filled,
+    Pin20Regular,
 } from '@fluentui/react-icons';
 import * as React from 'react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Constants } from '../../../Constants';
+import { AuthHelper } from '../../../libs/auth/AuthHelper';
 import { useChat, useFile } from '../../../libs/hooks';
+import { AlertType } from '../../../libs/models/AlertType';
 import { ChatMemorySource } from '../../../libs/models/ChatMemorySource';
-import { useAppSelector } from '../../../redux/app/hooks';
+import { DocumentImportService } from '../../../libs/services/DocumentImportService';
+import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
+import { addAlert } from '../../../redux/features/app/appSlice';
 import { Add20 } from '../../shared/BundledIcons';
 import { timestampToDateString } from '../../utils/TextUtils';
 import { TabView } from './TabView';
@@ -89,22 +104,28 @@ interface TableItem {
         timestamp: number;
     };
     size: number;
+    isPinned: boolean;
 }
 
 export const DocumentsTab: React.FC = () => {
     const classes = useClasses();
     const chat = useChat();
     const fileHandler = useFile();
+    const dispatch = useAppDispatch();
+    const { instance, inProgress } = useMsal();
 
     const { serviceInfo } = useAppSelector((state: RootState) => state.app);
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
     const { importingDocuments } = conversations[selectedId];
 
     const [resources, setResources] = React.useState<ChatMemorySource[]>([]);
+    const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
     const localDocumentFileRef = useRef<HTMLInputElement | null>(null);
     const globalDocumentFileRef = useRef<HTMLInputElement | null>(null);
 
-    React.useEffect(() => {
+    const documentImportService = React.useMemo(() => new DocumentImportService(), []);
+
+    const refreshDocuments = React.useCallback(() => {
         if (!conversations[selectedId].disabled) {
             const importingResources = importingDocuments
                 ? importingDocuments.map((document, index) => {
@@ -125,11 +146,60 @@ export const DocumentsTab: React.FC = () => {
                 setResources([...importingResources, ...sources]);
             });
         }
+    }, [chat, conversations, importingDocuments, selectedId]);
+
+    React.useEffect(() => {
+        refreshDocuments();
         // We don't want to have chat as one of the dependencies as it will cause infinite loop.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [importingDocuments, selectedId]);
 
-    const { columns, rows } = useTable(resources);
+    const handleDeleteDocument = async (documentId: string, documentName: string) => {
+        setDeletingDocumentId(documentId);
+        try {
+            const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+            await documentImportService.deleteDocumentAsync(selectedId, documentId, accessToken);
+            dispatch(addAlert({ message: `Dokumentet "${documentName}" er sletta.`, type: AlertType.Success }));
+            refreshDocuments();
+        } catch (error) {
+            dispatch(
+                addAlert({
+                    message: `Kunne ikkje slette dokumentet: ${error instanceof Error ? error.message : 'Ukjent feil'}`,
+                    type: AlertType.Error,
+                }),
+            );
+        } finally {
+            setDeletingDocumentId(null);
+        }
+    };
+
+    const handlePinDocument = async (documentId: string, documentName: string, isPinned: boolean) => {
+        try {
+            const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+            if (isPinned) {
+                await documentImportService.unpinDocumentAsync(selectedId, documentId, accessToken);
+                dispatch(
+                    addAlert({ message: `"${documentName}" er no løyst frå konteksten`, type: AlertType.Success }),
+                );
+            } else {
+                await documentImportService.pinDocumentAsync(selectedId, documentId, accessToken);
+                dispatch(
+                    addAlert({ message: `"${documentName}" er no festa til konteksten`, type: AlertType.Success }),
+                );
+            }
+            refreshDocuments();
+        } catch (err) {
+            const error = err as Error;
+            dispatch(
+                addAlert({
+                    message: `Kunne ikkje ${isPinned ? 'løyse' : 'feste'} dokument: ${error.message || 'Ukjent feil'}`,
+                    type: AlertType.Error,
+                }),
+            );
+        }
+    };
+
+    const { columns, rows } = useTable(resources, handleDeleteDocument, handlePinDocument, deletingDocumentId);
     return (
         <TabView
             title="Dokument"
@@ -238,7 +308,12 @@ export const DocumentsTab: React.FC = () => {
     );
 };
 
-function useTable(resources: ChatMemorySource[]) {
+function useTable(
+    resources: ChatMemorySource[],
+    onDelete: (documentId: string, documentName: string) => Promise<void>,
+    onPin: (documentId: string, documentName: string, isPinned: boolean) => Promise<void>,
+    deletingDocumentId: string | null,
+) {
     const headerSortProps = (columnId: TableColumnId): TableHeaderCellProps => ({
         onClick: (e: React.MouseEvent) => {
             toggleColumnSort(e, columnId);
@@ -346,6 +421,74 @@ function useTable(resources: ChatMemorySource[]) {
                 return getSortDirection('progress') === 'ascending' ? comparison : comparison * -1;
             },
         }),
+        createTableColumn<TableItem>({
+            columnId: 'actions',
+            renderHeaderCell: () => <TableHeaderCell key="actions">Handlingar</TableHeaderCell>,
+            renderCell: (item) => (
+                <TableCell key={`${item.id}-actions`}>
+                    {!item.id.startsWith('in-progress') && item.chatId !== EmptyGuid && (
+                        <>
+                            <Tooltip
+                                content={
+                                    item.isPinned
+                                        ? 'Løys dokumentet frå konteksten'
+                                        : 'Fest dokumentet til konteksten (alltid inkludert i svar)'
+                                }
+                                relationship="label"
+                            >
+                                <Button
+                                    icon={item.isPinned ? <Pin20Filled /> : <Pin20Regular />}
+                                    appearance="subtle"
+                                    onClick={() => void onPin(item.id, item.name.label, item.isPinned)}
+                                    aria-label={item.isPinned ? 'Løys dokument' : 'Fest dokument'}
+                                />
+                            </Tooltip>
+                            <Dialog>
+                                <DialogTrigger disableButtonEnhancement>
+                                    <Tooltip content="Slett dokument" relationship="label">
+                                        <Button
+                                            icon={
+                                                deletingDocumentId === item.id ? (
+                                                    <Spinner size="tiny" />
+                                                ) : (
+                                                    <DeleteRegular />
+                                                )
+                                            }
+                                            appearance="subtle"
+                                            disabled={deletingDocumentId !== null}
+                                            aria-label="Slett dokument"
+                                        />
+                                    </Tooltip>
+                                </DialogTrigger>
+                                <DialogSurface>
+                                    <DialogBody>
+                                        <DialogTitle>Slett dokument</DialogTitle>
+                                        <DialogContent>
+                                            Er du sikker på at du vil slette dokumentet &quot;{item.name.label}&quot;?
+                                            Dette vil fjerne dokumentet frå minnet til samtalen permanent.
+                                        </DialogContent>
+                                        <DialogActions>
+                                            <DialogTrigger disableButtonEnhancement>
+                                                <Button appearance="secondary">Avbryt</Button>
+                                            </DialogTrigger>
+                                            <DialogTrigger disableButtonEnhancement>
+                                                <Button
+                                                    appearance="primary"
+                                                    onClick={() => void onDelete(item.id, item.name.label)}
+                                                >
+                                                    Slett
+                                                </Button>
+                                            </DialogTrigger>
+                                        </DialogActions>
+                                    </DialogBody>
+                                </DialogSurface>
+                            </Dialog>
+                        </>
+                    )}
+                </TableCell>
+            ),
+            compare: () => 0,
+        }),
     ];
 
     const items = resources.map((item) => ({
@@ -361,6 +504,7 @@ function useTable(resources: ChatMemorySource[]) {
             timestamp: item.createdOn,
         },
         size: item.size,
+        isPinned: item.isPinned ?? false,
     }));
 
     const {

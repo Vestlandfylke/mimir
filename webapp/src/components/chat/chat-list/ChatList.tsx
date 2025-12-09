@@ -224,7 +224,7 @@ export const ChatList: FC = () => {
             fileHandler.loadFile<ChatArchive>(file, chat.uploadBot).catch((error) =>
                 dispatch(
                     addAlert({
-                        message: `Failed to parse uploaded file. ${error instanceof Error ? error.message : ''}`,
+                        message: `Kunne ikkje lese opplasta fil. ${error instanceof Error ? error.message : ''}`,
                         type: AlertType.Error,
                     }),
                 ),

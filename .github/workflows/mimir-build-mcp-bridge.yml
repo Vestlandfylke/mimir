@@ -1,0 +1,42 @@
+name: mimir-build-mcp-bridge
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          cd mcp-bridge
+          pip install -r requirements.txt
+
+      - name: Create deployment package
+        run: |
+          cd mcp-bridge
+          # Create zip with all necessary files
+          zip -r ../mcp-bridge.zip . \
+            -x "*.pyc" \
+            -x "__pycache__/*" \
+            -x ".git/*" \
+            -x ".venv/*" \
+            -x ".env" \
+            -x "*.log"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-bridge
+          path: mcp-bridge.zip
+          retention-days: 1

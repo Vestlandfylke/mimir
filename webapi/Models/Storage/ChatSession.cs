@@ -55,6 +55,12 @@ public class ChatSession : IStorageEntity
     public string? Version { get; set; }
 
     /// <summary>
+    /// The chat template type (e.g., "klarsprak" for specialized assistants).
+    /// Null or empty for default chats.
+    /// </summary>
+    public string? Template { get; set; }
+
+    /// <summary>
     /// The partition key for the session.
     /// </summary>
     [JsonIgnore]

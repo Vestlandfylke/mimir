@@ -29,7 +29,7 @@ export const PluginCard: React.FC<PluginCardProps> = ({ plugin, isHosted }) => {
         } else {
             setPluginStateAsync(selectedId, name, false)
                 .then(() => {
-                    dispatch(addAlert({ message: `${name} disabled!`, type: AlertType.Success }));
+                    dispatch(addAlert({ message: `${name} deaktivert!`, type: AlertType.Success }));
                 })
                 .catch((error: Error) => {
                     dispatch(addAlert({ message: error.message, type: AlertType.Error }));
@@ -47,7 +47,7 @@ export const PluginCard: React.FC<PluginCardProps> = ({ plugin, isHosted }) => {
                 enabled ? (
                     <Button
                         data-testid="disconnectPluginButton"
-                        aria-label="Disconnect plugin"
+                        aria-label="Kopla frå tillegg"
                         appearance="secondary"
                         onClick={onDisconnectClick}
                     >

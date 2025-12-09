@@ -5,7 +5,7 @@ using Microsoft.KernelMemory.Pipeline;
 namespace CopilotChat.WebApi.Services;
 
 /// <summary>
-/// Defines a service that performs content safety analysis on images.
+/// Defines a service that provides supported document types for import.
 /// </summary>
 public class DocumentTypeProvider
 {
@@ -20,17 +20,35 @@ public class DocumentTypeProvider
         this._supportedTypes =
             new(StringComparer.OrdinalIgnoreCase)
             {
+                // Text documents
                 { FileExtensions.MarkDown, false },
                 { FileExtensions.MsWord, false },
                 { FileExtensions.MsWordX, false },
                 { FileExtensions.Pdf, false },
                 { FileExtensions.PlainText, false },
+                
+                // Additional text/data formats
+                { ".html", false },
+                { ".htm", false },
+                { ".json", false },
+                { ".csv", false },
+                { ".xml", false },
+                { ".rtf", false },
+                
+                // Microsoft Office formats
+                { ".xlsx", false },  // Excel
+                { ".xls", false },   // Excel (legacy)
+                { ".pptx", false },  // PowerPoint
+                { ".ppt", false },   // PowerPoint (legacy)
+                
+                // Images (require OCR)
                 { FileExtensions.ImageBmp, true },
                 { FileExtensions.ImageGif, true },
                 { FileExtensions.ImagePng, true },
                 { FileExtensions.ImageJpg, true },
                 { FileExtensions.ImageJpeg, true },
                 { FileExtensions.ImageTiff, true },
+                { ".webp", true },
             };
     }
 
@@ -43,5 +61,24 @@ public class DocumentTypeProvider
     public bool IsSupported(string extension, out bool isSafetyTarget)
     {
         return this._supportedTypes.TryGetValue(extension, out isSafetyTarget);
+    }
+
+    /// <summary>
+    /// Gets all supported file extensions as a comma-separated string.
+    /// Useful for frontend accept attribute.
+    /// </summary>
+    /// <returns>Comma-separated list of supported extensions</returns>
+    public string GetSupportedExtensions()
+    {
+        return string.Join(",", this._supportedTypes.Keys);
+    }
+
+    /// <summary>
+    /// Gets all supported file extensions as a list.
+    /// </summary>
+    /// <returns>List of supported extensions</returns>
+    public IEnumerable<string> GetSupportedExtensionsList()
+    {
+        return this._supportedTypes.Keys;
     }
 }

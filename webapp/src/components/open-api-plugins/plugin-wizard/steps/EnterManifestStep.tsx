@@ -41,7 +41,7 @@ export const EnterManifestStep: React.FC<IEnterManifestStepProps> = ({
                     const validUrl = new URL(data.value);
                     setDomainUrl(validUrl.toString(), undefined);
                 } catch (e) {
-                    setDomainUrl(data.value, 'Domain is an invalid URL.');
+                    setDomainUrl(data.value, 'Domenet er ikkje ein gyldig URL.');
                 }
             }, Constants.KEYSTROKE_DEBOUNCE_TIME_MS);
         },
@@ -50,21 +50,21 @@ export const EnterManifestStep: React.FC<IEnterManifestStepProps> = ({
 
     return (
         <>
-            <Subtitle1>Enter your website domain</Subtitle1>
+            <Subtitle1>Skriv inn nettstaddomenet ditt</Subtitle1>
             <Text size={400}>
-                To connect a plugin, provide the website domain where your{' '}
+                For å kopla til eit tillegg, oppgje nettstaddomenet der{' '}
                 <a
                     href={'https://platform.openai.com/docs/plugins/getting-started/plugin-manifest'}
                     target="_blank"
                     rel="noreferrer noopener"
                 >
-                    OpenAI plugin manifest
+                    OpenAI-tilleggsmanifestet
                 </a>{' '}
-                is hosted. This is the{' '}
+                ditt ligg. Dette er{' '}
                 <Text size={400} weight="bold">
                     ai-plugin.json
                 </Text>{' '}
-                file.
+                fila.
             </Text>
             <Input
                 required
@@ -82,23 +82,23 @@ export const EnterManifestStep: React.FC<IEnterManifestStepProps> = ({
                 </div>
             )}
             <Body1 italic>
-                Note: Chat Copilot currently only supports plugins requiring{' '}
+                Merk: Mimir støttar for tida berre tillegg som krev{' '}
                 <a
                     href={'https://platform.openai.com/docs/plugins/authentication/no-authentication'}
                     target="_blank"
                     rel="noreferrer noopener"
                 >
-                    no auth
+                    ingen autentisering
                 </a>{' '}
-                or{' '}
+                eller{' '}
                 <a
                     href={'https://platform.openai.com/docs/plugins/authentication/user-level'}
                     target="_blank"
                     rel="noreferrer noopener"
                 >
-                    user-level
-                </a>{' '}
-                authentication.
+                    brukarniåå-autentisering
+                </a>
+                .
             </Body1>
         </>
     );

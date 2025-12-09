@@ -86,14 +86,35 @@ public class ChatHistoryController : ControllerBase
             return this.BadRequest("Chat session parameters cannot be null.");
         }
 
-        // Create a new chat session
-        var newChat = new ChatSession(chatParameters.Title, this._promptOptions.SystemDescription);
+        // Determine system description and initial message based on template
+        string systemDescription = this._promptOptions.SystemDescription;
+        string initialBotMessage = this._promptOptions.InitialBotMessage;
+
+        if (!string.IsNullOrEmpty(chatParameters.Template) && this._promptOptions.Templates != null)
+        {
+            if (this._promptOptions.Templates.TryGetValue(chatParameters.Template, out var template))
+            {
+                systemDescription = template.SystemDescription;
+                initialBotMessage = template.InitialBotMessage;
+                this._logger.LogDebug("Using template '{0}' for new chat session.", chatParameters.Template);
+            }
+            else
+            {
+                this._logger.LogWarning("Template '{0}' not found. Using default prompts.", chatParameters.Template);
+            }
+        }
+
+        // Create a new chat session with template info
+        var newChat = new ChatSession(chatParameters.Title, systemDescription)
+        {
+            Template = chatParameters.Template  // Store the template for MCP filtering
+        };
         await this._sessionRepository.CreateAsync(newChat);
 
         // Create initial bot message
         var chatMessage = CopilotChatMessage.CreateBotResponseMessage(
             newChat.Id,
-            this._promptOptions.InitialBotMessage,
+            initialBotMessage,
             string.Empty, // The initial bot message doesn't need a prompt.
             null,
             TokenUtils.EmptyTokenUsages());

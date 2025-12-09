@@ -92,7 +92,7 @@ export const PluginGallery: React.FC = () => {
                     .catch((error: Error) => {
                         dispatch(
                             addAlert({
-                                message: `Failed to fetch hosted plugin ${availablePlugin.name}: ${error.message}`,
+                                message: `Kunne ikkje hente tillegget ${availablePlugin.name}: ${error.message}`,
                                 type: AlertType.Error,
                             }),
                         );
@@ -114,7 +114,7 @@ export const PluginGallery: React.FC = () => {
             }}
         >
             <DialogTrigger>
-{/*                 <Button
+                {/*                 <Button
                     data-testid="pluginButton"
                     style={{ color: 'white' }}
                     appearance="transparent"

@@ -12,21 +12,59 @@ import asyncio
 import json
 import logging
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 import httpx
+from dotenv import load_dotenv
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 import uvicorn
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure logging with colors and better formatting
+class ColoredFormatter(logging.Formatter):
+    """Custom formatter with colors for different log levels and MCP events."""
+    
+    COLORS = {
+        'DEBUG': '\033[36m',      # Cyan
+        'INFO': '\033[32m',       # Green
+        'WARNING': '\033[33m',    # Yellow
+        'ERROR': '\033[31m',      # Red
+        'CRITICAL': '\033[35m',   # Magenta
+        'RESET': '\033[0m',       # Reset
+        'BOLD': '\033[1m',        # Bold
+        'TOOL': '\033[95m',       # Light Magenta for tools
+        'TIME': '\033[90m',       # Gray for timestamps
+    }
+    
+    def format(self, record):
+        # Add timestamp
+        timestamp = self.formatTime(record, '%Y-%m-%d %H:%M:%S')
+        
+        # Color based on level
+        level_color = self.COLORS.get(record.levelname, self.COLORS['RESET'])
+        reset = self.COLORS['RESET']
+        time_color = self.COLORS['TIME']
+        
+        # Format the message
+        formatted = f"{time_color}[{timestamp}]{reset} {level_color}{record.levelname:8}{reset} {record.getMessage()}"
+        return formatted
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Apply colored formatter to console handler
+for handler in logging.root.handlers:
+    handler.setFormatter(ColoredFormatter())
+
+# Also set up httpx logger to be less verbose
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Configuration
 FASTMCP_SERVER_URL = os.getenv(
@@ -36,10 +74,21 @@ FASTMCP_SERVER_URL = os.getenv(
 BRIDGE_HOST = os.getenv("BRIDGE_HOST", "0.0.0.0")
 BRIDGE_PORT = int(os.getenv("BRIDGE_PORT", "8002"))
 
+# Authentication configuration
+# OAuth is now DISABLED - FastMCP server runs without authentication
+# WebAPI already provides authentication for end users
+OAUTH_ENABLED = False
+
 # Global HTTP client and session management
 http_client: Optional[httpx.AsyncClient] = None
 session_id: Optional[str] = None
 session_lock = asyncio.Lock()
+
+
+async def get_oauth_token() -> Optional[str]:
+    """OAuth is disabled - FastMCP server runs without authentication."""
+    logger.debug("OAuth disabled - no token needed")
+    return None
 
 
 async def get_http_client() -> httpx.AsyncClient:
@@ -52,7 +101,7 @@ async def get_http_client() -> httpx.AsyncClient:
             timeout=120.0,  # Increased timeout for slow FastMCP server responses
             follow_redirects=True
         )
-        logger.info(f"Created HTTP client for {FASTMCP_SERVER_URL}")
+        logger.info(f"Created HTTP client for {FASTMCP_SERVER_URL} (OAuth disabled)")
     
     return http_client
 
@@ -87,6 +136,11 @@ async def get_or_create_session() -> str:
             "Accept": "application/json, text/event-stream",
             "Content-Type": "application/json"
         }
+        
+        # Add OAuth token if configured
+        token = await get_oauth_token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
         
         response = await client.post("/mcp", json=init_request, headers=headers)
         response.raise_for_status()
@@ -192,7 +246,11 @@ async def handle_tools_list(params: Dict[str, Any]) -> Dict[str, Any]:
                 }
                 mcp_tools.append(mcp_tool)
         
-        logger.info(f"Returning {len(mcp_tools)} tools")
+        # Log available tools
+        logger.info(f"\033[33m📋 Available tools ({len(mcp_tools)}):\033[0m")
+        for tool in mcp_tools:
+            logger.info(f"   \033[36m• {tool['name']}\033[0m - {tool.get('description', 'No description')[:60]}...")
+        
         return {"tools": mcp_tools}
     
     except Exception as e:
@@ -206,7 +264,18 @@ async def handle_tools_call(params: Dict[str, Any]) -> Dict[str, Any]:
     tool_name = params.get("name")
     arguments = params.get("arguments", {})
     
-    logger.info(f"Calling tool: {tool_name} with args: {arguments}")
+    # Enhanced logging for tool calls
+    logger.info(f"\033[95m{'='*60}\033[0m")
+    logger.info(f"\033[95m🔧 TOOL CALL: {tool_name}\033[0m")
+    logger.info(f"\033[95m{'='*60}\033[0m")
+    
+    # Log arguments (truncate if too long)
+    args_str = json.dumps(arguments, ensure_ascii=False, indent=2)
+    if len(args_str) > 500:
+        args_str = args_str[:500] + "... (truncated)"
+    logger.info(f"\033[36m📥 Arguments:\033[0m\n{args_str}")
+    
+    start_time = time.time()
     
     try:
         # Call the tool endpoint
@@ -218,6 +287,19 @@ async def handle_tools_call(params: Dict[str, Any]) -> Dict[str, Any]:
                 "arguments": arguments
             }
         )
+        
+        # Calculate duration
+        duration = time.time() - start_time
+        
+        # Log the response (truncate if too long)
+        result_str = json.dumps(result, ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
+        if len(result_str) > 1000:
+            result_preview = result_str[:1000] + "... (truncated)"
+        else:
+            result_preview = result_str
+        
+        logger.info(f"\033[32m📤 Response ({duration:.2f}s):\033[0m\n{result_preview}")
+        logger.info(f"\033[95m{'='*60}\033[0m\n")
         
         # Format response
         if isinstance(result, dict) and "content" in result:
@@ -233,7 +315,8 @@ async def handle_tools_call(params: Dict[str, Any]) -> Dict[str, Any]:
                 ]
             }
     except Exception as e:
-        logger.error(f"Error calling tool {tool_name}: {e}")
+        duration = time.time() - start_time
+        logger.error(f"\033[31m❌ Error calling tool {tool_name} ({duration:.2f}s): {e}\033[0m")
         return {
             "content": [
                 {
@@ -344,7 +427,19 @@ async def handle_jsonrpc(request: Request) -> JSONResponse:
         method = body.get("method")
         request_id = body.get("id")
         
-        logger.info(f"Converting JSON-RPC request to SSE: {method}")
+        # Log incoming request with appropriate icon
+        method_icons = {
+            "initialize": "🚀",
+            "tools/list": "📋",
+            "tools/call": "🔧",
+            "resources/list": "📁",
+            "resources/read": "📖",
+            "prompts/list": "💬",
+            "prompts/get": "💬",
+            "notifications/initialized": "✅",
+        }
+        icon = method_icons.get(method, "📨")
+        logger.info(f"{icon} Incoming request: \033[1m{method}\033[0m (id={request_id})")
         
         # Ensure we have a session (except for initialize requests)
         if method != "initialize":
@@ -359,6 +454,7 @@ async def handle_jsonrpc(request: Request) -> JSONResponse:
             "Content-Type": "application/json"
         }
         
+        # OAuth is disabled - no token needed
         # Add session ID if we have one (FastMCP uses "mcp-session-id" header)
         if session_id:
             headers["mcp-session-id"] = session_id

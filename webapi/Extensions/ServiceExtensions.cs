@@ -166,6 +166,7 @@ public static class CopilotChatServiceExtensions
         ICopilotChatMessageStorageContext chatMessageStorageContext;
         IStorageContext<MemorySource> chatMemorySourceStorageContext;
         IStorageContext<ChatParticipant> chatParticipantStorageContext;
+        IStorageContext<GeneratedFile> generatedFileStorageContext;
 
         ChatStoreOptions chatStoreConfig = services.BuildServiceProvider().GetRequiredService<IOptions<ChatStoreOptions>>().Value;
 
@@ -177,6 +178,7 @@ public static class CopilotChatServiceExtensions
                 chatMessageStorageContext = new VolatileCopilotChatMessageContext();
                 chatMemorySourceStorageContext = new VolatileContext<MemorySource>();
                 chatParticipantStorageContext = new VolatileContext<ChatParticipant>();
+                generatedFileStorageContext = new VolatileContext<GeneratedFile>();
                 break;
             }
 
@@ -197,6 +199,8 @@ public static class CopilotChatServiceExtensions
                     new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_memorysources{Path.GetExtension(fullPath)}")));
                 chatParticipantStorageContext = new FileSystemContext<ChatParticipant>(
                     new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_participants{Path.GetExtension(fullPath)}")));
+                generatedFileStorageContext = new FileSystemContext<GeneratedFile>(
+                    new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_generatedfiles{Path.GetExtension(fullPath)}")));
                 break;
             }
 
@@ -226,6 +230,8 @@ public static class CopilotChatServiceExtensions
                     sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatMemorySourcesContainer);
                 chatParticipantStorageContext = new CosmosDbContext<ChatParticipant>(
                     sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatParticipantsContainer);
+                generatedFileStorageContext = new CosmosDbContext<GeneratedFile>(
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.GeneratedFilesContainer);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 break;
             }
@@ -241,6 +247,7 @@ public static class CopilotChatServiceExtensions
         services.AddSingleton<ChatMessageRepository>(new ChatMessageRepository(chatMessageStorageContext));
         services.AddSingleton<ChatMemorySourceRepository>(new ChatMemorySourceRepository(chatMemorySourceStorageContext));
         services.AddSingleton<ChatParticipantRepository>(new ChatParticipantRepository(chatParticipantStorageContext));
+        services.AddSingleton<GeneratedFileRepository>(new GeneratedFileRepository(generatedFileStorageContext));
 
         return services;
     }

@@ -75,6 +75,12 @@ public class MemorySource : IStorageEntity
     public long Tokens { get; set; } = 0;
 
     /// <summary>
+    /// Whether this document is pinned (always included in context).
+    /// </summary>
+    [JsonPropertyName("isPinned")]
+    public bool IsPinned { get; set; } = false;
+
+    /// <summary>
     /// The partition key for the source.
     /// </summary>
     [JsonIgnore]

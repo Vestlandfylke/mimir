@@ -5,6 +5,7 @@ using CopilotChat.WebApi.Hubs;
 using CopilotChat.WebApi.Models.Response;
 using CopilotChat.WebApi.Options;
 using CopilotChat.WebApi.Plugins.Chat;
+using CopilotChat.WebApi.Plugins.FileGeneration;
 using CopilotChat.WebApi.Services;
 using CopilotChat.WebApi.Storage;
 using Microsoft.AspNetCore.SignalR;
@@ -38,7 +39,7 @@ internal static class SemanticKernelExtensions
     {
         builder.InitializeKernelProvider();
 
-        // Semantic Kernel
+        // Semantic Kernel (main kernel for chat responses)
         builder.Services.AddScoped<Kernel>(
             sp =>
             {
@@ -98,11 +99,13 @@ internal static class SemanticKernelExtensions
                 memoryClient: sp.GetRequiredService<IKernelMemory>(),
                 chatMessageRepository: sp.GetRequiredService<ChatMessageRepository>(),
                 chatSessionRepository: sp.GetRequiredService<ChatSessionRepository>(),
+                sourceRepository: sp.GetRequiredService<ChatMemorySourceRepository>(),
                 messageRelayHubContext: sp.GetRequiredService<IHubContext<MessageRelayHub>>(),
                 promptOptions: sp.GetRequiredService<IOptions<PromptsOptions>>(),
                 documentImportOptions: sp.GetRequiredService<IOptions<DocumentMemoryOptions>>(),
                 contentSafety: sp.GetService<AzureContentSafety>(),
-                logger: sp.GetRequiredService<ILogger<ChatPlugin>>()),
+                logger: sp.GetRequiredService<ILogger<ChatPlugin>>(),
+                mcpPlanService: sp.GetService<McpPlanService>()),
             nameof(ChatPlugin));
 
         return kernel;
@@ -115,8 +118,9 @@ internal static class SemanticKernelExtensions
 
     /// <summary>
     /// Register functions with the main kernel responsible for handling Chat Copilot requests.
+    /// Note: MCP plugins are registered separately in ChatController after we know the chat template.
     /// </summary>
-    private static async Task RegisterChatCopilotFunctionsAsync(IServiceProvider sp, Kernel kernel)
+    private static Task RegisterChatCopilotFunctionsAsync(IServiceProvider sp, Kernel kernel)
     {
         // Chat Copilot functions
         kernel.RegisterChatPlugin(sp);
@@ -124,8 +128,19 @@ internal static class SemanticKernelExtensions
         // Time plugin
         kernel.ImportPluginFromObject(new TimePlugin(), nameof(TimePlugin));
 
-        // MCP plugins - Register MCP tools as plugins
-        await kernel.RegisterMcpPluginsAsync(sp);
+        // File generation plugin - allows AI to create downloadable files
+        kernel.ImportPluginFromObject(
+            new FileGenerationPlugin(
+                sp.GetRequiredService<GeneratedFileRepository>(),
+                sp.GetRequiredService<ILogger<FileGenerationPlugin>>(),
+                sp.GetRequiredService<IHttpContextAccessor>()),
+            nameof(FileGenerationPlugin));
+
+        // MCP plugins are NOT registered here - they are registered in ChatController
+        // after we know which chat template is being used, so we can filter MCP servers
+        // based on the template (e.g., klarsprak-specific servers only for klarsprak chats)
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

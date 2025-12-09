@@ -47,7 +47,20 @@ public sealed class Program
             .AddKernelMemoryServices();
 
         // Add SignalR as the real time relay service
-        builder.Services.AddSignalR();
+        // Use Azure SignalR Service if connection string is configured (required for multi-instance scaling)
+        var signalRConnectionString = builder.Configuration["Azure:SignalR:ConnectionString"];
+        if (!string.IsNullOrEmpty(signalRConnectionString))
+        {
+            builder.Services.AddSignalR().AddAzureSignalR(options =>
+            {
+                options.ConnectionString = signalRConnectionString;
+                options.ServerStickyMode = Microsoft.Azure.SignalR.ServerStickyMode.Required;
+            });
+        }
+        else
+        {
+            builder.Services.AddSignalR();
+        }
 
         // Add AppInsights telemetry
         builder.Services
