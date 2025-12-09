@@ -111,7 +111,7 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                                 <br />
                             </Body1>
                         }
-                action={
+                        action={
                             enableEdits && enableStepDelete ? (
                                 <Dialog open={openDialog}>
                                     <DialogTrigger disableButtonEnhancement>
@@ -129,7 +129,7 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                                             <DialogTitle>Er du sikker på at du vil slette dette steget?</DialogTitle>
                                             <DialogContent>
                                                 {
-                                                    "Å slette dette steget kan forstyrre planens opprinnelige logikk og føre til feil i påfølgende steg. Sørg for at neste steg ikkje er avhengig av dette stegets utdata."
+                                                    'Å slette dette steget kan forstyrre planens opprinnelige logikk og føre til feil i påfølgende steg. Sørg for at neste steg ikkje er avhengig av dette stegets utdata.'
                                                 }
                                             </DialogContent>
                                             <DialogActions>
@@ -158,55 +158,55 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                                 </Dialog>
                             ) : undefined
                         }
-                        />
-                        {step.description && (
-                            <div className={classes.singleLine}>
-                                <Text weight="semibold">Om: </Text> <Text>{step.description}</Text>
+                    />
+                    {step.description && (
+                        <div className={classes.singleLine}>
+                            <Text weight="semibold">Om: </Text> <Text>{step.description}</Text>
+                        </div>
+                    )}
+                    {inputs.length > 0 && (
+                        <div className={classes.parameters}>
+                            <div>
+                                <Text weight="semibold">Inndata: </Text>
+                                {enableEdits && validationErrors > 0 && (
+                                    <Text className={classes.errorMessage}>
+                                        Dette steget trenger ekstra informasjon for å kjøre vellykket. Vennligst fiks
+                                        alle inndata som inneholder interpolerte variabler eller felt markert
+                                        <Text weight="bold"> $???</Text>.
+                                    </Text>
+                                )}
                             </div>
-                        )}
-                        {inputs.length > 0 && (
-                            <div className={classes.parameters}>
-                                <div>
-                                    <Text weight="semibold">Inndata: </Text>
-                                    {enableEdits && validationErrors > 0 && (
-                                        <Text className={classes.errorMessage}>
-                                            Dette steget trenger ekstra informasjon for å kjøre vellykket. Vennligst fiks alle
-                                            inndata som inneholder interpolerte variabler eller felt markert
-                                            <Text weight="bold"> $???</Text>.
-                                        </Text>
-                                    )}
-                                </div>
-                                {inputs.map((input: IPlanInput) => {
-                                    const onEditInput = (newValue: string) => {
-                                        const inputIndex = step.parameters.findIndex(
-                                            (element: IPlanInput) => element.Key === input.Key,
-                                        );
-                                        step.parameters[inputIndex] = {
-                                            Key: input.Key,
-                                            Value: newValue,
-                                        };
-                                    };
-                                    return (
-                                        <PlanStepInput
-                                            input={input}
-                                            key={input.Key}
-                                            onEdit={onEditInput}
-                                            enableEdits={enableEdits}
-                                            validationErrors={validationErrors}
-                                            setValidationErrors={setValidationErrors}
-                                        />
+                            {inputs.map((input: IPlanInput) => {
+                                const onEditInput = (newValue: string) => {
+                                    const inputIndex = step.parameters.findIndex(
+                                        (element: IPlanInput) => element.Key === input.Key,
                                     );
-                                })}
-                            </div>
-                        )}
-                        {step.outputs.length > 0 && (
-                            <div className={classes.parameters}>
-                                <Text weight="semibold">Utdata: </Text>
-                                {step.outputs.map((output: string) => {
-                                    return (
-                                        <Badge color="informative" shape="rounded" appearance="tint" key={output}>
-                                            {output}
-                                        </Badge>
+                                    step.parameters[inputIndex] = {
+                                        Key: input.Key,
+                                        Value: newValue,
+                                    };
+                                };
+                                return (
+                                    <PlanStepInput
+                                        input={input}
+                                        key={input.Key}
+                                        onEdit={onEditInput}
+                                        enableEdits={enableEdits}
+                                        validationErrors={validationErrors}
+                                        setValidationErrors={setValidationErrors}
+                                    />
+                                );
+                            })}
+                        </div>
+                    )}
+                    {step.outputs.length > 0 && (
+                        <div className={classes.parameters}>
+                            <Text weight="semibold">Utdata: </Text>
+                            {step.outputs.map((output: string) => {
+                                return (
+                                    <Badge color="informative" shape="rounded" appearance="tint" key={output}>
+                                        {output}
+                                    </Badge>
                                 );
                             })}
                         </div>

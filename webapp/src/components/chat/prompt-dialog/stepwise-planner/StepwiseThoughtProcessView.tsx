@@ -57,7 +57,8 @@ export const StepwiseThoughtProcessView: React.FC<IStepwiseThoughtProcessViewPro
                     expandIconPosition="end"
                     className={stepClasses.header}
                 >
-                    Utforsk korleis den stegvise planleggjaren kom fram til dette resultatet! Klikk her for å vise stega og logikken.
+                    Utforsk korleis den stegvise planleggjaren kom fram til dette resultatet! Klikk her for å vise stega
+                    og logikken.
                 </AccordionHeader>
             )}
             {showthoughtProcess && (
@@ -82,5 +83,5 @@ export const StepwiseThoughtProcessView: React.FC<IStepwiseThoughtProcessViewPro
                 </>
             )}
         </div>
-    );    
+    );
 };

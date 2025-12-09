@@ -48,7 +48,8 @@ jobs:
 
       - name: Get app name
         run: |
-          WEB_APP_NAME=$(az deployment group show --name ${{inputs.DEPLOYMENT_NAME}} --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} --output json | jq -r '.properties.outputs.memoryPipelineName.value')
+          # Use hardcoded app name for existing resource
+          WEB_APP_NAME="app-copichat-4kt5uxo2hrzri-memorypipeline"
           echo "AZURE_WEBAPP_NAME=$WEB_APP_NAME" >> $GITHUB_ENV
 
       - name: Enable Run From Package

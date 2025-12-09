@@ -150,7 +150,9 @@ export const PlanDialogView: React.FC<IPlanDialogViewProps> = ({ goal, plan, set
                         <DialogTitle>
                             Er du sikker på at du vil køyre denne planen?
                             <br />
-                            <Body1>Ver venleg og sørg for at alle naudsynte tillegg er aktiverte før du går vidare.</Body1>
+                            <Body1>
+                                Ver venleg og sørg for at alle naudsynte tillegg er aktiverte før du går vidare.
+                            </Body1>
                         </DialogTitle>
                         <DialogContent className={dialogClasses.content}>
                             <div className={classes.planView}>

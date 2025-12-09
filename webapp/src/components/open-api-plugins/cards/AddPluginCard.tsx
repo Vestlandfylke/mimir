@@ -25,5 +25,4 @@ export const AddPluginCard: React.FC = () => {
             />
         </div>
     );
-    
 };

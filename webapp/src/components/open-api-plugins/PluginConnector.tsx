@@ -135,7 +135,6 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
         setOpen(false);
     };
 
-
     const inactive = msalRequired && !AuthHelper.isAuthAAD();
     const inactiveReason = 'Berre tilgjengeleg når Azure AD-autorisasjon blir brukt.';
 
@@ -292,7 +291,8 @@ export const PluginConnector: React.FC<PluginConnectorProps> = ({
                                                 />
                                                 {propertyDetails.helpLink && (
                                                     <Body1>
-                                                        For fleire detaljar om korleis ein får tak i denne informasjonen,{' '}
+                                                        For fleire detaljar om korleis ein får tak i denne
+                                                        informasjonen,{' '}
                                                         <a
                                                             href={propertyDetails.helpLink}
                                                             target="_blank"

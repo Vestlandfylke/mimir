@@ -78,9 +78,10 @@ export const useChat = () => {
     };
 
     const createChat = async (template?: string) => {
-        const chatTitle = template === 'klarsprak' 
-            ? `Klarspråk-assistent @ ${new Date().toLocaleString()}`
-            : `Mimir @ ${new Date().toLocaleString()}`;
+        const chatTitle =
+            template === 'klarsprak'
+                ? `Klarspråk-assistent @ ${new Date().toLocaleString()}`
+                : `Mimir @ ${new Date().toLocaleString()}`;
         try {
             await chatService
                 .createChatAsync(chatTitle, await AuthHelper.getSKaaSAccessToken(instance, inProgress), template)
@@ -171,58 +172,58 @@ export const useChat = () => {
         }
     };
 
-const loadChats = async () => {
-    try {
-        const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
-        const chatSessions = await chatService.getAllChatsAsync(accessToken);
+    const loadChats = async () => {
+        try {
+            const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+            const chatSessions = await chatService.getAllChatsAsync(accessToken);
 
-        if (chatSessions.length > 0) {
-            const loadedConversations: Conversations = {};
-            const limitedChatSessions = chatSessions.slice(0, 15); // Limit to 15 chat sessions
+            if (chatSessions.length > 0) {
+                const loadedConversations: Conversations = {};
+                const limitedChatSessions = chatSessions.slice(0, 15); // Limit to 15 chat sessions
 
-            for (const chatSession of limitedChatSessions) {
-                const chatUsers = await chatService.getAllChatParticipantsAsync(chatSession.id, accessToken);
-                const chatMessages = await chatService.getChatMessagesAsync(chatSession.id, 0, 100, accessToken);
+                for (const chatSession of limitedChatSessions) {
+                    const chatUsers = await chatService.getAllChatParticipantsAsync(chatSession.id, accessToken);
+                    const chatMessages = await chatService.getChatMessagesAsync(chatSession.id, 0, 100, accessToken);
 
-                loadedConversations[chatSession.id] = {
-                    id: chatSession.id,
-                    title: chatSession.title,
-                    systemDescription: chatSession.systemDescription,
-                    memoryBalance: chatSession.memoryBalance,
-                    users: chatUsers,
-                    messages: chatMessages,
-                    enabledHostedPlugins: chatSession.enabledPlugins,
-                    botProfilePicture: getBotProfilePicture(Object.keys(loadedConversations).length),
-                    input: '',
-                    botResponseStatus: undefined,
-                    userDataLoaded: false,
-                    disabled: false,
-                    hidden: !features[FeatureKeys.MultiUserChat].enabled && chatUsers.length > 1,
-                };
-            }
+                    loadedConversations[chatSession.id] = {
+                        id: chatSession.id,
+                        title: chatSession.title,
+                        systemDescription: chatSession.systemDescription,
+                        memoryBalance: chatSession.memoryBalance,
+                        users: chatUsers,
+                        messages: chatMessages,
+                        enabledHostedPlugins: chatSession.enabledPlugins,
+                        botProfilePicture: getBotProfilePicture(Object.keys(loadedConversations).length),
+                        input: '',
+                        botResponseStatus: undefined,
+                        userDataLoaded: false,
+                        disabled: false,
+                        hidden: !features[FeatureKeys.MultiUserChat].enabled && chatUsers.length > 1,
+                    };
+                }
 
-            dispatch(setConversations(loadedConversations));
+                dispatch(setConversations(loadedConversations));
 
-            // If there are no non-hidden chats, create a new chat
-            const nonHiddenChats = Object.values(loadedConversations).filter((c) => !c.hidden);
-            if (nonHiddenChats.length === 0) {
-                await createChat();
+                // If there are no non-hidden chats, create a new chat
+                const nonHiddenChats = Object.values(loadedConversations).filter((c) => !c.hidden);
+                if (nonHiddenChats.length === 0) {
+                    await createChat();
+                } else {
+                    dispatch(setSelectedConversation(nonHiddenChats[0].id));
+                }
             } else {
-                dispatch(setSelectedConversation(nonHiddenChats[0].id));
+                // No chats exist, create first chat window
+                await createChat();
             }
-        } else {
-            // No chats exist, create first chat window
-            await createChat();
+
+            return true;
+        } catch (e: any) {
+            const errorMessage = `Unable to load chats. Details: ${getErrorDetails(e)}`;
+            dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
+
+            return false;
         }
-
-        return true;
-    } catch (e: any) {
-        const errorMessage = `Unable to load chats. Details: ${getErrorDetails(e)}`;
-        dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
-
-        return false;
-    }
-};
+    };
 
     const downloadBot = async (chatId: string) => {
         try {
@@ -485,7 +486,7 @@ export function getFriendlyChatName(convo: ChatState): string {
     // If the chat title is the default Copilot timestamp, use the first user message as the title.
     // If no user messages exist, use 'New Chat' as the title.
     const friendlyTitle = autoGeneratedTitleRegex.test(convo.title)
-        ? firstUserMessage?.content ?? 'New Chat'
+        ? (firstUserMessage?.content ?? 'New Chat')
         : convo.title;
 
     // Truncate the title if it is too long

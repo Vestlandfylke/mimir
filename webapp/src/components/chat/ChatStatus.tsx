@@ -42,7 +42,7 @@ export const ChatStatus: React.FC = () => {
         message = message
             ? `${message} og ${numberOfUsersTyping} brukarar skriv`
             : `${numberOfUsersTyping} brukarar skriv`;
-    }    
+    }
 
     if (!message) {
         return null;

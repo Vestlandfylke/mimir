@@ -34,11 +34,11 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
     const onAddChat = () => {
         void chat.createChat();
     };
-    
+
     const onAddKlarsprakChat = () => {
         void chat.createChat('klarsprak');
     };
-    
+
     const onJoinClick = () => {
         setIsJoiningBot(true);
     };

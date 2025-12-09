@@ -108,7 +108,8 @@ export const Features = {
     [FeatureKeys.RLHF]: {
         enabled: false,
         label: 'Forsterka læring frå menneskeleg tilbakemelding',
-        description: 'Gjer det mogleg for brukarar å stemme på svar generert av modellen. Berre for demonstrasjonsformål.',
+        description:
+            'Gjer det mogleg for brukarar å stemme på svar generert av modellen. Berre for demonstrasjonsformål.',
         // TODO: [Issue #42] Send og lagra tilbakemelding i backend
     },
 };

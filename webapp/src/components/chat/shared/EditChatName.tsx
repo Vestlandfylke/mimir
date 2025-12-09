@@ -72,13 +72,13 @@ export const EditChatName: React.FC<IEditChatNameProps> = ({ name, chatId, exitE
             dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
         });
     };
-    
+
     const handleKeyDown: React.KeyboardEventHandler<HTMLElement> = (event) => {
         if (event.key === 'Enter') {
             handleSave();
         }
     };
-    
+
     return (
         <div
             className={classes.root}
@@ -108,5 +108,5 @@ export const EditChatName: React.FC<IEditChatNameProps> = ({ name, chatId, exitE
                 </div>
             )}
         </div>
-    );    
+    );
 };

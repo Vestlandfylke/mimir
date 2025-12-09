@@ -86,13 +86,11 @@ export const BackendProbe: FC<IData> = ({ onBackendFound }) => {
             ) : (
                 <div className={classes.informativeView}>
                     <Title3>Koblar til Mimir...</Title3>
-                        <Spinner />
-                        
-                    <Body1>
-                        Den klokaste av alle gudar i norrøn mytologi! Mimir voktar kunnskapens
-                        brønn under Yggdrasil, og no har du tilgang til visdommen hans.
+                    <Spinner />
 
-                        Vennligst vent medan tilkoblingen vert oppretta.    
+                    <Body1>
+                        Den klokaste av alle gudar i norrøn mytologi! Mimir voktar kunnskapens brønn under Yggdrasil, og
+                        no har du tilgang til visdommen hans. Vennligst vent medan tilkoblingen vert oppretta.
                     </Body1>
                 </div>
             )}

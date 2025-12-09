@@ -26,7 +26,6 @@ const MissingEnvVariablesError: FC<IData> = ({ missingVariables }) => {
             </div>
         </div>
     );
-
 };
 
 export default MissingEnvVariablesError;

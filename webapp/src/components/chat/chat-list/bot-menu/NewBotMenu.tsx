@@ -26,11 +26,11 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
     const onAddChat = () => {
         void chat.createChat();
     };
-    
+
     const onAddKlarsprakChat = () => {
         void chat.createChat('klarsprak');
     };
-    
+
     const onJoinClick = () => {
         setIsJoiningBot(true);
     };

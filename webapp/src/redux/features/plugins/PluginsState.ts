@@ -72,7 +72,8 @@ export const initialState: PluginsState = {
         [BuiltInPlugins.MsGraph]: {
             name: BuiltInPlugins.MsGraph,
             publisher: 'Microsoft',
-            description: 'Bruk din Microsoft-konto for å få tilgang til din personlege Graph-informasjon og Microsoft-tenester.',
+            description:
+                'Bruk din Microsoft-konto for å få tilgang til din personlege Graph-informasjon og Microsoft-tenester.',
             enabled: false,
             authRequirements: {
                 Msal: true,

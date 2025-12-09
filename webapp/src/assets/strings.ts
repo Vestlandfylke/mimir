@@ -1,5 +1,6 @@
 export const COPY = {
-    STEPWISE_RESULT_NOT_FOUND_REGEX: /(Resultat ikkje funne, sjå gjennom _stepsTaken for å sjå kva som hende\.)\s+(\[{.*}])/g,
+    STEPWISE_RESULT_NOT_FOUND_REGEX:
+        /(Resultat ikkje funne, sjå gjennom _stepsTaken for å sjå kva som hende\.)\s+(\[{.*}])/g,
     CHAT_DELETED_MESSAGE: (chatName?: string) =>
         `Chat ${
             chatName ? `{${chatName}} ` : ''

@@ -39,5 +39,4 @@ export const TabView: React.FC<ITabViewProps> = ({ title, learnMoreDescription, 
             </Label>
         </div>
     );
-    
 };

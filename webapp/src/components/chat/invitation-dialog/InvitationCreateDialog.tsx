@@ -49,7 +49,9 @@ export const InvitationCreateDialog: React.FC<InvitationCreateDialogProps> = ({ 
                 <DialogBody>
                     <DialogTitle>Inviter andre til botten din</DialogTitle>
                     <DialogContent className={classes.content}>
-                        <Label>Vennligst oppgi følgjande Chat ID til vennene dine slik at dei kan bli med i chatten.</Label>
+                        <Label>
+                            Vennligst oppgi følgjande Chat ID til vennene dine slik at dei kan bli med i chatten.
+                        </Label>
                         <Label data-testid="invitationDialogChatIDLabel" weight="semibold">
                             {chatId}
                         </Label>
