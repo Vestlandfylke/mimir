@@ -147,7 +147,7 @@ public interface IMcpClientManager : IAsyncDisposable
 /// <summary>
 /// Manages MCP client connections throughout the application lifetime.
 /// </summary>
-    internal sealed class McpClientManager : IMcpClientManager
+internal sealed class McpClientManager : IMcpClientManager
 {
   private readonly IOptions<McpServerOptions> _options;
   private readonly ILogger<McpClientManager> _logger;
