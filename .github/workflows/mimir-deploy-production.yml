@@ -52,39 +52,31 @@ jobs:
     if: github.event.inputs.deploy_mcp_bridge != 'false'
     uses: ./.github/workflows/mimir-build-mcp-bridge.yml
 
-  # Deploy infrastructure
-  deploy-infra:
-    needs: []
-    uses: ./.github/workflows/copilot-deploy-infra.yml
-    with:
-      ENVIRONMENT: production
-    secrets: inherit
-
   # Deploy backend
   deploy-backend:
     if: github.event.inputs.deploy_backend != 'false'
-    needs: [build-backend, deploy-infra]
+    needs: [build-backend]
     uses: ./.github/workflows/copilot-deploy-backend.yml
     with:
       ARTIFACT_NAME: backend
       ENVIRONMENT: production
-      DEPLOYMENT_NAME: ${{ needs.deploy-infra.outputs.deployment-id }}
+      DEPLOYMENT_NAME: ${{ vars.CC_DEPLOYMENT_NAME }}
     secrets: inherit
 
   # Deploy memorypipeline
   deploy-memorypipeline:
-    needs: [build-memorypipeline, deploy-infra]
+    needs: [build-memorypipeline]
     uses: ./.github/workflows/copilot-deploy-memorypipeline.yml
     with:
       ARTIFACT_NAME: memorypipeline
       ENVIRONMENT: production
-      DEPLOYMENT_NAME: ${{ needs.deploy-infra.outputs.deployment-id }}
+      DEPLOYMENT_NAME: ${{ vars.CC_DEPLOYMENT_NAME }}
     secrets: inherit
 
   # Deploy MCP Bridge
   deploy-mcp-bridge:
     if: github.event.inputs.deploy_mcp_bridge != 'false'
-    needs: [build-mcp-bridge, deploy-infra]
+    needs: [build-mcp-bridge]
     uses: ./.github/workflows/mimir-deploy-mcp-bridge.yml
     with:
       ARTIFACT_NAME: mcp-bridge
@@ -93,7 +85,7 @@ jobs:
 
   # Update WebAPI with MCP Bridge URL
   configure-webapi:
-    needs: [deploy-backend, deploy-mcp-bridge, deploy-infra]
+    needs: [deploy-backend, deploy-mcp-bridge]
     runs-on: ubuntu-latest
     if: ${{ needs.deploy-mcp-bridge.result == 'success' }}
     steps:
@@ -104,11 +96,8 @@ jobs:
 
       - name: Update WebAPI Configuration
         run: |
-          # Get WebAPI name
-          WEBAPP_NAME=$(az deployment group show \
-            --name ${{needs.deploy-infra.outputs.deployment-id}} \
-            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
-            --query properties.outputs.webapiName.value -o tsv)
+          # Use hardcoded WebAPI name (existing resource)
+          WEBAPP_NAME="app-copichat-4kt5uxo2hrzri-webapi"
 
           # Update MCP Server URL
           MCP_URL="${{needs.deploy-mcp-bridge.outputs.mcp-bridge-url}}"
@@ -127,10 +116,7 @@ jobs:
 
       - name: Restart WebAPI
         run: |
-          WEBAPP_NAME=$(az deployment group show \
-            --name ${{needs.deploy-infra.outputs.deployment-id}} \
-            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
-            --query properties.outputs.webapiName.value -o tsv)
+          WEBAPP_NAME="app-copichat-4kt5uxo2hrzri-webapi"
 
           az webapp restart \
             --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
@@ -157,11 +143,10 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Infrastructure | ${{ needs.deploy-infra.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Backend | ${{ needs.deploy-backend.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Memorypipeline | ${{ needs.deploy-memorypipeline.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| MCP Bridge | ${{ needs.deploy-mcp-bridge.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Configuration | ${{ needs.configure-webapi.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Deployment ID**: ${{ needs.deploy-infra.outputs.deployment-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group**: ${{ vars.CC_DEPLOYMENT_GROUP_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "**MCP Bridge URL**: ${{ needs.deploy-mcp-bridge.outputs.mcp-bridge-url }}" >> $GITHUB_STEP_SUMMARY
