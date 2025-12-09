@@ -60,7 +60,7 @@ jobs:
     with:
       ARTIFACT_NAME: ${{ needs.build-backend.outputs.artifact }}
       ENVIRONMENT: production
-      DEPLOYMENT_NAME: ${{ vars.CC_DEPLOYMENT_NAME }}
+      DEPLOYMENT_NAME: SK-Copilot-NPI-MIMIR
     secrets: inherit
 
   # Deploy memorypipeline
@@ -70,7 +70,7 @@ jobs:
     with:
       ARTIFACT_NAME: memorypipeline
       ENVIRONMENT: production
-      DEPLOYMENT_NAME: ${{ vars.CC_DEPLOYMENT_NAME }}
+      DEPLOYMENT_NAME: SK-Copilot-NPI-MIMIR
     secrets: inherit
 
   # Deploy MCP Bridge
