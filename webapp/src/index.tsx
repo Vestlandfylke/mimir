@@ -12,6 +12,7 @@ import React from 'react';
 import { BackendServiceUrl } from './libs/services/BaseService';
 import { EmbeddedAppHelper } from './libs/utils/EmbeddedAppHelper';
 import { setAuthConfig } from './redux/features/app/appSlice';
+import { teamsAuthHelper } from './libs/auth/TeamsAuthHelper';
 
 if (!localStorage.getItem('debug')) {
     localStorage.setItem('debug', `${Constants.debug.root}:*`);
@@ -29,9 +30,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         root = ReactDOM.createRoot(container);
 
-        renderApp();
+        void initializeAndRenderApp();
     }
 });
+
+async function initializeAndRenderApp() {
+    // Initialize Teams SDK FIRST if we're in Teams
+    // This MUST happen before any other app initialization
+    if (EmbeddedAppHelper.isInTeams()) {
+        console.log('Detected Teams context, initializing Teams SDK...');
+        try {
+            const teamsInitSuccess = await teamsAuthHelper.initialize();
+            if (teamsInitSuccess) {
+                console.log('Teams SDK initialized successfully');
+            } else {
+                console.warn('Teams SDK initialization failed');
+            }
+        } catch (error) {
+            console.error('Error initializing Teams SDK:', error);
+        }
+    }
+
+    renderApp();
+}
 
 export function renderApp() {
     // Log the app context for debugging
