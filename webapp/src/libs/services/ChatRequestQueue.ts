@@ -2,10 +2,10 @@
 
 /**
  * ChatRequestQueue - Ensures chat requests are processed sequentially
- * 
+ *
  * Problem: When sending multiple messages quickly, responses can be lost
  * because Redux state gets overwritten by the second request.
- * 
+ *
  * Solution: Queue requests and process them one at a time.
  */
 
@@ -90,4 +90,3 @@ class ChatRequestQueue {
 
 // Export singleton instance
 export const chatRequestQueue = new ChatRequestQueue();
-
