@@ -49,18 +49,17 @@ export const Login: React.FC = () => {
         };
     }, [instance]);
 
-    const handleLogin = async () => {
+    const handleLogin = () => {
         setSilentAuthInProgress(true);
         setSilentAuthMessage('Logger inn...');
 
-        try {
-            // Use the dynamic authentication method (popup for iframes, redirect for browser)
-            await AuthHelper.loginAsync(instance);
-        } catch (e: unknown) {
+        // Use the dynamic authentication method (popup for iframes, redirect for browser)
+        // Note: We don't await here to avoid Promise return type (React onClick expects void)
+        void AuthHelper.loginAsync(instance).catch((e: unknown) => {
             const context = EmbeddedAppHelper.getAppContext();
             setSilentAuthInProgress(false);
             alert(`Feil ved innlogging (${context}): ${getErrorDetails(e)}`);
-        }
+        });
     };
 
     return (
