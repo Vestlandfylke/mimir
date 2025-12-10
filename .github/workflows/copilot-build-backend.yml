@@ -37,6 +37,13 @@ jobs:
           clean: true
           fetch-depth: 0
 
+      - name: Setup Node.js for frontend build
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "yarn"
+          cache-dependency-path: "webapp/yarn.lock"
+
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2
         with:
