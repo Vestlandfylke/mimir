@@ -41,8 +41,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: "yarn"
-          cache-dependency-path: "webapp/yarn.lock"
+
+      - name: Clean frontend build artifacts
+        run: |
+          if (Test-Path "webapp\build") {
+            Remove-Item "webapp\build" -Recurse -Force
+            Write-Host "Cleaned old frontend build"
+          }
+          if (Test-Path "webapp\node_modules") {
+            Remove-Item "webapp\node_modules" -Recurse -Force
+            Write-Host "Cleaned node_modules"
+          }
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2

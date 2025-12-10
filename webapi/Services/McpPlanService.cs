@@ -22,28 +22,28 @@ public class McpPlanService
       ILogger<McpPlanService> logger,
       IOptions<McpServerOptions> mcpOptions)
   {
-    _logger = logger;
-    _mcpOptions = mcpOptions.Value;
+    this._logger = logger;
+    this._mcpOptions = mcpOptions.Value;
   }
 
   /// <summary>
   /// Gets the current plan approval mode.
   /// </summary>
-  public PlanApprovalMode ApprovalMode => _mcpOptions.PlanApprovalMode;
+  public PlanApprovalMode ApprovalMode => this._mcpOptions.PlanApprovalMode;
 
   /// <summary>
   /// Gets the list of MCP server names that require approval based on current mode.
   /// </summary>
   public IReadOnlyList<string> GetServersRequiringApproval()
   {
-    return _mcpOptions.PlanApprovalMode switch
+    return this._mcpOptions.PlanApprovalMode switch
     {
       PlanApprovalMode.Auto => new List<string>(),
-      PlanApprovalMode.RequireApproval => _mcpOptions.Servers
+      PlanApprovalMode.RequireApproval => this._mcpOptions.Servers
           .Where(s => s.Enabled)
           .Select(s => s.Name)
           .ToList(),
-      PlanApprovalMode.PerServer => _mcpOptions.Servers
+      PlanApprovalMode.PerServer => this._mcpOptions.Servers
           .Where(s => s.Enabled && s.RequireApproval)
           .Select(s => s.Name)
           .ToList(),
@@ -56,7 +56,7 @@ public class McpPlanService
   /// </summary>
   public bool AnyServerRequiresApproval()
   {
-    return _mcpOptions.AnyToolRequiresApproval();
+    return this._mcpOptions.AnyToolRequiresApproval();
   }
 
   /// <summary>
@@ -66,7 +66,7 @@ public class McpPlanService
   /// <returns>True if the plugin requires approval.</returns>
   public bool RequiresApproval(string pluginName)
   {
-    return _mcpOptions.IsApprovalRequired(pluginName);
+    return this._mcpOptions.IsApprovalRequired(pluginName);
   }
 
   /// <summary>
@@ -88,7 +88,7 @@ public class McpPlanService
 
     foreach (var functionCall in functionCalls)
     {
-      var step = CreatePlanStep(kernel, functionCall, index++);
+      var step = this.CreatePlanStep(kernel, functionCall, index++);
       steps.Add(step);
     }
 
@@ -172,14 +172,14 @@ public class McpPlanService
     {
       try
       {
-        _logger.LogInformation(
+        this._logger.LogInformation(
             "Executing approved MCP tool: {Plugin}.{Function}",
             step.SkillName,
             step.Name);
 
         if (!kernel.Plugins.TryGetFunction(step.SkillName, step.Name, out var function))
         {
-          _logger.LogWarning(
+          this._logger.LogWarning(
               "Function {Plugin}.{Function} not found in kernel",
               step.SkillName,
               step.Name);
@@ -196,14 +196,14 @@ public class McpPlanService
         var result = await function.InvokeAsync(kernel, arguments, cancellationToken);
         results.Add(result);
 
-        _logger.LogInformation(
+        this._logger.LogInformation(
             "MCP tool {Plugin}.{Function} executed successfully",
             step.SkillName,
             step.Name);
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex,
+        this._logger.LogError(ex,
             "Error executing MCP tool {Plugin}.{Function}",
             step.SkillName,
             step.Name);

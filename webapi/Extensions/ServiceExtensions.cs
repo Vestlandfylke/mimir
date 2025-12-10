@@ -149,7 +149,8 @@ public static class CopilotChatServiceExtensions
                     {
                         policy.WithOrigins(allowedOrigins)
                             .WithMethods("POST", "GET", "PUT", "DELETE", "PATCH")
-                            .AllowAnyHeader();
+                            .AllowAnyHeader()
+                            .AllowCredentials(); // Required for SignalR with authentication
                     });
             });
         }

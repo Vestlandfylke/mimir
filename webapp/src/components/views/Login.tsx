@@ -24,7 +24,7 @@ export const Login: React.FC = () => {
                 setSilentAuthMessage('Prøver automatisk pålogging...');
 
                 const success = await AuthHelper.attemptSilentLogin(instance);
-                
+
                 if (success) {
                     console.log('Login component: Silent authentication successful');
                     setSilentAuthMessage('Pålogging vellykket! Laster inn...');
@@ -77,7 +77,12 @@ export const Login: React.FC = () => {
                     <Spinner size="large" label={silentAuthMessage} />
                 </div>
             ) : (
-                <Button style={{ padding: 0, marginTop: '20px' }} appearance="transparent" onClick={handleLogin} data-testid="signinButton">
+                <Button
+                    style={{ padding: 0, marginTop: '20px' }}
+                    appearance="transparent"
+                    onClick={handleLogin}
+                    data-testid="signinButton"
+                >
                     <Image src={signInLogo} />
                 </Button>
             )}

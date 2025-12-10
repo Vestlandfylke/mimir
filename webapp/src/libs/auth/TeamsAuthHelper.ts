@@ -75,7 +75,7 @@ class TeamsAuthHelper {
 
         try {
             log('Attempting silent SSO with scopes:', scopes);
-            
+
             const token = await authentication.getAuthToken({
                 silent: true,
                 // Teams will only prompt if absolutely necessary
@@ -146,10 +146,7 @@ class TeamsAuthHelper {
     /**
      * Complete authentication flow - try silent first, fallback to interactive
      */
-    async authenticate(
-        msalInstance: IPublicClientApplication,
-        scopes: string[],
-    ): Promise<TeamsAuthResult> {
+    async authenticate(msalInstance: IPublicClientApplication, scopes: string[]): Promise<TeamsAuthResult> {
         log('Starting Teams authentication flow...');
 
         // Step 1: Try silent SSO first
@@ -205,4 +202,3 @@ class TeamsAuthHelper {
 
 // Export singleton instance
 export const teamsAuthHelper = new TeamsAuthHelper();
-

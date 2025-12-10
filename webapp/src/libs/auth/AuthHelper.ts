@@ -88,9 +88,9 @@ const ssoSilentRequest = async (msalInstance: IPublicClientApplication) => {
  */
 const loginAsync = async (instance: IPublicClientApplication) => {
     const scopes = getMsalScopes();
-    
+
     log('Starting authentication flow...');
-    
+
     // Step 1: Try silent authentication first
     const silentSuccess = await attemptSilentLogin(instance);
     if (silentSuccess) {
@@ -104,7 +104,7 @@ const loginAsync = async (instance: IPublicClientApplication) => {
     if (EmbeddedAppHelper.isInTeams()) {
         log('Using Teams authentication flow');
         const result = await teamsAuthHelper.authenticate(instance, scopes);
-        
+
         if (!result.success) {
             throw new Error(result.error ?? 'Teams authentication failed');
         }
@@ -172,7 +172,7 @@ const initializeAndAttemptSso = async (instance: IPublicClientApplication): Prom
         if (EmbeddedAppHelper.isInTeams()) {
             log('Initializing Teams SSO...');
             await teamsAuthHelper.initialize();
-            
+
             const result = await teamsAuthHelper.attemptSilentSso(getMsalScopes());
             if (result.success && result.token) {
                 log('Teams SSO successful');
@@ -185,7 +185,7 @@ const initializeAndAttemptSso = async (instance: IPublicClientApplication): Prom
         const accounts = instance.getAllAccounts();
         if (accounts.length > 0) {
             const account = instance.getActiveAccount() ?? accounts[0];
-            
+
             const response = await instance.acquireTokenSilent({
                 scopes: getMsalScopes(),
                 account: account,

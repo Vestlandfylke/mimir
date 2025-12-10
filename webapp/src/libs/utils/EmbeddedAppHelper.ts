@@ -33,12 +33,12 @@ export const isInTeams = (): boolean => {
 
     // Method 4: Check for Teams-specific hostnames
     const hasTeamsHost =
-        url.includes('teams.microsoft.com') || 
+        url.includes('teams.microsoft.com') ||
         url.includes('teams.cloud.microsoft') ||
         url.includes('.sharepoint.com/_layouts/15/teamslogon.aspx');
 
     const result = hasTeamsParam || hasTeamsUserAgent || hasTeamsContext || hasTeamsHost;
-    
+
     // Store result for future use
     if (result) {
         sessionStorage.setItem('teamsContext', 'true');

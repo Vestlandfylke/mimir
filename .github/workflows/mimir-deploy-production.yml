@@ -106,10 +106,22 @@ jobs:
             --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
             --name $WEBAPP_NAME \
             --settings \
+              FastModel__Enabled="true" \
+              FastModel__Deployment="gpt-4o-mini" \
+              Service__SemanticPluginsDirectory="./Plugins/SemanticPlugins" \
+              Service__NativePluginsDirectory="./Plugins/NativePlugins" \
+              McpServers__PlanApprovalMode="PerServer" \
               McpServers__Servers__0__Url="${MCP_URL}/mcp" \
               McpServers__Servers__0__Name="CustomMcpServer" \
               McpServers__Servers__0__Enabled="true" \
               McpServers__Servers__0__TimeoutSeconds="120" \
+              McpServers__Servers__0__RequireApproval="true" \
+              McpServers__Servers__0__Description="Klarspråk MCP server - provides text analysis and simplification tools" \
+              McpServers__Servers__0__Templates__0="klarsprak" \
+              DocumentMemory__DocumentLineSplitMaxTokens="72" \
+              DocumentMemory__DocumentChunkMaxTokens="512" \
+              DocumentMemory__FileSizeLimit="10000000" \
+              DocumentMemory__FileCountLimit="20" \
             --output none
 
           echo "✅ WebAPI configured to use MCP Bridge at ${MCP_URL}"
