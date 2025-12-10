@@ -3,6 +3,7 @@
 using System.Text;
 using CopilotChat.WebApi.Auth;
 using CopilotChat.WebApi.Storage;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CopilotChat.WebApi.Controllers;
@@ -34,6 +35,7 @@ public class FileDownloadController : ControllerBase
   /// <returns>The file content</returns>
   [HttpGet]
   [Route("files/{fileId}")]
+  [AllowAnonymous] // Allow direct browser access - authorization is checked internally
   [ProducesResponseType(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -60,15 +62,24 @@ public class FileDownloadController : ControllerBase
       }
 
       // Verify user has access (must be the creator or have access to the chat)
-      // Skip check if either userId is empty (for local testing without auth)
-      if (!string.IsNullOrEmpty(file.UserId) &&
-          !string.IsNullOrEmpty(this._authInfo.UserId) &&
-          file.UserId != this._authInfo.UserId)
+      // If file has an owner (UserId set), verify the requesting user matches
+      if (!string.IsNullOrEmpty(file.UserId))
       {
-        this._logger.LogWarning("User {UserId} attempted to access file {FileId} belonging to {FileOwnerId}",
-            this._authInfo.UserId, fileId, file.UserId);
-        return this.StatusCode(StatusCodes.Status403Forbidden, "Du har ikkje tilgang til denne fila");
+        // File has an owner - must be authenticated and match
+        if (string.IsNullOrEmpty(this._authInfo.UserId))
+        {
+          this._logger.LogWarning("Anonymous user attempted to access protected file {FileId}", fileId);
+          return this.StatusCode(StatusCodes.Status401Unauthorized, "Du må vere logga inn for å laste ned denne fila");
+        }
+        
+        if (file.UserId != this._authInfo.UserId)
+        {
+          this._logger.LogWarning("User {UserId} attempted to access file {FileId} belonging to {FileOwnerId}",
+              this._authInfo.UserId, fileId, file.UserId);
+          return this.StatusCode(StatusCodes.Status403Forbidden, "Du har ikkje tilgang til denne fila");
+        }
       }
+      // If file has no owner (UserId empty), allow access for local testing
 
       // Convert content to bytes
       byte[] fileBytes;
