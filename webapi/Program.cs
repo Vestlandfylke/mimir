@@ -14,6 +14,7 @@ namespace CopilotChat.WebApi;
 
 /// <summary>
 /// Chat Copilot Service
+/// Built with Semantic Kernel 1.68.0 for GPT-5/GPT-4o compatibility
 /// </summary>
 public sealed class Program
 {
