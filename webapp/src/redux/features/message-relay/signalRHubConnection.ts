@@ -213,18 +213,23 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
         },
     );
 
-    hubConnection.on(SignalRCallbackMethods.ReceiveBotResponseStatus, (chatId: string, status: string) => {
+    hubConnection.on(SignalRCallbackMethods.ReceiveBotResponseStatus, (chatId: string, status: string | null) => {
         // Enhanced logging for bot status
         console.log('🔄 SignalR ReceiveBotResponseStatus:', {
             chatId,
-            status: status || 'null (done/clear)',
+            status: status ?? 'null (done/clear)',
             timestamp: new Date().toISOString(),
             connectionState: hubConnection.state,
         });
 
-        store.dispatch({ type: 'conversations/updateBotResponseStatus', payload: { chatId, status } });
+        // Normalize null/empty to undefined to clear spinner reliably
+        const normalizedStatus = status ?? undefined;
+        store.dispatch({
+            type: 'conversations/updateBotResponseStatus',
+            payload: { chatId, status: normalizedStatus },
+        });
 
-        if (!status) {
+        if (!normalizedStatus) {
             console.log('✓ Bot response complete - spinner should clear');
         }
     });

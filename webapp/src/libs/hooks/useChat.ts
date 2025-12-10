@@ -25,9 +25,9 @@ import { IChatUser } from '../models/ChatUser';
 import { TokenUsage } from '../models/TokenUsage';
 import { IAskVariables } from '../semantic-kernel/model/Ask';
 import { ChatArchiveService } from '../services/ChatArchiveService';
+import { chatRequestQueue } from '../services/ChatRequestQueue';
 import { ChatService } from '../services/ChatService';
 import { DocumentImportService } from '../services/DocumentImportService';
-import { chatRequestQueue } from '../services/ChatRequestQueue';
 
 import botIcon1 from '../../assets/bot-icons/bot-icon-1.png';
 import botIcon2 from '../../assets/bot-icons/bot-icon-2.png';
@@ -161,7 +161,11 @@ export const useChat = () => {
                 // Update token usage of current session
                 const responseTokenUsage = askResult.variables.find((v) => v.key === 'tokenUsage')?.value;
                 if (responseTokenUsage) dispatch(updateTokenUsage(JSON.parse(responseTokenUsage) as TokenUsage));
+
+                // Safety: clear bot response status on success to ensure spinner stops
+                dispatch(updateBotResponseStatus({ chatId, status: undefined }));
             } catch (e: any) {
+                // Clear spinner on error as well
                 dispatch(updateBotResponseStatus({ chatId, status: undefined }));
 
                 const errorDetails = getErrorDetails(e);
