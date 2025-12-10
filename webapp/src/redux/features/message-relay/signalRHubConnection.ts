@@ -37,7 +37,7 @@ const enum SignalRCallbackMethods {
 const setupSignalRConnectionToChatHub = () => {
     const connectionHubUrl = new URL('/messageRelayHub', BackendServiceUrl);
     const signalRConnectionOptions = {
-        skipNegotiation: true,
+        skipNegotiation: false,
         transport: signalR.HttpTransportType.WebSockets,
         logger: signalR.LogLevel.Warning,
     };
