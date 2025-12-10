@@ -1,0 +1,17 @@
+// Backend: What chatId is being used?
+traces
+| where timestamp > ago(30m)
+| where message contains "Chat" and message contains "request"
+| extend chatId = extract("chatId['\"]?:\\s*['\"]?([^'\"\\s,}]+)", 1, message)
+| project timestamp, chatId, message
+| order by timestamp desc
+| take 10
+
+// Compare with SignalR send
+traces  
+| where timestamp > ago(30m)
+| where message contains "SendAsync" and message contains "Clients.Group"
+| extend chatId = extract("Group\\(\\\"([^\\\"]+)", 1, message)
+| project timestamp, chatId, message
+| order by timestamp desc
+| take 10

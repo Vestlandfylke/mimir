@@ -1,0 +1,44 @@
+
+QUERY 1: Check if backend is SENDING SignalR messages
+----------------------------------------------------
+traces
+| where timestamp > ago(1h)
+| where message contains "SendAsync" or message contains "Clients.Group"
+| project timestamp, message, severityLevel
+| order by timestamp desc
+| take 50
+
+Expected: Should see traces for each message sent
+
+
+QUERY 2: Check for SignalR HUB exceptions
+-----------------------------------------
+exceptions
+| where timestamp > ago(1h)
+| where outerMessage contains "Hub" or outerMessage contains "SignalR"
+| project timestamp, type, outerMessage, innermostMessage
+| order by timestamp desc
+
+Expected: Should be EMPTY or very few errors
+
+
+QUERY 3: Check message delivery timeline
+----------------------------------------
+traces
+| where timestamp > ago(1h)
+| where message contains "ReceiveMessage" or message contains "GeneratingResponse"
+| project timestamp, message
+| order by timestamp asc
+
+Expected: Should see pairs of "GeneratingResponse" start/end
+
+
+QUERY 4: Check if messages are sent but not reaching clients
+------------------------------------------------------------
+customEvents
+| where timestamp > ago(1h)
+| where name == "MessageSent" or name == "MessageReceived"
+| summarize sent=countif(name=="MessageSent"), received=countif(name=="MessageReceived")
+
+Expected: sent ≈ received (if not, delivery problem)
+

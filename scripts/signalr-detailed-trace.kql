@@ -1,0 +1,21 @@
+traces
+| where timestamp > ago(30m)
+| where message contains "messageRelayHub" 
+    or message contains "SendAsync"
+    or message contains "Clients.Group"
+    or message contains "SignalR"
+| extend 
+    chatId = extract("chatId['\"]?:\\s*['\"]?([^'\"\\s,}]+)", 1, message),
+    operation = case(
+        message contains "SendAsync", "Sending",
+        message contains "Clients.Group", "Targeting Group",
+        message contains "Connected", "Connection",
+        "Other"
+    )
+| project 
+    timestamp,
+    operation,
+    chatId,
+    severityLevel,
+    message
+| order by timestamp asc
