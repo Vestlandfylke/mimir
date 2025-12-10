@@ -38,7 +38,12 @@ const setupSignalRConnectionToChatHub = () => {
     const connectionHubUrl = new URL('/messageRelayHub', BackendServiceUrl);
     const signalRConnectionOptions = {
         skipNegotiation: false,
-        transport: signalR.HttpTransportType.WebSockets,
+        // Use WebSockets with fallback to other transports if WebSockets fail
+        // This is more reliable than WebSockets-only
+        transport:
+            signalR.HttpTransportType.WebSockets |
+            signalR.HttpTransportType.ServerSentEvents |
+            signalR.HttpTransportType.LongPolling,
         logger: signalR.LogLevel.Warning,
     };
 
@@ -46,7 +51,7 @@ const setupSignalRConnectionToChatHub = () => {
     // withAutomaticReconnect will automatically try to reconnect and generate a new socket connection if needed
     const hubConnection = new signalR.HubConnectionBuilder()
         .withUrl(connectionHubUrl.toString(), signalRConnectionOptions)
-        .withAutomaticReconnect()
+        .withAutomaticReconnect([0, 2000, 5000, 10000, 30000]) // Retry with increasing delays
         .withHubProtocol(new signalR.JsonHubProtocol())
         .configureLogging(signalR.LogLevel.Information)
         .build();
@@ -54,8 +59,10 @@ const setupSignalRConnectionToChatHub = () => {
     // Note: to keep the connection open the serverTimeout should be
     // larger than the KeepAlive value that is set on the server
     // keepAliveIntervalInMilliseconds default is 15000 and we are using default
-    // serverTimeoutInMilliseconds default is 30000 and we are using 60000 set below
-    hubConnection.serverTimeoutInMilliseconds = 60000;
+    // Increased serverTimeout to 180000ms (3 minutes) to handle long AI responses
+    // This matches the backend timeout of 180 seconds
+    hubConnection.serverTimeoutInMilliseconds = 180000; // 3 minutes
+    hubConnection.keepAliveIntervalInMilliseconds = 15000; // Send keepalive every 15 seconds
 
     return hubConnection;
 };
