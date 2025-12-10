@@ -27,6 +27,7 @@ import { IAskVariables } from '../semantic-kernel/model/Ask';
 import { ChatArchiveService } from '../services/ChatArchiveService';
 import { ChatService } from '../services/ChatService';
 import { DocumentImportService } from '../services/DocumentImportService';
+import { chatRequestQueue } from '../services/ChatRequestQueue';
 
 import botIcon1 from '../../assets/bot-icons/bot-icon-1.png';
 import botIcon2 from '../../assets/bot-icons/bot-icon-2.png';
@@ -112,64 +113,68 @@ export const useChat = () => {
     };
 
     const getResponse = async ({ messageType, value, chatId, kernelArguments, processPlan }: GetResponseOptions) => {
-        const chatInput: IChatMessage = {
-            chatId: chatId,
-            timestamp: new Date().getTime(),
-            userId: activeUserInfo?.id as string,
-            userName: activeUserInfo?.username as string,
-            content: value,
-            type: messageType,
-            authorRole: AuthorRoles.User,
-        };
+        // Use request queue to prevent race conditions when sending multiple messages quickly
+        // This ensures messages are processed one at a time, preventing lost responses
+        await chatRequestQueue.enqueue(async () => {
+            const chatInput: IChatMessage = {
+                chatId: chatId,
+                timestamp: new Date().getTime(),
+                userId: activeUserInfo?.id as string,
+                userName: activeUserInfo?.username as string,
+                content: value,
+                type: messageType,
+                authorRole: AuthorRoles.User,
+            };
 
-        dispatch(addMessageToConversationFromUser({ message: chatInput, chatId: chatId }));
+            dispatch(addMessageToConversationFromUser({ message: chatInput, chatId: chatId }));
 
-        const ask = {
-            input: value,
-            variables: [
-                {
-                    key: 'chatId',
-                    value: chatId,
-                },
-                {
-                    key: 'messageType',
-                    value: messageType.toString(),
-                },
-            ],
-        };
+            const ask = {
+                input: value,
+                variables: [
+                    {
+                        key: 'chatId',
+                        value: chatId,
+                    },
+                    {
+                        key: 'messageType',
+                        value: messageType.toString(),
+                    },
+                ],
+            };
 
-        if (kernelArguments) {
-            ask.variables.push(...kernelArguments);
-        }
-
-        try {
-            const askResult = await chatService
-                .getBotResponseAsync(
-                    ask,
-                    await AuthHelper.getSKaaSAccessToken(instance, inProgress),
-                    getEnabledPlugins(),
-                    processPlan,
-                )
-                .catch((e: any) => {
-                    throw e;
-                });
-
-            // Update token usage of current session
-            const responseTokenUsage = askResult.variables.find((v) => v.key === 'tokenUsage')?.value;
-            if (responseTokenUsage) dispatch(updateTokenUsage(JSON.parse(responseTokenUsage) as TokenUsage));
-        } catch (e: any) {
-            dispatch(updateBotResponseStatus({ chatId, status: undefined }));
-
-            const errorDetails = getErrorDetails(e);
-            if (errorDetails.includes('Failed to process plan')) {
-                // Error should already be reflected in bot response message. Skip alert.
-                return;
+            if (kernelArguments) {
+                ask.variables.push(...kernelArguments);
             }
 
-            const action = processPlan ? 'execute plan' : 'generate bot response';
-            const errorMessage = `Unable to ${action}. Details: ${getErrorDetails(e)}`;
-            dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
-        }
+            try {
+                const askResult = await chatService
+                    .getBotResponseAsync(
+                        ask,
+                        await AuthHelper.getSKaaSAccessToken(instance, inProgress),
+                        getEnabledPlugins(),
+                        processPlan,
+                    )
+                    .catch((e: any) => {
+                        throw e;
+                    });
+
+                // Update token usage of current session
+                const responseTokenUsage = askResult.variables.find((v) => v.key === 'tokenUsage')?.value;
+                if (responseTokenUsage) dispatch(updateTokenUsage(JSON.parse(responseTokenUsage) as TokenUsage));
+            } catch (e: any) {
+                dispatch(updateBotResponseStatus({ chatId, status: undefined }));
+
+                const errorDetails = getErrorDetails(e);
+                if (errorDetails.includes('Failed to process plan')) {
+                    // Error should already be reflected in bot response message. Skip alert.
+                    return;
+                }
+
+                const action = processPlan ? 'execute plan' : 'generate bot response';
+                const errorMessage = `Unable to ${action}. Details: ${getErrorDetails(e)}`;
+                dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
+            }
+        });
     };
 
     const loadChats = async () => {

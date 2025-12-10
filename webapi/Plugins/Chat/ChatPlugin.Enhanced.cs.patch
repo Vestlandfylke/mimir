@@ -1,0 +1,61 @@
+// PATCH: Add detailed SignalR logging to ChatPlugin.cs
+// This helps identify exactly where SignalR message delivery fails
+
+// LOCATION 1: In CreateBotMessageOnClient (around line 848)
+// BEFORE:
+//     await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveMessage", chatId, userId, chatMessage, cancellationToken);
+
+// AFTER:
+try 
+{
+    this._logger.LogInformation("🔵 SIGNALR: Attempting to send ReceiveMessage for chatId: {ChatId}, messageId: {MessageId}", chatId, chatMessage.Id);
+    
+    if (this._messageRelayHubContext == null)
+    {
+        this._logger.LogError("🔴 SIGNALR ERROR: _messageRelayHubContext is NULL!");
+        throw new InvalidOperationException("MessageRelayHubContext is null");
+    }
+    
+    await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveMessage", chatId, userId, chatMessage, cancellationToken);
+    
+    this._logger.LogInformation("✅ SIGNALR: Successfully sent ReceiveMessage for chatId: {ChatId}", chatId);
+}
+catch (Exception ex)
+{
+    this._logger.LogError(ex, "🔴 SIGNALR ERROR: Failed to send ReceiveMessage for chatId: {ChatId}", chatId);
+    // Re-throw to ensure we know about the failure
+    throw;
+}
+
+// LOCATION 2: In UpdateBotResponseStatusOnClientAsync (around line 870)
+// BEFORE:
+//     await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveBotResponseStatus", chatId, status, cancellationToken);
+
+// AFTER:
+try
+{
+    this._logger.LogInformation("🔵 SIGNALR: Sending ReceiveBotResponseStatus for chatId: {ChatId}, status: {Status}", chatId, status ?? "null (clearing)");
+    
+    if (this._messageRelayHubContext == null)
+    {
+        this._logger.LogError("🔴 SIGNALR ERROR: _messageRelayHubContext is NULL in UpdateBotResponseStatusOnClientAsync!");
+        throw new InvalidOperationException("MessageRelayHubContext is null");
+    }
+    
+    await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveBotResponseStatus", chatId, status, cancellationToken);
+    
+    this._logger.LogInformation("✅ SIGNALR: Successfully sent ReceiveBotResponseStatus for chatId: {ChatId}", chatId);
+}
+catch (Exception ex)
+{
+    this._logger.LogError(ex, "🔴 SIGNALR ERROR: Failed to send ReceiveBotResponseStatus for chatId: {ChatId}", chatId);
+    throw;
+}
+
+// NOTES:
+// - These logs will appear in Application Insights with the 🔵/✅/🔴 emojis for easy filtering
+// - Search for "SIGNALR" in Application Insights traces
+// - If you see 🔵 but no ✅, then SendAsync is failing
+// - If you see 🔴, there's an explicit error
+// - If you see neither, the method is not being called at all
+

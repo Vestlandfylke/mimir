@@ -845,7 +845,28 @@ public class ChatPlugin
         CopilotChatMessage.ChatMessageType messageType = CopilotChatMessage.ChatMessageType.Message)
     {
         var chatMessage = CopilotChatMessage.CreateBotResponseMessage(chatId, content, prompt, citations, tokenUsage, messageType);
-        await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveMessage", chatId, userId, chatMessage, cancellationToken);
+        
+        // Enhanced logging to debug SignalR message delivery
+        try 
+        {
+            this._logger.LogInformation("🔵 SIGNALR: Attempting to send ReceiveMessage for chatId: {ChatId}, messageId: {MessageId}", chatId, chatMessage.Id);
+            
+            if (this._messageRelayHubContext == null)
+            {
+                this._logger.LogError("🔴 SIGNALR ERROR: _messageRelayHubContext is NULL!");
+                throw new InvalidOperationException("MessageRelayHubContext is null");
+            }
+            
+            await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveMessage", chatId, userId, chatMessage, cancellationToken);
+            
+            this._logger.LogInformation("✅ SIGNALR: Successfully sent ReceiveMessage for chatId: {ChatId}", chatId);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "🔴 SIGNALR ERROR: Failed to send ReceiveMessage for chatId: {ChatId}", chatId);
+            throw;
+        }
+        
         return chatMessage;
     }
 
@@ -867,7 +888,26 @@ public class ChatPlugin
     /// <param name="cancellationToken">The cancellation token.</param>
     private async Task UpdateBotResponseStatusOnClientAsync(string chatId, string status, CancellationToken cancellationToken)
     {
-        await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveBotResponseStatus", chatId, status, cancellationToken);
+        // Enhanced logging to debug SignalR status updates
+        try
+        {
+            this._logger.LogInformation("🔵 SIGNALR: Sending ReceiveBotResponseStatus for chatId: {ChatId}, status: {Status}", chatId, status ?? "null (clearing)");
+            
+            if (this._messageRelayHubContext == null)
+            {
+                this._logger.LogError("🔴 SIGNALR ERROR: _messageRelayHubContext is NULL in UpdateBotResponseStatusOnClientAsync!");
+                throw new InvalidOperationException("MessageRelayHubContext is null");
+            }
+            
+            await this._messageRelayHubContext.Clients.Group(chatId).SendAsync("ReceiveBotResponseStatus", chatId, status, cancellationToken);
+            
+            this._logger.LogInformation("✅ SIGNALR: Successfully sent ReceiveBotResponseStatus for chatId: {ChatId}", chatId);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "🔴 SIGNALR ERROR: Failed to send ReceiveBotResponseStatus for chatId: {ChatId}", chatId);
+            throw;
+        }
     }
 
     /// <summary>
