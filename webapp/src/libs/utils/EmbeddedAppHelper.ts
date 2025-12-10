@@ -17,20 +17,34 @@ export const isInIframe = (): boolean => {
 
 /**
  * Detects if the app is running inside Microsoft Teams specifically
- * Requires @microsoft/teams-js to be installed
+ * Uses multiple detection methods for reliability
  */
 export const isInTeams = (): boolean => {
-    // Check for Teams-specific indicators
+    // Method 1: Check URL parameters
     const url = window.location.href.toLowerCase();
     const hasTeamsParam = url.includes('teams') || url.includes('context=teams');
 
-    // Check if running in Teams iframe
-    const hasTeamsUserAgent = navigator.userAgent.toLowerCase().includes('teams');
+    // Method 2: Check user agent
+    const userAgent = navigator.userAgent.toLowerCase();
+    const hasTeamsUserAgent = userAgent.includes('teams');
 
-    // Check for Teams context in sessionStorage (set by Teams when loading)
+    // Method 3: Check for Teams context in sessionStorage
     const hasTeamsContext = sessionStorage.getItem('teamsContext') !== null;
 
-    return hasTeamsParam || hasTeamsUserAgent || hasTeamsContext;
+    // Method 4: Check for Teams-specific hostnames
+    const hasTeamsHost =
+        url.includes('teams.microsoft.com') || 
+        url.includes('teams.cloud.microsoft') ||
+        url.includes('.sharepoint.com/_layouts/15/teamslogon.aspx');
+
+    const result = hasTeamsParam || hasTeamsUserAgent || hasTeamsContext || hasTeamsHost;
+    
+    // Store result for future use
+    if (result) {
+        sessionStorage.setItem('teamsContext', 'true');
+    }
+
+    return result;
 };
 
 /**

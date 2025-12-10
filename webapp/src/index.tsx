@@ -37,6 +37,7 @@ export function renderApp() {
     // Log the app context for debugging
     console.log(`Mimir running in: ${EmbeddedAppHelper.getAppContext()}`);
     console.log(`Auth method: ${Constants.msal.method}`);
+    console.log(`Is in Teams: ${EmbeddedAppHelper.isInTeams()}`);
 
     fetch(new URL('authConfig', BackendServiceUrl))
         .then((response) => (response.ok ? (response.json() as Promise<AuthConfig>) : Promise.reject()))
@@ -47,11 +48,22 @@ export function renderApp() {
                 msalInstance = new PublicClientApplication(AuthHelper.getMsalConfig(authConfig));
                 await msalInstance.initialize();
 
+                // Handle redirect promise (for redirect-based auth)
                 void msalInstance.handleRedirectPromise().then((response) => {
                     if (response) {
                         msalInstance.setActiveAccount(response.account);
+                        console.log('Authentication successful via redirect');
                     }
                 });
+
+                // Attempt silent SSO on startup
+                console.log('Attempting silent SSO...');
+                const ssoAccount = await AuthHelper.initializeAndAttemptSso(msalInstance);
+                if (ssoAccount) {
+                    console.log('Silent SSO successful:', ssoAccount.username);
+                } else {
+                    console.log('Silent SSO not available - user will need to login interactively');
+                }
 
                 // render with the MsalProvider if AAD is enabled
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
