@@ -150,8 +150,7 @@ Sjå [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for komplett guide.
 
 Dette er eit internt prosjekt for Vestland Fylkeskommune. For spørsmål eller support, kontakt:
 
-- Trond Kvittingen (Trond.Farestveit.Kvittingen@vlfk.no)
-- Sondre Solibakke Mo (Sondre.Solibakke.Mo@vlfk.no)
+- Digitalisering - KI & teknologiutvikling
 
 ## Lisens
 

@@ -39,7 +39,7 @@ interface IChatListSectionProps {
 export const ChatListSection: React.FC<IChatListSectionProps> = ({ header, conversations }) => {
     const classes = useClasses();
     const { selectedId } = useAppSelector((state: RootState) => state.conversations);
-    
+
     // Sort by timestamp descending (newest first)
     const keys = Object.keys(conversations).sort((a, b) => {
         const convoA = conversations[a];

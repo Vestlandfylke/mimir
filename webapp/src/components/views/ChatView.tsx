@@ -120,9 +120,7 @@ export const ChatView: FC = () => {
             )}
 
             {/* Overlay for closing menu */}
-            {isMobile && isMobileMenuOpen && (
-                <div className={classes.overlay} onClick={toggleMobileMenu} />
-            )}
+            {isMobile && isMobileMenuOpen && <div className={classes.overlay} onClick={toggleMobileMenu} />}
 
             {/* Chat list sidebar */}
             <div
@@ -148,9 +146,7 @@ export const ChatView: FC = () => {
             </div>
 
             {/* Chat window */}
-            <div className={classes.chatWindowWrapper}>
-                {selectedId !== '' && <ChatWindow />}
-            </div>
+            <div className={classes.chatWindowWrapper}>{selectedId !== '' && <ChatWindow />}</div>
         </div>
     );
 };
