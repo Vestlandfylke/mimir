@@ -196,14 +196,33 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
 
     hubConnection.on(SignalRCallbackMethods.ReceiveMessageUpdate, (message: IChatMessage) => {
         const { chatId, id: messageId, content } = message;
+
+        // Enhanced logging for message updates
+        console.log('📝 SignalR ReceiveMessageUpdate:', {
+            chatId,
+            messageId,
+            hasContent: !!content,
+            contentPreview: content ? content.substring(0, 50) : '(empty)',
+            hasTokenUsage: !!message.tokenUsage,
+            authorRole: message.authorRole,
+        });
+
         // If tokenUsage is defined, that means full message content has already been streamed and updated from server. No need to update content again.
+        const property = message.tokenUsage ? 'tokenUsage' : 'content';
+        const value = message.tokenUsage ?? content;
+
+        console.log(`📝 Updating message property: ${property}`, {
+            messageId,
+            valuePreview: typeof value === 'string' ? value.substring(0, 50) : value,
+        });
+
         store.dispatch({
             type: 'conversations/updateMessageProperty',
             payload: {
                 chatId,
                 messageIdOrIndex: messageId,
-                property: message.tokenUsage ? 'tokenUsage' : 'content',
-                value: message.tokenUsage ?? content,
+                property,
+                value,
                 frontLoad: true,
             },
         });

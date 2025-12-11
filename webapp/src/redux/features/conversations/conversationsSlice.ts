@@ -147,17 +147,34 @@ export const conversationsSlice = createSlice({
         ) => {
             const { property, value, messageIdOrIndex, chatId, updatedContent, frontLoad } = action.payload;
             const conversation = state.conversations[chatId];
-            const conversationMessage =
-                typeof messageIdOrIndex === 'number'
-                    ? conversation.messages[messageIdOrIndex]
-                    : conversation.messages.find((m) => m.id === messageIdOrIndex);
 
-            if (conversationMessage) {
-                conversationMessage[property] = value;
-                if (updatedContent) {
-                    conversationMessage.content = updatedContent;
-                }
+            const messageIndex =
+                typeof messageIdOrIndex === 'number'
+                    ? messageIdOrIndex
+                    : conversation.messages.findIndex((m) => m.id === messageIdOrIndex);
+
+            if (messageIndex === -1) {
+                console.warn(`⚠️ updateMessageProperty: Message ${messageIdOrIndex} not found in chat ${chatId}`);
+                return;
             }
+
+            const conversationMessage = conversation.messages[messageIndex];
+
+            // Log the update
+            const oldVal = conversationMessage[property];
+            console.log(`📝 Updating message[${messageIndex}].${String(property)}`, {
+                messageId: conversationMessage.id,
+                oldValue: typeof oldVal === 'string' ? oldVal.substring(0, 30) : oldVal,
+                newValue: typeof value === 'string' ? value.substring(0, 30) : value,
+            });
+
+            conversationMessage[property] = value;
+            if (updatedContent) {
+                conversationMessage.content = updatedContent;
+            }
+
+            // Force a new array reference to ensure React detects the change
+            conversation.messages = [...conversation.messages];
 
             if (frontLoad) {
                 frontLoadChat(state, chatId);
