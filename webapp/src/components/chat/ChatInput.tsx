@@ -4,7 +4,7 @@ import { Button, Spinner, Textarea, makeStyles, mergeClasses, shorthands, tokens
 import { AttachRegular, MicRegular, SendRegular } from '@fluentui/react-icons';
 import debug from 'debug';
 import * as speechSdk from 'microsoft-cognitiveservices-speech-sdk';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Constants } from '../../Constants';
 import { COPY } from '../../assets/strings';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
@@ -12,6 +12,7 @@ import { useFile } from '../../libs/hooks';
 import { GetResponseOptions } from '../../libs/hooks/useChat';
 import { AlertType } from '../../libs/models/AlertType';
 import { ChatMessageType } from '../../libs/models/ChatMessage';
+import { chatRequestQueue } from '../../libs/services/ChatRequestQueue';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { addAlert } from '../../redux/features/app/appSlice';
@@ -60,6 +61,15 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'row',
     },
+    queueInfo: {
+        color: tokens.colorNeutralForeground3,
+        fontSize: tokens.fontSizeBase200,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        ...shorthands.gap(tokens.spacingHorizontalS),
+        marginBottom: tokens.spacingVerticalXS,
+    },
     hiddenFileInput: {
         display: 'none',
     },
@@ -93,14 +103,34 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
     const [isListening, setIsListening] = useState(false);
     const { importingDocuments } = conversations[selectedId];
 
+    // Queue info state - number of messages waiting in queue
+    const [queueLength, setQueueLength] = useState(0);
+
+    // Poll queue state periodically when processing
+    useEffect(() => {
+        const updateQueueState = () => {
+            setQueueLength(chatRequestQueue.getQueueLength());
+        };
+
+        // Check immediately
+        updateQueueState();
+
+        // Poll every 500ms to update queue status
+        const interval = setInterval(updateQueueState, 500);
+        return () => {
+            clearInterval(interval);
+        };
+    }, []);
+
     const documentFileRef = useRef<HTMLInputElement | null>(null);
     const textAreaRef = React.useRef<HTMLTextAreaElement>(null);
-    React.useEffect(() => {
+
+    useEffect(() => {
         // Focus on the text area when the selected conversation changes
         textAreaRef.current?.focus();
     }, [selectedId]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         async function initSpeechRecognizer() {
             const speechService = new SpeechService();
             const response = await speechService.getSpeechTokenAsync(
@@ -119,7 +149,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
         });
     }, [dispatch, instance, inProgress]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         const chatState = conversations[selectedId];
         setValue(chatState.disabled ? COPY.CHAT_DELETED_MESSAGE() : chatState.input);
     }, [conversations, selectedId]);
@@ -138,30 +168,42 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
         }
     };
 
-    const handleSubmit = (value: string, messageType: ChatMessageType = ChatMessageType.Message) => {
-        if (value.trim() === '') {
-            return; // berre send inn dersom verdien ikkje er tom
-        }
+    const handleSubmit = useCallback(
+        (inputValue: string, messageType: ChatMessageType = ChatMessageType.Message) => {
+            if (inputValue.trim() === '') {
+                return;
+            }
 
-        setValue('');
-        dispatch(editConversationInput({ id: selectedId, newInput: '' }));
-        dispatch(updateBotResponseStatus({ chatId: selectedId, status: 'Kallar på kjernen' }));
-        onSubmit({ value, messageType, chatId: selectedId }).catch((error) => {
-            const message = `Feil ved innsending av chat-input: ${(error as Error).message}`;
-            log(message);
-            dispatch(
-                addAlert({
-                    type: AlertType.Error,
-                    message,
-                }),
-            );
-        });
-    };
+            // Clear input immediately - don't wait for response
+            setValue('');
+            dispatch(editConversationInput({ id: selectedId, newInput: '' }));
+            dispatch(updateBotResponseStatus({ chatId: selectedId, status: 'Kallar på kjernen' }));
+
+            // Fire and forget - onSubmit handles queuing internally
+            // The queue will process requests one at a time
+            onSubmit({ value: inputValue, messageType, chatId: selectedId }).catch((error) => {
+                const message = `Feil ved innsending av chat-input: ${(error as Error).message}`;
+                log(message);
+                dispatch(
+                    addAlert({
+                        type: AlertType.Error,
+                        message,
+                    }),
+                );
+            });
+        },
+        [dispatch, selectedId, onSubmit],
+    );
 
     const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
         onDragLeave(e);
         void fileHandler.handleImport(selectedId, documentFileRef, false, undefined, e.dataTransfer.files);
     };
+
+    const dragging = isDraggingOver ?? false;
+
+    // Show queue info when there are items waiting
+    const showQueueInfo = queueLength > 0;
 
     return (
         <div className={classes.root}>
@@ -169,6 +211,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                 <ChatStatus />
             </div>
             <Alerts />
+            {showQueueInfo && (
+                <div className={classes.queueInfo}>
+                    <Spinner size="tiny" />
+                    <span>{queueLength === 1 ? '1 melding ventar i kø' : `${queueLength} meldingar ventar i kø`}</span>
+                </div>
+            )}
             <div className={classes.content}>
                 <Textarea
                     title="Chat-input"
@@ -176,14 +224,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                     ref={textAreaRef}
                     id="chat-input"
                     resize="vertical"
-                    disabled={conversations[selectedId].disabled}
+                    disabled={conversations[selectedId].disabled || dragging}
                     textarea={{
-                        className: isDraggingOver
-                            ? mergeClasses(classes.dragAndDrop, classes.textarea)
-                            : classes.textarea,
+                        className: dragging ? mergeClasses(classes.dragAndDrop, classes.textarea) : classes.textarea,
                     }}
                     className={classes.input}
-                    value={isDraggingOver ? 'Slepp filene dine her' : value}
+                    value={dragging ? 'Slepp filene dine her' : value}
+                    placeholder="Skriv meldinga di her."
                     onDrop={handleDrop}
                     onFocus={() => {
                         // oppdater den lokalt lagra verdien til den nåverande verdien
@@ -199,7 +246,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         }
                     }}
                     onChange={(_event, data) => {
-                        if (isDraggingOver) {
+                        if (dragging) {
                             return;
                         }
 
@@ -238,7 +285,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                     />
                     <Button
                         disabled={
-                            conversations[selectedId].disabled || (importingDocuments && importingDocuments.length > 0)
+                            conversations[selectedId].disabled || dragging || (importingDocuments?.length ?? 0) > 0
                         }
                         appearance="transparent"
                         icon={<AttachRegular />}
@@ -252,7 +299,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                     {recognizer && (
                         <Button
                             appearance="transparent"
-                            disabled={conversations[selectedId].disabled || isListening}
+                            disabled={conversations[selectedId].disabled || isListening || dragging}
                             icon={<MicRegular />}
                             onClick={handleSpeech}
                         />
@@ -265,7 +312,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         onClick={() => {
                             handleSubmit(value);
                         }}
-                        disabled={conversations[selectedId].disabled}
+                        disabled={conversations[selectedId].disabled || dragging}
                     />
                 </div>
             </div>

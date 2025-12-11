@@ -13,12 +13,12 @@ interface QueuedRequest {
     id: string;
     execute: () => Promise<void>;
     resolve: () => void;
-    reject: (error: any) => void;
+    reject: (error: unknown) => void;
 }
 
 class ChatRequestQueue {
     private queue: QueuedRequest[] = [];
-    private isProcessing = false;
+    private processing = false;
 
     /**
      * Add a request to the queue
@@ -38,18 +38,18 @@ class ChatRequestQueue {
             console.log(`📋 Request queued (${this.queue.length} in queue):`, request.id);
 
             // Start processing if not already processing
-            if (!this.isProcessing) {
+            if (!this.processing) {
                 void this.processQueue();
             }
         });
     }
 
     private async processQueue(): Promise<void> {
-        if (this.isProcessing || this.queue.length === 0) {
+        if (this.processing || this.queue.length === 0) {
             return;
         }
 
-        this.isProcessing = true;
+        this.processing = true;
 
         while (this.queue.length > 0) {
             const request = this.queue.shift();
@@ -69,12 +69,12 @@ class ChatRequestQueue {
             }
         }
 
-        this.isProcessing = false;
+        this.processing = false;
         console.log(`✅ Queue empty - ready for new requests`);
     }
 
     /**
-     * Get current queue length
+     * Get current queue length (items waiting, not including current)
      */
     getQueueLength(): number {
         return this.queue.length;
@@ -84,7 +84,7 @@ class ChatRequestQueue {
      * Check if currently processing a request
      */
     isCurrentlyProcessing(): boolean {
-        return this.isProcessing;
+        return this.processing;
     }
 }
 
