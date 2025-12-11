@@ -217,6 +217,7 @@ const updateConversation = (state: ConversationsState, chatId: string, message: 
         ...message,
         userFeedback: requestUserFeedback ? UserFeedback.Requested : undefined,
     });
+    state.conversations[chatId].lastUpdatedTimestamp = message.timestamp;
     frontLoadChat(state, chatId);
 };
 

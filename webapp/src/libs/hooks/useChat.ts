@@ -206,6 +206,8 @@ export const useChat = () => {
                         input: '',
                         botResponseStatus: undefined,
                         userDataLoaded: false,
+                        lastUpdatedTimestamp:
+                            chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].timestamp : Date.now(),
                         disabled: false,
                         hidden: !features[FeatureKeys.MultiUserChat].enabled && chatUsers.length > 1,
                     };
@@ -215,6 +217,7 @@ export const useChat = () => {
 
                 // If there are no non-hidden chats, create a new chat
                 const nonHiddenChats = Object.values(loadedConversations).filter((c) => !c.hidden);
+                nonHiddenChats.sort((a, b) => (b.lastUpdatedTimestamp ?? 0) - (a.lastUpdatedTimestamp ?? 0));
                 if (nonHiddenChats.length === 0) {
                     await createChat();
                 } else {

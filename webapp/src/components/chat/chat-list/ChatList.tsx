@@ -162,15 +162,20 @@ export const ChatList: FC = () => {
     const dispatch = useAppDispatch();
 
     const sortConversations = (conversations: Conversations): ConversationsView => {
-        const sortedIds = Object.keys(conversations).sort((a, b) => {
-            if (conversations[a].lastUpdatedTimestamp === undefined) {
-                return 1;
+        const getTimestamp = (id: string) => {
+            const convo = conversations[id];
+            if (convo.lastUpdatedTimestamp !== undefined) {
+                return convo.lastUpdatedTimestamp;
             }
-            if (conversations[b].lastUpdatedTimestamp === undefined) {
-                return -1;
-            }
+            // convo.messages is assumed non-empty because a conversation is created with an initial bot message
+            const lastMsg = convo.messages[convo.messages.length - 1];
+            return lastMsg.timestamp;
+        };
 
-            return conversations[a].lastUpdatedTimestamp - conversations[b].lastUpdatedTimestamp;
+        const sortedIds = Object.keys(conversations).sort((a, b) => {
+            const tsA = getTimestamp(a);
+            const tsB = getTimestamp(b);
+            return tsB - tsA; // Newest first
         });
 
         const latestConversations: Conversations = {};
