@@ -212,12 +212,29 @@ const frontLoadChat = (state: ConversationsState, id: string) => {
 };
 
 const updateConversation = (state: ConversationsState, chatId: string, message: IChatMessage) => {
+    const conversation = state.conversations[chatId];
+
+    // Check for duplicate messages (prevent adding same message twice)
+    // Only check if message has an ID - messages without ID are always added
+    if (message.id) {
+        const existingMessage = conversation.messages.find((m) => m.id === message.id);
+        if (existingMessage) {
+            console.log(`ℹ️ Message ${message.id} already exists, skipping add`);
+            return;
+        }
+    }
+
     const requestUserFeedback = message.userId === 'bot' && message.type === ChatMessageType.Message;
-    state.conversations[chatId].messages.push({
+    const newMessage = {
         ...message,
         userFeedback: requestUserFeedback ? UserFeedback.Requested : undefined,
-    });
-    state.conversations[chatId].lastUpdatedTimestamp = message.timestamp;
+    };
+
+    // Create a new messages array to ensure React detects the change
+    conversation.messages = [...conversation.messages, newMessage];
+    conversation.lastUpdatedTimestamp = message.timestamp;
+
+    console.log(`✓ Message added to chat ${chatId}, total messages: ${conversation.messages.length}`);
     frontLoadChat(state, chatId);
 };
 

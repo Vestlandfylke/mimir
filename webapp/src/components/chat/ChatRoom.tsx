@@ -42,7 +42,14 @@ export const ChatRoom: React.FC = () => {
     const chat = useChat();
 
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
-    const messages = conversations[selectedId].messages;
+    const conversation = conversations[selectedId];
+    // Use the messages array directly from the conversation to ensure reactivity
+    const messages = conversation.messages;
+
+    // Debug logging for message updates
+    React.useEffect(() => {
+        console.log(`📋 ChatRoom: messages updated, count: ${messages.length}`);
+    }, [messages.length]);
 
     const scrollViewTargetRef = React.useRef<HTMLDivElement>(null);
     const [shouldAutoScroll, setShouldAutoScroll] = React.useState(true);

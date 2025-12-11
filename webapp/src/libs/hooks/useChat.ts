@@ -116,7 +116,11 @@ export const useChat = () => {
         // Use request queue to prevent race conditions when sending multiple messages quickly
         // This ensures messages are processed one at a time, preventing lost responses
         await chatRequestQueue.enqueue(async () => {
+            // Generate a unique ID for the user message to avoid duplicate detection issues
+            const messageId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
             const chatInput: IChatMessage = {
+                id: messageId,
                 chatId: chatId,
                 timestamp: new Date().getTime(),
                 userId: activeUserInfo?.id as string,

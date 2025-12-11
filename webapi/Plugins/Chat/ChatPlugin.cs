@@ -352,7 +352,7 @@ public class ChatPlugin
         string? userIntent = null)
     {
         // Get bot response and stream to client
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Genererer botsvar", cancellationToken);
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
         CopilotChatMessage chatMessage = await AsyncUtils.SafeInvokeAsync(
             () => this.StreamResponseToClientAsync(chatId, userId, promptView, cancellationToken, citations, userIntent), nameof(this.StreamResponseToClientAsync));
 

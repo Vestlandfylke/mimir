@@ -168,11 +168,21 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
                         ? PlanState.PlanApprovalRequired
                         : PlanState.Disabled;
 
-                console.log('🤖 Bot message received, dispatching to Redux');
+                console.log('🤖 Bot message received, dispatching to Redux', {
+                    chatId,
+                    messageId: message.id,
+                    contentPreview: message.content.substring(0, 50),
+                });
             }
 
+            // Get current message count before dispatch
+            const beforeCount = store.getState().conversations.conversations[chatId].messages.length;
+
             store.dispatch({ type: 'conversations/addMessageToConversationFromServer', payload: { chatId, message } });
-            console.log('✓ Message dispatched to Redux store');
+
+            // Verify message was added
+            const afterCount = store.getState().conversations.conversations[chatId].messages.length;
+            console.log(`✓ Message dispatched to Redux store (messages: ${beforeCount} → ${afterCount})`);
 
             // Safety: clear spinner when a bot message is received
             if (message.authorRole === AuthorRoles.Bot) {
