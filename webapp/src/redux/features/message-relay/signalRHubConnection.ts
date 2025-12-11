@@ -173,6 +173,14 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
 
             store.dispatch({ type: 'conversations/addMessageToConversationFromServer', payload: { chatId, message } });
             console.log('✓ Message dispatched to Redux store');
+
+            // Safety: clear spinner when a bot message is received
+            if (message.authorRole === AuthorRoles.Bot) {
+                store.dispatch({
+                    type: 'conversations/updateBotResponseStatus',
+                    payload: { chatId, status: undefined },
+                });
+            }
         },
     );
 
@@ -189,6 +197,14 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
                 frontLoad: true,
             },
         });
+
+        // Also clear spinner on message updates from bot
+        if (message.authorRole === AuthorRoles.Bot) {
+            store.dispatch({
+                type: 'conversations/updateBotResponseStatus',
+                payload: { chatId, status: undefined },
+            });
+        }
     });
 
     hubConnection.on(SignalRCallbackMethods.UserJoined, (chatId: string, userId: string) => {
