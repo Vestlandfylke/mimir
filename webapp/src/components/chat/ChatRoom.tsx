@@ -17,10 +17,14 @@ const useClasses = makeStyles({
         flexDirection: 'column',
         justifyContent: 'space-between',
         height: '100%',
+        flexGrow: 1,
     },
     scroll: {
         ...shorthands.margin(tokens.spacingVerticalXS),
         ...SharedStyles.scroll,
+        flexGrow: 1,
+        flexShrink: 1,
+        minHeight: 0, // Important for flex scroll containers
     },
     history: {
         ...shorthands.padding(tokens.spacingVerticalM),
@@ -33,6 +37,7 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'center',
+        flexShrink: 0, // Don't shrink the input area
         ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingVerticalNone),
     },
 });

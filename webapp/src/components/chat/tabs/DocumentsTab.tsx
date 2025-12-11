@@ -68,10 +68,19 @@ const useClasses = makeStyles({
     functional: {
         display: 'flex',
         flexDirection: 'row',
-        ...shorthands.margin('0', '0', tokens.spacingVerticalS, '0'),
+        flexWrap: 'wrap',
+        ...shorthands.margin('0', '0', tokens.spacingVerticalM, '0'),
+        ...shorthands.gap(tokens.spacingVerticalS),
+        '@media (max-width: 744px)': {
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+        },
     },
     uploadButton: {
         ...shorthands.margin('0', tokens.spacingHorizontalS, '0', '0'),
+        '@media (max-width: 744px)': {
+            ...shorthands.margin('0'),
+        },
     },
     vectorDatabase: {
         display: 'flex',
@@ -79,15 +88,77 @@ const useClasses = makeStyles({
         alignItems: 'baseline',
         marginLeft: 'auto',
         ...shorthands.gap(tokens.spacingHorizontalSNudge),
+        '@media (max-width: 744px)': {
+            marginLeft: '0',
+            flexWrap: 'wrap',
+        },
     },
     hiddenFileInput: {
         display: 'none',
+    },
+    // Desktop table view
+    tableContainer: {
+        '@media (max-width: 744px)': {
+            display: 'none',
+        },
     },
     table: {
         backgroundColor: tokens.colorNeutralBackground1,
     },
     tableHeader: {
         fontWeight: tokens.fontSizeBase600,
+    },
+    // Mobile card view
+    mobileCardList: {
+        display: 'none',
+        '@media (max-width: 744px)': {
+            display: 'flex',
+            flexDirection: 'column',
+            ...shorthands.gap(tokens.spacingVerticalM),
+        },
+    },
+    documentCard: {
+        backgroundColor: tokens.colorNeutralBackground1,
+        ...shorthands.borderRadius(tokens.borderRadiusMedium),
+        ...shorthands.padding(tokens.spacingVerticalM),
+        boxShadow: tokens.shadow4,
+        display: 'flex',
+        flexDirection: 'column',
+        ...shorthands.gap(tokens.spacingVerticalS),
+    },
+    cardHeader: {
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        ...shorthands.gap(tokens.spacingHorizontalS),
+    },
+    cardName: {
+        fontWeight: tokens.fontWeightSemibold,
+        fontSize: tokens.fontSizeBase300,
+        flexGrow: 1,
+        ...shorthands.overflow('hidden'),
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+    },
+    cardDetails: {
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        ...shorthands.gap(tokens.spacingHorizontalM),
+        fontSize: tokens.fontSizeBase200,
+        color: tokens.colorNeutralForeground3,
+    },
+    cardActions: {
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        ...shorthands.gap(tokens.spacingHorizontalS),
+        marginTop: tokens.spacingVerticalS,
+        paddingTop: tokens.spacingVerticalS,
+        ...shorthands.borderTop('1px', 'solid', tokens.colorNeutralStroke2),
+    },
+    progressBar: {
+        width: '100%',
     },
 });
 
@@ -294,16 +365,106 @@ export const DocumentsTab: React.FC = () => {
                     </RadioGroup>
                 </div>
             </div>
-            <Table aria-label="Ekstern ressurs tabell" className={classes.table}>
-                <TableHeader>
-                    <TableRow>{columns.map((column) => column.renderHeaderCell())}</TableRow>
-                </TableHeader>
-                <TableBody>
-                    {rows.map((item) => (
-                        <TableRow key={item.id}>{columns.map((column) => column.renderCell(item))}</TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            {/* Desktop: Table view */}
+            <div className={classes.tableContainer}>
+                <Table aria-label="Ekstern ressurs tabell" className={classes.table}>
+                    <TableHeader>
+                        <TableRow>{columns.map((column) => column.renderHeaderCell())}</TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rows.map((item) => (
+                            <TableRow key={item.id}>{columns.map((column) => column.renderCell(item))}</TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Mobile: Card view */}
+            <div className={classes.mobileCardList}>
+                {rows.map((item) => (
+                    <div key={item.id} className={classes.documentCard}>
+                        <div className={classes.cardHeader}>
+                            {item.name.icon}
+                            <span className={classes.cardName} title={item.name.label}>
+                                {item.name.url ? <a href={item.name.url}>{item.name.label}</a> : item.name.label}
+                            </span>
+                        </div>
+                        <div className={classes.cardDetails}>
+                            <span>📅 {item.id.startsWith('in-progress') ? 'Lastar...' : item.createdOn.label}</span>
+                            <span>
+                                📦 {item.id.startsWith('in-progress') ? '...' : `${item.size.toLocaleString()} bytes`}
+                            </span>
+                            <span>🔒 {item.chatId === EmptyGuid ? 'Global' : 'Denne samtalen'}</span>
+                        </div>
+                        <ProgressBar
+                            className={classes.progressBar}
+                            max={1}
+                            value={item.id.startsWith('in-progress') ? undefined : 1}
+                            shape="rounded"
+                            thickness="large"
+                            color={item.id.startsWith('in-progress') ? 'brand' : 'success'}
+                        />
+                        {!item.id.startsWith('in-progress') && item.chatId !== EmptyGuid && (
+                            <div className={classes.cardActions}>
+                                <Tooltip
+                                    content={item.isPinned ? 'Løys frå kontekst' : 'Fest til kontekst'}
+                                    relationship="label"
+                                >
+                                    <Button
+                                        icon={item.isPinned ? <Pin20Filled /> : <Pin20Regular />}
+                                        appearance="subtle"
+                                        onClick={() => void handlePinDocument(item.id, item.name.label, item.isPinned)}
+                                        size="small"
+                                    >
+                                        {item.isPinned ? 'Løys' : 'Fest'}
+                                    </Button>
+                                </Tooltip>
+                                <Dialog>
+                                    <DialogTrigger disableButtonEnhancement>
+                                        <Button
+                                            icon={
+                                                deletingDocumentId === item.id ? (
+                                                    <Spinner size="tiny" />
+                                                ) : (
+                                                    <DeleteRegular />
+                                                )
+                                            }
+                                            appearance="subtle"
+                                            disabled={deletingDocumentId !== null}
+                                            size="small"
+                                        >
+                                            Slett
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogSurface>
+                                        <DialogBody>
+                                            <DialogTitle>Slett dokument</DialogTitle>
+                                            <DialogContent>
+                                                Er du sikker på at du vil slette &quot;{item.name.label}&quot;?
+                                            </DialogContent>
+                                            <DialogActions>
+                                                <DialogTrigger disableButtonEnhancement>
+                                                    <Button appearance="secondary">Avbryt</Button>
+                                                </DialogTrigger>
+                                                <DialogTrigger disableButtonEnhancement>
+                                                    <Button
+                                                        appearance="primary"
+                                                        onClick={() =>
+                                                            void handleDeleteDocument(item.id, item.name.label)
+                                                        }
+                                                    >
+                                                        Slett
+                                                    </Button>
+                                                </DialogTrigger>
+                                            </DialogActions>
+                                        </DialogBody>
+                                    </DialogSurface>
+                                </Dialog>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
         </TabView>
     );
 };

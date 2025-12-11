@@ -45,6 +45,7 @@ const useClasses = makeStyles({
         ...shorthands.borderRadius(customTokens.borderRadiusMedium),
         ...Breakpoints.small({
             maxWidth: '100%',
+            minWidth: 'unset',
         }),
         ...shorthands.gap(customTokens.spacingHorizontalXS),
     },

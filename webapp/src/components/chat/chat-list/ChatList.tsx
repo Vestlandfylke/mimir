@@ -39,7 +39,12 @@ const useClasses = makeStyles({
         position: 'relative',
         ...shorthands.overflow('hidden'),
         ...Breakpoints.small({
-            width: '80px',
+            width: '280px', // Full sidebar on mobile when visible
+            minWidth: '280px',
+        }),
+        ...Breakpoints.extraSmall({
+            width: '260px',
+            minWidth: '260px',
         }),
     },
     list: {
@@ -69,15 +74,16 @@ const useClasses = makeStyles({
         alignItems: 'center',
         height: '60px',
         ...Breakpoints.small({
-            justifyContent: 'center',
+            marginLeft: tokens.spacingHorizontalM,
+            marginRight: '48px', // Space for close button
         }),
     },
     title: {
         flexGrow: 1,
-        ...Breakpoints.small({
-            display: 'none',
-        }),
         fontSize: tokens.fontSizeBase500,
+        ...Breakpoints.small({
+            fontSize: tokens.fontSizeBase400,
+        }),
     },
     input: {
         flexGrow: 1,
@@ -98,16 +104,15 @@ const useClasses = makeStyles({
         height: '100px',
         ...shorthands.padding(tokens.spacingVerticalM),
         ...Breakpoints.small({
-            padding: '0',
+            height: '80px',
+            padding: tokens.spacingVerticalS,
         }),
     },
     logo: {
         maxWidth: '80%',
         maxHeight: '80%',
         ...Breakpoints.small({
-            width: '97%',
-            maxWidth: '80px',
-            padding: '0',
+            maxWidth: '150px',
         }),
     },
     feedbackContainer: {
@@ -116,6 +121,10 @@ const useClasses = makeStyles({
         justifyContent: 'center',
         alignItems: 'center',
         padding: tokens.spacingVerticalM,
+        ...Breakpoints.small({
+            width: '100%',
+            padding: tokens.spacingVerticalS,
+        }),
     },
     feedbackButton: {
         width: '80%',
@@ -124,10 +133,11 @@ const useClasses = makeStyles({
         fontSize: 'calc(0.8rem + 0.5vw)',
         marginBottom: '50%',
         ...Breakpoints.small({
-            width: '50%',
-            maxWidth: '80px',
-            fontSize: 'calc(0.4rem + 0.4vw)',
-            padding: '8px',
+            width: '80%',
+            maxWidth: '180px',
+            fontSize: tokens.fontSizeBase300,
+            padding: tokens.spacingVerticalS,
+            marginBottom: '30%',
         }),
         backgroundColor: tokens.colorBrandBackground,
         color: tokens.colorNeutralForegroundOnBrand,
@@ -181,7 +191,8 @@ export const ChatList: FC = () => {
         const latestConversations: Conversations = {};
         const olderConversations: Conversations = {};
         sortedIds.forEach((id) => {
-            if (isToday(new Date(conversations[id].lastUpdatedTimestamp ?? 0))) {
+            const timestamp = getTimestamp(id);
+            if (isToday(new Date(timestamp))) {
                 latestConversations[id] = conversations[id];
             } else {
                 olderConversations[id] = conversations[id];

@@ -20,6 +20,11 @@ const useClasses = makeStyles({
         ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalXL),
         flexShrink: 0,
         overflow: 'hidden',
+        // Better touch targets on mobile
+        ...Breakpoints.small({
+            ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
+            minHeight: '56px',
+        }),
     },
 
     avatar: {
@@ -32,10 +37,8 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'column',
         marginLeft: tokens.spacingHorizontalXS,
-        ...Breakpoints.small({
-            display: 'none',
-        }),
         alignSelf: 'center',
+        // Show body on mobile (slide-out menu)
     },
     header: {
         flexGrow: 1,
@@ -62,11 +65,8 @@ const useClasses = makeStyles({
         color: tokens.colorNeutralForeground2,
     },
     popoverSurface: {
-        display: 'none',
-        ...Breakpoints.small({
-            display: 'flex',
-            flexDirection: 'column',
-        }),
+        display: 'flex',
+        flexDirection: 'column',
     },
     selected: {
         backgroundColor: tokens.colorNeutralBackground1,

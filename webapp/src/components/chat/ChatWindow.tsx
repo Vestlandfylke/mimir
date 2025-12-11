@@ -21,6 +21,7 @@ import React, { useState } from 'react';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
+import { Breakpoints } from '../../styles';
 import { Alerts } from '../shared/Alerts';
 import { ChatRoom } from './ChatRoom';
 import { ParticipantsList } from './controls/ParticipantsList';
@@ -35,6 +36,7 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
+        height: '100%',
         backgroundColor: tokens.colorNeutralBackground3,
         boxShadow: 'rgb(0 0 0 / 25%) 0 0.2rem 0.4rem -0.075rem',
     },
@@ -47,16 +49,36 @@ const useClasses = makeStyles({
         boxSizing: 'border-box',
         width: '100%',
         justifyContent: 'space-between',
+        // Add left padding on mobile for hamburger menu button
+        '@media (max-width: 744px)': {
+            paddingLeft: '48px', // Space for hamburger button
+        },
     },
     title: {
         ...shorthands.gap(tokens.spacingHorizontalM),
         alignItems: 'center',
         display: 'flex',
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        ...Breakpoints.small({
+            ...shorthands.gap(tokens.spacingHorizontalS),
+        }),
+    },
+    // Hide persona info on mobile to save space
+    personaInfo: {
+        display: 'flex',
+        alignItems: 'center',
+        ...shorthands.gap(tokens.spacingHorizontalM),
+        ...Breakpoints.small({
+            display: 'none',
+        }),
     },
     controls: {
         display: 'flex',
         alignItems: 'center',
+        ...Breakpoints.small({
+            display: 'none', // Hide on mobile
+        }),
     },
     popoverHeader: {
         ...shorthands.margin('0'),
@@ -106,7 +128,7 @@ export const ChatWindow: React.FC = () => {
             <div className={classes.header}>
                 <div className={classes.title}>
                     {!features[FeatureKeys.SimplifiedExperience].enabled && (
-                        <>
+                        <div className={classes.personaInfo}>
                             <Persona
                                 key={'Semantic Kernel Bot'}
                                 size="medium"
@@ -143,7 +165,7 @@ export const ChatWindow: React.FC = () => {
                                     />
                                 </PopoverSurface>
                             </Popover>
-                        </>
+                        </div>
                     )}
                     <TabList selectedValue={selectedTab} onTabSelect={onTabSelect}>
                         <Tab data-testid="chatTab" id="chat" value="chat" aria-label="Chat-fane" title="Chat-fane">

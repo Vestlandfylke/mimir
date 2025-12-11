@@ -32,6 +32,9 @@ const useClasses = makeStyles({
         width: '100%',
         maxWidth: '105em',
         ...shorthands.margin(tokens.spacingVerticalNone, tokens.spacingHorizontalM),
+        '@media (max-width: 744px)': {
+            ...shorthands.margin(tokens.spacingVerticalNone, tokens.spacingHorizontalS),
+        },
     },
     typingIndicator: {
         maxHeight: '28px',
@@ -41,12 +44,19 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'row',
         width: '100%',
+        '@media (max-width: 744px)': {
+            ...shorthands.gap(tokens.spacingHorizontalS),
+        },
     },
     input: {
         width: '100%',
     },
     textarea: {
         maxHeight: '80px',
+        '@media (max-width: 744px)': {
+            maxHeight: '60px',
+            fontSize: tokens.fontSizeBase300,
+        },
     },
     controls: {
         display: 'flex',

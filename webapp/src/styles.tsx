@@ -42,8 +42,17 @@ export const semanticKernelDarkTheme: Theme & { colorMeBackground: string } = {
 export const customTokens = themeToTokensObject(semanticKernelLightTheme);
 
 export const Breakpoints = {
+    // Tablets and smaller desktops
     small: (style: GriffelStyle): Record<string, GriffelStyle> => {
         return { '@media (max-width: 744px)': style };
+    },
+    // Mobile phones in landscape or larger phones
+    extraSmall: (style: GriffelStyle): Record<string, GriffelStyle> => {
+        return { '@media (max-width: 480px)': style };
+    },
+    // Mobile phones in portrait
+    mobile: (style: GriffelStyle): Record<string, GriffelStyle> => {
+        return { '@media (max-width: 390px)': style };
     },
 };
 

@@ -10,9 +10,23 @@ const useClasses = makeStyles({
         ...SharedStyles.scroll,
         display: 'flex',
         flexDirection: 'column',
+        '@media (max-width: 744px)': {
+            ...shorthands.margin(tokens.spacingVerticalS, tokens.spacingHorizontalS),
+        },
+    },
+    title: {
+        '@media (max-width: 744px)': {
+            fontSize: tokens.fontSizeBase500,
+            marginTop: tokens.spacingVerticalS,
+            marginBottom: tokens.spacingVerticalS,
+        },
     },
     footer: {
         paddingTop: tokens.spacingVerticalL,
+        '@media (max-width: 744px)': {
+            paddingTop: tokens.spacingVerticalM,
+            fontSize: tokens.fontSizeBase200,
+        },
     },
 });
 
@@ -28,7 +42,7 @@ export const TabView: React.FC<ITabViewProps> = ({ title, learnMoreDescription, 
 
     return (
         <div className={classes.root}>
-            <h2>{title}</h2>
+            <h2 className={classes.title}>{title}</h2>
             {children}
             <Label size="small" color="brand" className={classes.footer}>
                 Vil du lære meir om {learnMoreDescription}? Klikk{' '}

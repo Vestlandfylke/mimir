@@ -25,7 +25,8 @@ const useClasses = makeStyles({
         fontSize: tokens.fontSizeBase200,
         color: tokens.colorNeutralForeground3,
         ...Breakpoints.small({
-            display: 'none',
+            marginLeft: tokens.spacingHorizontalM,
+            marginRight: tokens.spacingHorizontalM,
         }),
     },
 });
@@ -38,7 +39,17 @@ interface IChatListSectionProps {
 export const ChatListSection: React.FC<IChatListSectionProps> = ({ header, conversations }) => {
     const classes = useClasses();
     const { selectedId } = useAppSelector((state: RootState) => state.conversations);
-    const keys = Object.keys(conversations);
+    
+    // Sort by timestamp descending (newest first)
+    const keys = Object.keys(conversations).sort((a, b) => {
+        const convoA = conversations[a];
+        const convoB = conversations[b];
+        const lastMsgA = convoA.messages[convoA.messages.length - 1];
+        const lastMsgB = convoB.messages[convoB.messages.length - 1];
+        const tsA = convoA.lastUpdatedTimestamp ?? lastMsgA.timestamp;
+        const tsB = convoB.lastUpdatedTimestamp ?? lastMsgB.timestamp;
+        return tsB - tsA; // Newest first
+    });
 
     return keys.length > 0 ? (
         <div className={classes.root}>
