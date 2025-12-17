@@ -47,10 +47,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = ({ 
     const classes = useClasses();
     const dispatch = useAppDispatch();
     const { instance, inProgress } = useMsal();
-    const content = utils.replaceCitationLinksWithIndices(
-        utils.formatChatTextContent(message.content),
-        message,
-    );
+    const content = utils.replaceCitationLinksWithIndices(utils.formatChatTextContent(message.content), message);
 
     const downloadBlob = (blob: Blob, filename: string) => {
         const link = document.createElement('a');
@@ -99,10 +96,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = ({ 
         }
     };
 
-    const handleFilesLinkClick = async (
-        e: React.MouseEvent<HTMLAnchorElement>,
-        href: string,
-    ) => {
+    const handleFilesLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
         // If auth is disabled, a normal navigation is fine (PassThrough backend).
         if (!AuthHelper.isAuthAAD()) {
             return;
@@ -128,9 +122,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = ({ 
 
             const contentDisposition = response.headers.get('content-disposition');
             const filename =
-                tryGetFilenameFromContentDisposition(contentDisposition) ??
-                url.pathname.split('/').pop() ??
-                'download';
+                tryGetFilenameFromContentDisposition(contentDisposition) ?? url.pathname.split('/').pop() ?? 'download';
             const blob = await response.blob();
             downloadBlob(blob, filename);
         } catch (err) {
@@ -154,11 +146,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = ({ 
                         const safeHref = href ?? '';
                         if (safeHref && isFilesEndpointLink(safeHref)) {
                             return (
-                                <a
-                                    {...props}
-                                    href={safeHref}
-                                    onClick={(e) => void handleFilesLinkClick(e, safeHref)}
-                                >
+                                <a {...props} href={safeHref} onClick={(e) => void handleFilesLinkClick(e, safeHref)}>
                                     {children}
                                 </a>
                             );
