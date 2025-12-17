@@ -12,6 +12,27 @@ import { IAskResult } from '../semantic-kernel/model/AskResult';
 import { ICustomPlugin } from '../semantic-kernel/model/CustomPlugin';
 import { BaseService } from './BaseService';
 
+// The backend serializes DateTimeOffset as ISO strings by default.
+// The webapp expects numeric timestamps (ms since epoch). Normalize on ingress.
+type ApiChatMessage = Omit<IChatMessage, 'timestamp'> & { timestamp: string | number };
+
+type ApiCreateChatSessionResponse = Omit<ICreateChatSessionResponse, 'initialBotMessage'> & {
+    initialBotMessage: ApiChatMessage;
+};
+
+const coerceTimestampToMs = (value: string | number): number => {
+    if (typeof value === 'number') return value;
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const normalizeChatMessage = (m: ApiChatMessage): IChatMessage => {
+    return {
+        ...m,
+        timestamp: coerceTimestampToMs(m.timestamp),
+    };
+};
+
 export class ChatService extends BaseService {
     public createChatAsync = async (
         title: string,
@@ -26,7 +47,7 @@ export class ChatService extends BaseService {
             body.template = template;
         }
 
-        const result = await this.getResponseAsync<ICreateChatSessionResponse>(
+        const result = await this.getResponseAsync<ApiCreateChatSessionResponse>(
             {
                 commandPath: 'chats',
                 method: 'POST',
@@ -35,7 +56,11 @@ export class ChatService extends BaseService {
             accessToken,
         );
 
-        return result;
+        // Normalize the initial message timestamp for consistent sorting/UI.
+        return {
+            chatSession: result.chatSession,
+            initialBotMessage: normalizeChatMessage(result.initialBotMessage),
+        };
     };
 
     public getChatAsync = async (chatId: string, accessToken: string): Promise<IChatSession> => {
@@ -67,7 +92,7 @@ export class ChatService extends BaseService {
         count: number,
         accessToken: string,
     ): Promise<IChatMessage[]> => {
-        const result = await this.getResponseAsync<IChatMessage[]>(
+        const result = await this.getResponseAsync<ApiChatMessage[]>(
             {
                 commandPath: `chats/${chatId}/messages?skip=${skip}&count=${count}`,
                 method: 'GET',
@@ -75,9 +100,12 @@ export class ChatService extends BaseService {
             accessToken,
         );
 
+        // Normalize timestamps before any sorting/reversing.
+        const normalized = result.map(normalizeChatMessage);
+
         // Messages are returned with most recent message at index 0 and oldest message at the last index,
         // so we need to reverse the order for render
-        return result.reverse();
+        return normalized.reverse();
     };
 
     public editChatAsync = async (

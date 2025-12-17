@@ -225,6 +225,7 @@ export const useChat = () => {
                 if (nonHiddenChats.length === 0) {
                     await createChat();
                 } else {
+                    // Always select newest chat on startup.
                     dispatch(setSelectedConversation(nonHiddenChats[0].id));
                 }
             } else {
