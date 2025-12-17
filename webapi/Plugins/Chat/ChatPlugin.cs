@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using CopilotChatMessage = CopilotChat.WebApi.Models.Storage.CopilotChatMessage;
 using FunctionCallContent = Microsoft.SemanticKernel.FunctionCallContent;
@@ -579,18 +580,22 @@ public class ChatPlugin
     }
 
     /// <summary>
-    /// Create `OpenAIPromptExecutionSettings` for chat response. Parameters are read from the PromptSettings class.
+    /// Create `AzureOpenAIPromptExecutionSettings` for chat response.
+    /// GPT-5.x models require `max_completion_tokens` (not `max_tokens`), so we enable the SK flag.
     /// </summary>
     /// <param name="requireApproval">If true, enables kernel functions without auto-invoke to allow plan approval.</param>
-    private OpenAIPromptExecutionSettings CreateChatRequestSettings(bool requireApproval = false)
+    private AzureOpenAIPromptExecutionSettings CreateChatRequestSettings(bool requireApproval = false)
     {
-        return new OpenAIPromptExecutionSettings
+        return new AzureOpenAIPromptExecutionSettings
         {
+#pragma warning disable SKEXP0010 // Experimental flag required for GPT-5.x max_completion_tokens support
+            SetNewMaxCompletionTokensEnabled = true,
+#pragma warning restore SKEXP0010
             MaxTokens = this._promptOptions.ResponseTokenLimit,
-            Temperature = this._promptOptions.ResponseTemperature,
-            TopP = this._promptOptions.ResponseTopP,
-            FrequencyPenalty = this._promptOptions.ResponseFrequencyPenalty,
-            PresencePenalty = this._promptOptions.ResponsePresencePenalty,
+            // GPT-5.x currently only supports default temperature/top_p (1.0). Avoid non-default values.
+            Temperature = 1.0,
+            TopP = 1.0,
+            // GPT-5.x does not support presence_penalty/frequency_penalty. Avoid sending these parameters.
             // When approval is required, enable functions but don't auto-invoke them
             // This allows us to intercept the function calls and show them to the user for approval
             ToolCallBehavior = requireApproval
@@ -600,17 +605,21 @@ public class ChatPlugin
     }
 
     /// <summary>
-    /// Create `OpenAIPromptExecutionSettings` for intent response. Parameters are read from the PromptSettings class.
+    /// Create `AzureOpenAIPromptExecutionSettings` for intent response.
+    /// GPT-5.x models require `max_completion_tokens` (not `max_tokens`), so we enable the SK flag.
     /// </summary>
-    private OpenAIPromptExecutionSettings CreateIntentCompletionSettings()
+    private AzureOpenAIPromptExecutionSettings CreateIntentCompletionSettings()
     {
-        return new OpenAIPromptExecutionSettings
+        return new AzureOpenAIPromptExecutionSettings
         {
+#pragma warning disable SKEXP0010 // Experimental flag required for GPT-5.x max_completion_tokens support
+            SetNewMaxCompletionTokensEnabled = true,
+#pragma warning restore SKEXP0010
             MaxTokens = this._promptOptions.ResponseTokenLimit,
-            Temperature = this._promptOptions.IntentTemperature,
-            TopP = this._promptOptions.IntentTopP,
-            FrequencyPenalty = this._promptOptions.IntentFrequencyPenalty,
-            PresencePenalty = this._promptOptions.IntentPresencePenalty,
+            // GPT-5.x currently only supports default temperature/top_p (1.0). Avoid non-default values.
+            Temperature = 1.0,
+            TopP = 1.0,
+            // GPT-5.x does not support presence_penalty/frequency_penalty. Avoid sending these parameters.
             StopSequences = new string[] { "] bot:" }
         };
     }

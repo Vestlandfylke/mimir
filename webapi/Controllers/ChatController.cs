@@ -21,6 +21,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Plugins.MsGraph;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors;
@@ -550,10 +551,16 @@ public class ChatController : ControllerBase, IDisposable
 
             var llmResponse = await chatCompletion.GetChatMessageContentAsync(
                 chatHistory,
-                new OpenAIPromptExecutionSettings
+                new AzureOpenAIPromptExecutionSettings
                 {
+                    // GPT-5.x models require `max_completion_tokens` instead of `max_tokens`.
+                    // This flag makes SK emit the new parameter while keeping our MaxTokens config.
+#pragma warning disable SKEXP0010 // Experimental flag required for GPT-5.x max_completion_tokens support
+                    SetNewMaxCompletionTokensEnabled = true,
+#pragma warning restore SKEXP0010
                     MaxTokens = this._promptsOptions.ResponseTokenLimit,
-                    Temperature = 0.7
+                    // GPT-5.x currently only supports default temperature (1.0). Avoid non-default values.
+                    Temperature = 1.0
                 },
                 kernel,
                 this.HttpContext.RequestAborted);

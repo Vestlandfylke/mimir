@@ -6,6 +6,7 @@ using CopilotChat.WebApi.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace CopilotChat.WebApi.Services;
@@ -217,20 +218,23 @@ public class McpPlanService
   /// <summary>
   /// Creates execution settings that don't auto-invoke functions (for plan generation).
   /// </summary>
-  public static OpenAIPromptExecutionSettings CreatePlanGenerationSettings(
+  public static AzureOpenAIPromptExecutionSettings CreatePlanGenerationSettings(
       int maxTokens,
-      double temperature = 0.7,
+      double temperature = 1.0,
       double topP = 1.0,
       double frequencyPenalty = 0.5,
       double presencePenalty = 0.5)
   {
-    return new OpenAIPromptExecutionSettings
+    return new AzureOpenAIPromptExecutionSettings
     {
+#pragma warning disable SKEXP0010 // Experimental flag required for GPT-5.x max_completion_tokens support
+      SetNewMaxCompletionTokensEnabled = true,
+#pragma warning restore SKEXP0010
       MaxTokens = maxTokens,
-      Temperature = temperature,
+      // GPT-5.x currently only supports default temperature (1.0). Avoid non-default values.
+      Temperature = 1.0,
       TopP = topP,
-      FrequencyPenalty = frequencyPenalty,
-      PresencePenalty = presencePenalty,
+      // GPT-5.x does not support presence_penalty/frequency_penalty. Avoid sending these parameters.
       // Don't auto-invoke - we want to intercept and show to user
       ToolCallBehavior = ToolCallBehavior.EnableKernelFunctions
     };
@@ -239,20 +243,23 @@ public class McpPlanService
   /// <summary>
   /// Creates execution settings that auto-invoke functions (for approved plan execution).
   /// </summary>
-  public static OpenAIPromptExecutionSettings CreateAutoInvokeSettings(
+  public static AzureOpenAIPromptExecutionSettings CreateAutoInvokeSettings(
       int maxTokens,
-      double temperature = 0.7,
+      double temperature = 1.0,
       double topP = 1.0,
       double frequencyPenalty = 0.5,
       double presencePenalty = 0.5)
   {
-    return new OpenAIPromptExecutionSettings
+    return new AzureOpenAIPromptExecutionSettings
     {
+#pragma warning disable SKEXP0010 // Experimental flag required for GPT-5.x max_completion_tokens support
+      SetNewMaxCompletionTokensEnabled = true,
+#pragma warning restore SKEXP0010
       MaxTokens = maxTokens,
-      Temperature = temperature,
+      // GPT-5.x currently only supports default temperature (1.0). Avoid non-default values.
+      Temperature = 1.0,
       TopP = topP,
-      FrequencyPenalty = frequencyPenalty,
-      PresencePenalty = presencePenalty,
+      // GPT-5.x does not support presence_penalty/frequency_penalty. Avoid sending these parameters.
       ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
     };
   }
