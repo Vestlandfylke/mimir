@@ -140,7 +140,6 @@ Sjå [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for komplett guide.
 ## Dokumentasjon
 
 - [FAQ_MIMIR.md](FAQ_MIMIR.md) - Brukarrettleiing
-- [FEATURE_SUMMARY.md](FEATURE_SUMMARY.md) - Oversikt over funksjonar
 - [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) - Deployment-setup
 - [DEPLOY_NOW.md](DEPLOY_NOW.md) - Quick deploy guide
 - [webapi/MCP_INTEGRATION_GUIDE.md](webapi/MCP_INTEGRATION_GUIDE.md) - MCP-integrasjon

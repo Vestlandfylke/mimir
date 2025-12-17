@@ -2,6 +2,7 @@
 
 using System.ComponentModel;
 using System.Text;
+using CopilotChat.WebApi.Auth;
 using CopilotChat.WebApi.Models.Storage;
 using CopilotChat.WebApi.Storage;
 using Microsoft.AspNetCore.Http;
@@ -17,15 +18,18 @@ public class FileGenerationPlugin
   private readonly GeneratedFileRepository _fileRepository;
   private readonly ILogger<FileGenerationPlugin> _logger;
   private readonly IHttpContextAccessor _httpContextAccessor;
+  private readonly IAuthInfo _authInfo;
 
   public FileGenerationPlugin(
       GeneratedFileRepository fileRepository,
       ILogger<FileGenerationPlugin> logger,
-      IHttpContextAccessor httpContextAccessor)
+      IHttpContextAccessor httpContextAccessor,
+      IAuthInfo authInfo)
   {
     this._fileRepository = fileRepository;
     this._logger = logger;
     this._httpContextAccessor = httpContextAccessor;
+    this._authInfo = authInfo;
   }
 
   /// <summary>
@@ -34,14 +38,12 @@ public class FileGenerationPlugin
   /// <param name="fileName">The name of the file (e.g., "dokument.md")</param>
   /// <param name="content">The text content of the file</param>
   /// <param name="chatId">The chat ID</param>
-  /// <param name="userId">The user ID</param>
   /// <returns>A download URL for the file</returns>
   [KernelFunction, Description("Lag ei nedlastbar tekstfil (markdown, txt, osv.) som brukaren kan laste ned")]
   public async Task<string> CreateTextFile(
       [Description("Filnamn (t.d. 'dokument.md', 'rapport.txt')")] string fileName,
       [Description("Innhaldet i fila")] string content,
-      [Description("Chat ID")] string chatId,
-      [Description("Brukar ID")] string userId)
+      [Description("Chat ID")] string chatId)
   {
     try
     {
@@ -52,7 +54,9 @@ public class FileGenerationPlugin
       {
         Id = fileId,
         ChatId = chatId,
-        UserId = userId,
+        // Always use the authenticated user id from the request context (stable id),
+        // instead of trusting the LLM to supply the correct value.
+        UserId = this._authInfo.UserId,
         FileName = fileName,
         ContentType = contentType,
         Content = content,
@@ -81,14 +85,12 @@ public class FileGenerationPlugin
   /// <param name="fileName">The name of the file</param>
   /// <param name="contentBase64">The base64-encoded content of the file</param>
   /// <param name="chatId">The chat ID</param>
-  /// <param name="userId">The user ID</param>
   /// <returns>A download URL for the file</returns>
   [KernelFunction, Description("Lag ei nedlastbar binærfil (PDF, Word, osv.) som brukaren kan laste ned")]
   public async Task<string> CreateBinaryFile(
       [Description("Filnamn (t.d. 'dokument.pdf', 'rapport.docx')")] string fileName,
       [Description("Base64-enkoda innhald")] string contentBase64,
-      [Description("Chat ID")] string chatId,
-      [Description("Brukar ID")] string userId)
+      [Description("Chat ID")] string chatId)
   {
     try
     {
@@ -102,7 +104,9 @@ public class FileGenerationPlugin
       {
         Id = fileId,
         ChatId = chatId,
-        UserId = userId,
+        // Always use the authenticated user id from the request context (stable id),
+        // instead of trusting the LLM to supply the correct value.
+        UserId = this._authInfo.UserId,
         FileName = fileName,
         ContentType = contentType,
         Content = contentBase64,

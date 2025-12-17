@@ -35,7 +35,9 @@ public class FileDownloadController : ControllerBase
   /// <returns>The file content</returns>
   [HttpGet]
   [Route("files/{fileId}")]
-  [AllowAnonymous] // Allow direct browser access - authorization is checked internally
+  // NOTE: We intentionally allow this endpoint to be hit directly from the browser without auth headers.
+  // The UI performs authenticated fetch for downloads, and we return 401/403 for protected files.
+  [AllowAnonymous]
   [ProducesResponseType(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -43,7 +45,14 @@ public class FileDownloadController : ControllerBase
   {
     try
     {
-      this._logger.LogInformation("Downloading file {FileId} for user {UserId}", fileId, this._authInfo.UserId);
+      var isAuthenticated = this.HttpContext?.User?.Identity?.IsAuthenticated == true;
+      var requestUserId = isAuthenticated ? this._authInfo.UserId : string.Empty;
+      var requestUserName = isAuthenticated ? this._authInfo.Name : string.Empty;
+
+      this._logger.LogInformation(
+          "Downloading file {FileId} for user {UserId}",
+          fileId,
+          string.IsNullOrEmpty(requestUserId) ? "<anonymous>" : requestUserId);
 
       // Get the file from storage
       var file = await this._fileRepository.FindByIdAsync(fileId);
@@ -66,16 +75,18 @@ public class FileDownloadController : ControllerBase
       if (!string.IsNullOrEmpty(file.UserId))
       {
         // File has an owner - must be authenticated and match
-        if (string.IsNullOrEmpty(this._authInfo.UserId))
+        if (!isAuthenticated || (string.IsNullOrEmpty(requestUserId) && string.IsNullOrEmpty(requestUserName)))
         {
           this._logger.LogWarning("Anonymous user attempted to access protected file {FileId}", fileId);
           return this.StatusCode(StatusCodes.Status401Unauthorized, "Du må vere logga inn for å laste ned denne fila");
         }
-        
-        if (file.UserId != this._authInfo.UserId)
+
+        // Backward compatibility:
+        // Older deployments stored display name in GeneratedFile.UserId. Prefer stable user id, but allow name match.
+        if (file.UserId != requestUserId && file.UserId != requestUserName)
         {
           this._logger.LogWarning("User {UserId} attempted to access file {FileId} belonging to {FileOwnerId}",
-              this._authInfo.UserId, fileId, file.UserId);
+              string.IsNullOrEmpty(requestUserId) ? requestUserName : requestUserId, fileId, file.UserId);
           return this.StatusCode(StatusCodes.Status403Forbidden, "Du har ikkje tilgang til denne fila");
         }
       }
@@ -118,6 +129,10 @@ public class FileDownloadController : ControllerBase
   {
     try
     {
+      var isAuthenticated = this.HttpContext?.User?.Identity?.IsAuthenticated == true;
+      var requestUserId = isAuthenticated ? this._authInfo.UserId : string.Empty;
+      var requestUserName = isAuthenticated ? this._authInfo.Name : string.Empty;
+
       var file = await this._fileRepository.FindByIdAsync(fileId);
       if (file == null)
       {
@@ -126,11 +141,17 @@ public class FileDownloadController : ControllerBase
 
       // Verify user has access
       // Skip check if either userId is empty (for local testing without auth)
-      if (!string.IsNullOrEmpty(file.UserId) &&
-          !string.IsNullOrEmpty(this._authInfo.UserId) &&
-          file.UserId != this._authInfo.UserId)
+      if (!string.IsNullOrEmpty(file.UserId))
       {
-        return this.StatusCode(StatusCodes.Status403Forbidden, "Du har ikkje tilgang til å slette denne fila");
+        if (!isAuthenticated || (string.IsNullOrEmpty(requestUserId) && string.IsNullOrEmpty(requestUserName)))
+        {
+          return this.StatusCode(StatusCodes.Status401Unauthorized, "Du må vere logga inn for å slette denne fila");
+        }
+
+        if (file.UserId != requestUserId && file.UserId != requestUserName)
+        {
+          return this.StatusCode(StatusCodes.Status403Forbidden, "Du har ikkje tilgang til å slette denne fila");
+        }
       }
 
       await this._fileRepository.DeleteAsync(file);

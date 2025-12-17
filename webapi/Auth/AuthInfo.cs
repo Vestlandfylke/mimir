@@ -26,6 +26,17 @@ public class AuthInfo : IAuthInfo
                 throw new InvalidOperationException("HttpContext must be present to inspect auth info.");
             }
 
+            // Some endpoints (e.g. file downloads) may allow anonymous requests. In that case,
+            // avoid throwing and return empty values so callers can decide how to handle it.
+            if (user.Identity?.IsAuthenticated != true)
+            {
+                return new AuthData
+                {
+                    UserId = string.Empty,
+                    UserName = string.Empty,
+                };
+            }
+
             var userIdClaim = user.FindFirst(ClaimConstants.Oid)
                               ?? user.FindFirst(ClaimConstants.ObjectId)
                               ?? user.FindFirst(ClaimConstants.Sub)

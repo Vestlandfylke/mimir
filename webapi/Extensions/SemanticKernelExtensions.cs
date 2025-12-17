@@ -133,7 +133,8 @@ internal static class SemanticKernelExtensions
             new FileGenerationPlugin(
                 sp.GetRequiredService<GeneratedFileRepository>(),
                 sp.GetRequiredService<ILogger<FileGenerationPlugin>>(),
-                sp.GetRequiredService<IHttpContextAccessor>()),
+                sp.GetRequiredService<IHttpContextAccessor>(),
+                sp.GetRequiredService<CopilotChat.WebApi.Auth.IAuthInfo>()),
             nameof(FileGenerationPlugin));
 
         // MCP plugins are NOT registered here - they are registered in ChatController
