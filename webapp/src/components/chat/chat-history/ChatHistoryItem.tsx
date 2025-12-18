@@ -64,10 +64,18 @@ const useClasses = makeStyles({
         backgroundColor: customTokens.colorNeutralBackground1,
         ...shorthands.borderRadius(customTokens.borderRadiusMedium),
         ...shorthands.padding(customTokens.spacingVerticalXS, customTokens.spacingHorizontalS),
+        // Allow the bubble to shrink within the row and wrap long strings instead of expanding page width
+        minWidth: 0,
+        maxWidth: '100%',
+        overflowX: 'hidden',
+        overflowWrap: 'anywhere',
+        wordBreak: 'break-word',
     },
     me: {
         backgroundColor: customTokens.colorMeBackground,
-        width: '100%',
+        // Fill remaining space next to the avatar without forcing overflow
+        flexGrow: 1,
+        minWidth: 0,
     },
     time: {
         color: customTokens.colorNeutralForeground3,
@@ -79,6 +87,8 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'row',
         ...shorthands.gap(customTokens.spacingHorizontalL),
+        minWidth: 0,
+        maxWidth: '100%',
     },
     canvas: {
         width: '100%',

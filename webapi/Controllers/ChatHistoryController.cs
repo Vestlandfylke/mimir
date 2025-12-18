@@ -264,6 +264,44 @@ public class ChatHistoryController : ControllerBase
     }
 
     /// <summary>
+    /// Update a chat message (e.g., to update plan state).
+    /// </summary>
+    /// <param name="chatId">The chat id.</param>
+    /// <param name="messageId">The message id.</param>
+    /// <param name="updateRequest">The update request containing new content.</param>
+    [HttpPatch]
+    [Route("chats/{chatId:guid}/messages/{messageId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [Authorize(Policy = AuthPolicyName.RequireChatParticipant)]
+    public async Task<IActionResult> UpdateChatMessageAsync(
+        [FromRoute] Guid chatId,
+        [FromRoute] Guid messageId,
+        [FromBody] UpdateMessageRequest updateRequest)
+    {
+        if (string.IsNullOrWhiteSpace(updateRequest.Content))
+        {
+            return this.BadRequest("Content cannot be empty.");
+        }
+
+        CopilotChatMessage? message = null;
+        if (!await this._messageRepository.TryFindByIdAsync(messageId.ToString(), chatId.ToString(), callback: v => message = v))
+        {
+            return this.NotFound($"No message found for message id '{messageId}' in chat '{chatId}'.");
+        }
+
+        // Update message content (which may contain updated plan state JSON)
+        message!.Content = updateRequest.Content;
+        await this._messageRepository.UpsertAsync(message);
+
+        this._logger.LogDebug("Updated message {0} in chat {1}.", messageId, chatId);
+
+        return this.Ok(message);
+    }
+
+    /// <summary>
     /// Delete a chat session.
     /// </summary>
     /// <param name="chatId">The chat id.</param>

@@ -1,5 +1,4 @@
 import {
-    Badge,
     Body1,
     Button,
     Card,
@@ -18,15 +17,25 @@ import {
 } from '@fluentui/react-components';
 import { Dismiss12Regular } from '@fluentui/react-icons';
 import { useState } from 'react';
-import { Constants } from '../../../Constants';
-import { IPlanInput, Plan } from '../../../libs/models/Plan';
-import { PlanStepInput } from './PlanStepInput';
+import { Plan } from '../../../libs/models/Plan';
 
 const useClasses = makeStyles({
     card: {
         ...shorthands.margin('auto'),
         width: '700px',
         maxWidth: '100%',
+        overflowX: 'hidden',
+    },
+    headerText: {
+        // Prevent long tool names/descriptions from forcing horizontal overflow.
+        maxWidth: '100%',
+        overflow: 'hidden',
+        overflowWrap: 'anywhere',
+        wordBreak: 'break-word',
+        // Cut off after a couple of lines for a cleaner, more professional look.
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
     },
     header: {
         color: tokens.colorBrandForeground1,
@@ -35,6 +44,8 @@ const useClasses = makeStyles({
         ...shorthands.gap(tokens.spacingHorizontalS),
         display: 'flex',
         flexWrap: 'wrap',
+        maxWidth: '100%',
+        minWidth: 0,
     },
     bar: {
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
@@ -44,11 +55,13 @@ const useClasses = makeStyles({
     flexRow: {
         display: 'flex',
         flexDirection: 'row',
+        minWidth: 0,
     },
     flexColumn: {
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
+        minWidth: 0,
         marginLeft: tokens.spacingHorizontalS,
         marginTop: tokens.spacingVerticalXS,
         marginBottom: tokens.spacingVerticalXS,
@@ -91,13 +104,6 @@ interface PlanStepCardProps {
 export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, enableStepDelete, onDeleteStep }) => {
     const classes = useClasses();
     const [openDialog, setOpenDialog] = useState(false);
-    const [validationErrors, setValidationErrors] = useState(0);
-
-    // Omit reserved context variable names from displayed inputs
-    const inputs = step.parameters.filter(
-        (parameter: IPlanInput) =>
-            !(Constants.sk.reservedWords.includes(parameter.Key.trim()) || parameter.Value.trim() === ''),
-    );
 
     return (
         <Card className={classes.card}>
@@ -106,9 +112,8 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                 <div className={classes.flexColumn}>
                     <CardHeader
                         header={
-                            <Body1>
-                                <b className={classes.header}>Steg {step.index + 1} •</b> {step.skill_name}.{step.name}
-                                <br />
+                            <Body1 className={classes.headerText}>
+                                <b className={classes.header}>Steg {step.index + 1}</b>
                             </Body1>
                         }
                         action={
@@ -162,53 +167,6 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                     {step.description && (
                         <div className={classes.singleLine}>
                             <Text weight="semibold">Om: </Text> <Text>{step.description}</Text>
-                        </div>
-                    )}
-                    {inputs.length > 0 && (
-                        <div className={classes.parameters}>
-                            <div>
-                                <Text weight="semibold">Inndata: </Text>
-                                {enableEdits && validationErrors > 0 && (
-                                    <Text className={classes.errorMessage}>
-                                        Dette steget trenger ekstra informasjon for å kjøre vellykket. Vennligst fiks
-                                        alle inndata som inneholder interpolerte variabler eller felt markert
-                                        <Text weight="bold"> $???</Text>.
-                                    </Text>
-                                )}
-                            </div>
-                            {inputs.map((input: IPlanInput) => {
-                                const onEditInput = (newValue: string) => {
-                                    const inputIndex = step.parameters.findIndex(
-                                        (element: IPlanInput) => element.Key === input.Key,
-                                    );
-                                    step.parameters[inputIndex] = {
-                                        Key: input.Key,
-                                        Value: newValue,
-                                    };
-                                };
-                                return (
-                                    <PlanStepInput
-                                        input={input}
-                                        key={input.Key}
-                                        onEdit={onEditInput}
-                                        enableEdits={enableEdits}
-                                        validationErrors={validationErrors}
-                                        setValidationErrors={setValidationErrors}
-                                    />
-                                );
-                            })}
-                        </div>
-                    )}
-                    {step.outputs.length > 0 && (
-                        <div className={classes.parameters}>
-                            <Text weight="semibold">Utdata: </Text>
-                            {step.outputs.map((output: string) => {
-                                return (
-                                    <Badge color="informative" shape="rounded" appearance="tint" key={output}>
-                                        {output}
-                                    </Badge>
-                                );
-                            })}
                         </div>
                     )}
                 </div>

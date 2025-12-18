@@ -15,7 +15,12 @@ export const usePlanViewClasses = makeStyles({
         ...shorthands.gap(tokens.spacingVerticalM),
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'baseline',
+        // Stretch + allow wrapping so long/unbroken strings don't create horizontal overflow on mobile
+        alignItems: 'stretch',
+        minWidth: 0,
+        maxWidth: '100%',
+        overflowWrap: 'anywhere',
+        wordBreak: 'break-word',
     },
     buttons: {
         display: 'flex',
@@ -58,7 +63,7 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
             generatedPlanMessageId: message.id,
         });
 
-        // Update bot message with new plan state
+        // Update bot message with new plan state (Redux for immediate UI update)
         dispatch(
             updateMessageProperty({
                 messageIdOrIndex: messageIndex,
@@ -69,6 +74,11 @@ export const PlanViewer: React.FC<PlanViewerProps> = ({ message, messageIndex })
                 frontLoad: true,
             }),
         );
+
+        // Persist the updated plan state to the backend so it survives page refresh
+        if (message.id) {
+            await chat.updateMessage(selectedId, message.id, updatedPlan);
+        }
 
         await chat.processPlan(selectedId, planState, updatedPlan);
     };

@@ -9,6 +9,8 @@ Frontend-en tilbyr:
 - 📄 Dokumentopplasting og -administrasjon
 - 📌 Festa dokument (pinned documents)
 - 🔢 Matematikk-rendering med KaTeX
+- 📊 **Mermaid-diagram** - Visualiser flowcharts, sekvensdiagram, ER-diagram og meir
+- 💻 **Kodeblokker** - Syntax highlighting, linjenummer og kopier-knapp
 - 📋 Kopier-knapp på meldingar
 - 🎨 Moderne UI med Fluent Design
 - 🔐 Azure AD B2C autentisering
@@ -125,6 +127,21 @@ import 'katex/dist/katex.min.css';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 ```
+
+### Mermaid-diagram
+
+Støttar rendering av Mermaid-diagram direkte i chatten:
+- Flowcharts, sekvensdiagram, ER-diagram, Gantt-diagram, osv.
+- Last ned diagram som JPG med éin klikk
+- Bruk `\`\`\`mermaid` code blocks
+
+### Kodeblokker
+
+Avansert kode-visning med:
+- **Syntax highlighting** via prism-react-renderer
+- **Linjenummer** for enkel navigering
+- **Kopier-knapp** for rask kopiering
+- Støtte for mange språk: TypeScript, JavaScript, Python, SQL, osv.
 
 ## Utvikling
 

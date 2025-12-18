@@ -13,6 +13,8 @@ import { AuthHelper } from '../../../libs/auth/AuthHelper';
 import { useAppDispatch } from '../../../redux/app/hooks';
 import { addAlert } from '../../../redux/features/app/appSlice';
 import { AlertType } from '../../../libs/models/AlertType';
+import { MermaidBlock } from './MermaidBlock';
+import { CodeBlock } from './CodeBlock';
 
 // Import KaTeX CSS
 import 'katex/dist/katex.min.css';
@@ -36,6 +38,12 @@ const useClasses = makeStyles({
             display: 'inline-block',
             maxWidth: '100%',
         },
+    },
+    codeInline: {
+        padding: '0 6px',
+        borderRadius: '6px',
+        backgroundColor: '#F3F4F6', // gray-100
+        overflowWrap: 'anywhere',
     },
 });
 
@@ -142,6 +150,34 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = ({ 
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
+                    // We fully render block code in the `code` renderer (CodeBlock / MermaidBlock),
+                    // so `pre` should not introduce any extra wrapper.
+                    pre: ({ children }) => <>{children}</>,
+                    code: ({ className, children, ...props }) => {
+                        const raw = String(children ?? '');
+                        const text = raw.replace(/\n$/, '');
+                        const match = /language-(\w+)/.exec(className ?? '');
+                        const lang = match?.[1]?.toLowerCase();
+
+                        // Render Mermaid fenced blocks: ```mermaid ... ```
+                        if (lang === 'mermaid') {
+                            return <MermaidBlock code={text} />;
+                        }
+
+                        // Inline vs block:
+                        // - fenced/indented blocks often contain newlines
+                        // - language-xxx className indicates fenced block with language
+                        const isBlock = raw.includes('\n') || Boolean(className);
+                        if (!isBlock) {
+                            return (
+                                <code {...props} className={classes.codeInline}>
+                                    {children}
+                                </code>
+                            );
+                        }
+
+                        return <CodeBlock code={text} language={lang} />;
+                    },
                     a: ({ href, children, ...props }) => {
                         const safeHref = href ?? '';
                         if (safeHref && isFilesEndpointLink(safeHref)) {

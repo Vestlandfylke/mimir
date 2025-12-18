@@ -94,7 +94,7 @@ public class FileDownloadController : ControllerBase
 
       // Convert content to bytes
       byte[] fileBytes;
-      if (IsTextFile(file.ContentType))
+      if (IsTextFile(file.ContentType, file.FileName))
       {
         // Text file - convert from string
         fileBytes = Encoding.UTF8.GetBytes(file.Content);
@@ -199,8 +199,17 @@ public class FileDownloadController : ControllerBase
     }
   }
 
-  private static bool IsTextFile(string contentType)
+  private static bool IsTextFile(string contentType, string fileName)
   {
+    // Prefer file extension as source of truth, since some clients may have stored
+    // a mismatched ContentType historically (e.g., .docx stored as text/plain).
+    var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+    if (!string.IsNullOrEmpty(ext))
+    {
+      return ext is ".md" or ".txt" or ".html" or ".json" or ".xml" or ".csv";
+    }
+
+    // Fallback to content type
     return contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
            contentType.Contains("json", StringComparison.OrdinalIgnoreCase) ||
            contentType.Contains("xml", StringComparison.OrdinalIgnoreCase) ||

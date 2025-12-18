@@ -471,6 +471,20 @@ export const useChat = () => {
         });
     };
 
+    const updateMessage = async (chatId: string, messageId: string, content: string) => {
+        try {
+            await chatService.updateMessageAsync(
+                chatId,
+                messageId,
+                content,
+                await AuthHelper.getSKaaSAccessToken(instance, inProgress),
+            );
+        } catch (e: unknown) {
+            const errorMessage = `Unable to update message. Details: ${getErrorDetails(e)}`;
+            dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
+        }
+    };
+
     return {
         getChatUserById,
         createChat,
@@ -486,6 +500,7 @@ export const useChat = () => {
         getServiceInfo,
         deleteChat,
         processPlan,
+        updateMessage,
     };
 };
 

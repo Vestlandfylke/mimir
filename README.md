@@ -11,7 +11,9 @@ Mimir er ein avansert chatbot bygd på Microsoft Semantic Kernel og Azure OpenAI
 - 🤖 **Intelligent chat** med kontekstforståing og langtidsminne
 - 📄 **Dokumentanalyse** med semantisk søk i opplasta dokument
 - 📌 **Festa dokument** som alltid er i kontekst
-- 📥 **Filgenerering** med nedlastingsstøtte (PDF, DOCX, MD, osv.)
+- 📥 **Filgenerering** - Lag nedlastbare Word, Excel, PowerPoint, PDF, Markdown og tekstfiler
+- 📊 **Mermaid-diagram** - Visualiser flowcharts, sekvensdiagram, ER-diagram direkte i chatten
+- 💻 **Kodeblokker** - Syntax highlighting, linjenummer og kopier-knapp
 - 🔢 **Matematikkstøtte** med KaTeX-rendering
 - 🌍 **Nynorsk-lokalisering** for god brukaropplevlng
 - 🔧 **13 MCP-verktøy** via FastMCP server:
@@ -27,7 +29,6 @@ Mimir er ein avansert chatbot bygd på Microsoft Semantic Kernel og Azure OpenAI
 - ✅ **MCP Bridge** - Container App for MCP-verktøy
 - ✅ **Fast model** - gpt-4o-mini for rask intent-ekstraksjon
 - ✅ **Teams-støtte** - Fungerer i Microsoft Teams og andre iframe-appliksjonar
-- ✅ **Kopier-knapp** - Enkel kopiering av meldingar frå Mimir
 - ✅ **Pinned documents** - Fest dokument som alltid skal vere i kontekst
 
 ## Kom i gang

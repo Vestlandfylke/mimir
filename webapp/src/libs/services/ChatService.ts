@@ -108,6 +108,24 @@ export class ChatService extends BaseService {
         return normalized.reverse();
     };
 
+    public updateMessageAsync = async (
+        chatId: string,
+        messageId: string,
+        content: string,
+        accessToken: string,
+    ): Promise<IChatMessage> => {
+        const result = await this.getResponseAsync<ApiChatMessage>(
+            {
+                commandPath: `chats/${chatId}/messages/${messageId}`,
+                method: 'PATCH',
+                body: { content },
+            },
+            accessToken,
+        );
+
+        return normalizeChatMessage(result);
+    };
+
     public editChatAsync = async (
         chatId: string,
         title: string,

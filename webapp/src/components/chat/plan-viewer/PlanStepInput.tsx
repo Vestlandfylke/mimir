@@ -6,8 +6,23 @@ import { IPlanInput } from '../../../libs/models/Plan';
 
 const useClasses = makeStyles({
     root: {
-        ...shorthands.overflow('hidden'),
+        // Keep badges from forcing horizontal overflow: allow shrinking + ellipsis on the value part.
         display: 'flex',
+        alignItems: 'center',
+        maxWidth: '100%',
+        minWidth: 0,
+        ...shorthands.overflow('hidden'),
+    },
+    label: {
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+    },
+    value: {
+        minWidth: 0,
+        flexGrow: 1,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
     },
     buttons: {
         ...shorthands.padding(tokens.spacingVerticalNone),
@@ -19,6 +34,8 @@ const useClasses = makeStyles({
         maxHeight: '10px',
         minHeight: '10px',
         fontSize: '12px',
+        minWidth: 0,
+        maxWidth: '100%',
     },
     interactable: {
         zIndex: '50',
@@ -69,6 +86,8 @@ export const PlanStepInput: React.FC<PlanStepInputProps> = ({
     const [formValue, setFormValue] = useState(input.Value);
     const [isEditingInput, setIsEditingInput] = useState(requiresEdits(input.Value));
     const [editsRequired, setEditsRequired] = useState(enableEdits && requiresEdits(input.Value));
+    const inputLength = Math.max(formValue.length, 10);
+    const widthCh = Math.min(inputLength, 60);
 
     useEffect(() => {
         if (editsRequired) setValidationErrors(validationErrors + 1);
@@ -122,14 +141,15 @@ export const PlanStepInput: React.FC<PlanStepInputProps> = ({
             appearance="tint"
             className={classes.root}
         >
-            {`${input.Key}: `}
-            {!enableEdits && input.Value}
+            <span className={classes.label}>{`${input.Key}: `}</span>
+            {!enableEdits && <span className={classes.value}>{input.Value}</span>}
             {enableEdits && (
                 <>
                     {isEditingInput ? (
                         <input
                             className={mergeClasses(classes.input, classes.interactable)}
-                            style={{ width: input.Value.length * 6, minWidth: '75px' }}
+                            // Use ch-based sizing with a cap so long values can't force horizontal scrolling on mobile
+                            style={{ width: `${widthCh}ch`, minWidth: '75px', maxWidth: '100%' }}
                             placeholder={input.Value}
                             value={formValue}
                             onChange={updateAndValidateInput}
@@ -142,7 +162,7 @@ export const PlanStepInput: React.FC<PlanStepInputProps> = ({
                             autoFocus
                         />
                     ) : (
-                        formValue
+                        <span className={classes.value}>{formValue}</span>
                     )}
                     <Button
                         icon={isEditingInput ? <Checkmark16Regular /> : <Edit16Regular />}
