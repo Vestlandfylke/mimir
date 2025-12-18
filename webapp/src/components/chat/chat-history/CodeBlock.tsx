@@ -23,7 +23,8 @@ const useClasses = makeStyles({
         width: '100%',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+        fontFamily:
+            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
         fontSize: tokens.fontSizeBase200,
         lineHeight: tokens.lineHeightBase300,
         color: tokens.colorNeutralForeground1,
@@ -175,5 +176,3 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
         </div>
     );
 };
-
-

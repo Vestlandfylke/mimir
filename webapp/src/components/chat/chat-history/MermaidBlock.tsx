@@ -193,5 +193,3 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = ({ code }) => {
         </div>
     );
 };
-
-
