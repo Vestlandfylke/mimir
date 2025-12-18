@@ -431,7 +431,11 @@ public class FileGenerationPlugin
     var delimiter = trimmed.Contains(';') ? ';' : ',';
     foreach (var line in lines)
     {
-      if (string.IsNullOrWhiteSpace(line)) continue;
+      if (string.IsNullOrWhiteSpace(line))
+      {
+        continue;
+      }
+
       result.Add(line.Split(delimiter).Select(c => c.Trim()).ToList());
     }
 
