@@ -22,6 +22,7 @@ import { getErrorDetails } from '../utils/TextUtils';
 import { SpeechService } from './../../libs/services/SpeechService';
 import { updateUserIsTyping } from './../../redux/features/conversations/conversationsSlice';
 import { ChatStatus } from './ChatStatus';
+import { DiagramType, DiagramTypeSelector } from './DiagramTypeSelector';
 
 const log = debug(Constants.debug.root).extend('chat-input');
 
@@ -111,6 +112,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
     const [value, setValue] = useState('');
     const [recognizer, setRecognizer] = useState<speechSdk.SpeechRecognizer>();
     const [isListening, setIsListening] = useState(false);
+    const [selectedDiagramType, setSelectedDiagramType] = useState<DiagramType | null>(null);
     const { importingDocuments } = conversations[selectedId];
 
     // Queue info state - number of messages waiting in queue
@@ -184,14 +186,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                 return;
             }
 
+            // If a diagram type is selected, prepend the diagram instruction to the message
+            let finalValue = inputValue;
+            if (selectedDiagramType) {
+                finalValue = `[Diagram request: ${selectedDiagramType.prompt}]\n\nUser request: ${inputValue}`;
+            }
+
             // Clear input immediately - don't wait for response
             setValue('');
             dispatch(editConversationInput({ id: selectedId, newInput: '' }));
             dispatch(updateBotResponseStatus({ chatId: selectedId, status: 'Kallar på kjernen' }));
 
+            // Clear diagram type after sending (user can re-select for next message)
+            setSelectedDiagramType(null);
+
             // Fire and forget - onSubmit handles queuing internally
             // The queue will process requests one at a time
-            onSubmit({ value: inputValue, messageType, chatId: selectedId }).catch((error) => {
+            onSubmit({ value: finalValue, messageType, chatId: selectedId }).catch((error) => {
                 const message = `Feil ved innsending av chat-input: ${(error as Error).message}`;
                 log(message);
                 dispatch(
@@ -202,12 +213,39 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                 );
             });
         },
-        [dispatch, selectedId, onSubmit],
+        [dispatch, selectedId, onSubmit, selectedDiagramType],
     );
 
     const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
         onDragLeave(e);
         void fileHandler.handleImport(selectedId, documentFileRef, false, undefined, e.dataTransfer.files);
+    };
+
+    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const clipboardItems = e.clipboardData.items;
+
+        // Look for image data in the clipboard
+        for (const item of clipboardItems) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault(); // Prevent default paste behavior for images
+
+                const blob = item.getAsFile();
+                if (!blob) continue;
+
+                // Generate a filename with timestamp
+                const extension = item.type.split('/')[1] || 'png';
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `screenshot-${timestamp}.${extension}`;
+
+                // Create a File from the blob with the generated filename
+                const file = new File([blob], filename, { type: item.type });
+
+                // Use existing import handler
+                void fileHandler.handleImport(selectedId, documentFileRef, false, file);
+                return; // Only handle one image
+            }
+        }
+        // If no image found, let the default paste behavior happen (text paste)
     };
 
     const dragging = isDraggingOver ?? false;
@@ -230,7 +268,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
             <div className={classes.content}>
                 <Textarea
                     title="Chat-input"
-                    aria-label="Chat-input felt. Klikk enter for å sende inn input."
+                    aria-label="Chat-input felt. Klikk enter for å sende inn input. Du kan òg lime inn skjermbilete."
                     ref={textAreaRef}
                     id="chat-input"
                     resize="vertical"
@@ -240,8 +278,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                     }}
                     className={classes.input}
                     value={dragging ? 'Slepp filene dine her' : value}
-                    placeholder="Skriv meldinga di her."
+                    placeholder="Skriv meldinga di her. Du kan lime inn bilete med Ctrl+V."
                     onDrop={handleDrop}
+                    onPaste={handlePaste}
                     onFocus={() => {
                         // oppdater den lokalt lagra verdien til den nåverande verdien
                         const chatInput = document.getElementById('chat-input');
@@ -302,6 +341,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         onClick={() => documentFileRef.current?.click()}
                         title="Vedlegg fil"
                         aria-label="Vedlegg fil-knapp"
+                    />
+                    <DiagramTypeSelector
+                        selectedType={selectedDiagramType}
+                        onSelectType={setSelectedDiagramType}
+                        disabled={conversations[selectedId].disabled || dragging}
                     />
                     {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
                 </div>
