@@ -13,6 +13,7 @@ import {
 } from '@fluentui/react-components';
 import React from 'react';
 import { IChatMessage } from '../../../libs/models/ChatMessage';
+import { logger } from '../../../libs/utils/Logger';
 import { SharedStyles } from '../../../styles';
 import { getFileIconByFileExtension } from '../tabs/DocumentsTab';
 
@@ -80,7 +81,7 @@ export const ChatHistoryDocumentContent: React.FC<ChatHistoryDocumentContentProp
     try {
         ({ documents } = JSON.parse(message.content) as DocumentMessageContent);
     } catch (e) {
-        console.error('Error parsing chat history file item: ' + message.content);
+        logger.error('Error parsing chat history file item: ' + message.content);
     }
 
     return (

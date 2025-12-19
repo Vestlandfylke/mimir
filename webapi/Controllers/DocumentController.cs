@@ -250,7 +250,7 @@ public class DocumentController : ControllerBase
         {
             this._logger.LogError(ex, "Error pinning document {DocumentId}", documentId);
             return this.StatusCode(StatusCodes.Status500InternalServerError,
-                $"Feil ved festing av dokument: {ex.Message}");
+                "Ein feil oppstod ved festing av dokument. Prøv igjen seinare.");
         }
     }
 
@@ -296,7 +296,7 @@ public class DocumentController : ControllerBase
         {
             this._logger.LogError(ex, "Error unpinning document {DocumentId}", documentId);
             return this.StatusCode(StatusCodes.Status500InternalServerError,
-                $"Feil ved løysing av dokument: {ex.Message}");
+                "Ein feil oppstod ved løysing av dokument. Prøv igjen seinare.");
         }
     }
 

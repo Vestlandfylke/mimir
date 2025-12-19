@@ -32,6 +32,7 @@ public class FileDownloadController : ControllerBase
   /// Download a generated file.
   /// </summary>
   /// <param name="fileId">The ID of the file to download</param>
+  /// <param name="chatId">The chat ID (used as partition key in storage)</param>
   /// <returns>The file content</returns>
   [HttpGet]
   [Route("files/{fileId}")]
@@ -41,7 +42,7 @@ public class FileDownloadController : ControllerBase
   [ProducesResponseType(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<IActionResult> DownloadFileAsync(string fileId)
+  public async Task<IActionResult> DownloadFileAsync(string fileId, [FromQuery] string? chatId = null)
   {
     try
     {
@@ -50,15 +51,16 @@ public class FileDownloadController : ControllerBase
       var requestUserName = isAuthenticated ? this._authInfo.Name : string.Empty;
 
       this._logger.LogInformation(
-          "Downloading file {FileId} for user {UserId}",
+          "Downloading file {FileId} for user {UserId} (chatId: {ChatId})",
           fileId,
-          string.IsNullOrEmpty(requestUserId) ? "<anonymous>" : requestUserId);
+          string.IsNullOrEmpty(requestUserId) ? "<anonymous>" : requestUserId,
+          chatId ?? "<not provided>");
 
-      // Get the file from storage
-      var file = await this._fileRepository.FindByIdAsync(fileId);
+      // Get the file from storage - use chatId as partition key if provided
+      var file = await this._fileRepository.FindByIdAsync(fileId, chatId);
       if (file == null)
       {
-        this._logger.LogWarning("File {FileId} not found", fileId);
+        this._logger.LogWarning("File {FileId} not found (chatId: {ChatId})", fileId, chatId ?? "<not provided>");
         return this.NotFound($"Fil med ID {fileId} finst ikkje");
       }
 
@@ -112,7 +114,7 @@ public class FileDownloadController : ControllerBase
     {
       this._logger.LogError(ex, "Error downloading file {FileId}", fileId);
       return this.StatusCode(StatusCodes.Status500InternalServerError,
-          $"Feil ved nedlasting av fil: {ex.Message}");
+          "Ein feil oppstod ved nedlasting av fila. Prøv igjen seinare.");
     }
   }
 
@@ -120,12 +122,13 @@ public class FileDownloadController : ControllerBase
   /// Delete a generated file.
   /// </summary>
   /// <param name="fileId">The ID of the file to delete</param>
+  /// <param name="chatId">The chat ID (used as partition key in storage)</param>
   [HttpDelete]
   [Route("files/{fileId}")]
   [ProducesResponseType(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<IActionResult> DeleteFileAsync(string fileId)
+  public async Task<IActionResult> DeleteFileAsync(string fileId, [FromQuery] string? chatId = null)
   {
     try
     {
@@ -133,7 +136,7 @@ public class FileDownloadController : ControllerBase
       var requestUserId = isAuthenticated ? this._authInfo.UserId : string.Empty;
       var requestUserName = isAuthenticated ? this._authInfo.Name : string.Empty;
 
-      var file = await this._fileRepository.FindByIdAsync(fileId);
+      var file = await this._fileRepository.FindByIdAsync(fileId, chatId);
       if (file == null)
       {
         return this.NotFound($"Fil med ID {fileId} finst ikkje");
@@ -161,7 +164,7 @@ public class FileDownloadController : ControllerBase
     {
       this._logger.LogError(ex, "Error deleting file {FileId}", fileId);
       return this.StatusCode(StatusCodes.Status500InternalServerError,
-          $"Feil ved sletting av fil: {ex.Message}");
+          "Ein feil oppstod ved sletting av fila. Prøv igjen seinare.");
     }
   }
 
@@ -195,7 +198,7 @@ public class FileDownloadController : ControllerBase
     {
       this._logger.LogError(ex, "Error getting files for chat {ChatId}", chatId);
       return this.StatusCode(StatusCodes.Status500InternalServerError,
-          $"Feil ved henting av filer: {ex.Message}");
+          "Ein feil oppstod ved henting av filer. Prøv igjen seinare.");
     }
   }
 

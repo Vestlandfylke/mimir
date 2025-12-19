@@ -67,6 +67,13 @@
             crossorigin="anonymous"></script>
     
     <script>
+        // Production-safe logging - only log in development (localhost)
+        const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const logger = {
+            log: isDev ? console.log.bind(console) : () => {},
+            error: console.error.bind(console) // Always log errors
+        };
+
         // Parse query parameters
         const urlParams = new URLSearchParams(window.location.search);
         const clientId = urlParams.get('clientId');
@@ -74,10 +81,10 @@
         const scope = urlParams.get('scope') || 'openid profile offline_access';
         const redirectUri = urlParams.get('redirectUri') || window.location.origin + '/auth-end.html';
 
-        console.log('Auth start page loaded');
-        console.log('Client ID:', clientId);
-        console.log('Authority:', authority);
-        console.log('Scope:', scope);
+        logger.log('Auth start page loaded');
+        logger.log('Client ID:', clientId);
+        logger.log('Authority:', authority);
+        logger.log('Scope:', scope);
 
         // Build the authorization URL
         const authUrl = `${authority}/oauth2/v2.0/authorize?` +
@@ -88,7 +95,7 @@
             `&response_mode=fragment` +
             `&prompt=select_account`;
 
-        console.log('Redirecting to auth URL:', authUrl);
+        logger.log('Redirecting to auth URL:', authUrl);
 
         // Redirect to Microsoft login
         setTimeout(() => {
@@ -97,7 +104,7 @@
 
         // Error handling
         window.addEventListener('error', (event) => {
-            console.error('Auth start error:', event.error);
+            logger.error('Auth start error:', event.error);
             const errorDiv = document.getElementById('error-message');
             errorDiv.textContent = 'Feil ved innlogging: ' + event.error.message;
             errorDiv.style.display = 'block';

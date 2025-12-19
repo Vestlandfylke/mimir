@@ -115,40 +115,6 @@ const useClasses = makeStyles({
             maxWidth: '150px',
         }),
     },
-    feedbackContainer: {
-        width: '80%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: tokens.spacingVerticalM,
-        ...Breakpoints.small({
-            width: '100%',
-            padding: tokens.spacingVerticalS,
-        }),
-    },
-    feedbackButton: {
-        width: '80%',
-        maxWidth: '200px',
-        padding: tokens.spacingVerticalM,
-        fontSize: 'calc(0.8rem + 0.5vw)',
-        marginBottom: '50%',
-        ...Breakpoints.small({
-            width: '80%',
-            maxWidth: '180px',
-            fontSize: tokens.fontSizeBase300,
-            padding: tokens.spacingVerticalS,
-            marginBottom: '30%',
-        }),
-        backgroundColor: tokens.colorBrandBackground,
-        color: tokens.colorNeutralForegroundOnBrand,
-        borderRadius: tokens.borderRadiusMedium,
-        textAlign: 'center',
-        boxShadow: tokens.shadow4,
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-            backgroundColor: tokens.colorBrandBackgroundHover,
-        },
-    },
 });
 
 interface ConversationsView {
@@ -292,15 +258,6 @@ export const ChatList: FC = () => {
                 {conversationsView.olderConversations && (
                     <ChatListSection header="Eldre" conversations={conversationsView.olderConversations} />
                 )}
-            </div>
-            <div className={classes.feedbackContainer}>
-                <Button
-                    appearance="primary"
-                    className={classes.feedbackButton}
-                    onClick={() => window.open('https://forms.office.com/e/nPZciRWFFc', '_blank')}
-                >
-                    Innspel
-                </Button>
             </div>
             <div className={classes.logoContainer}>
                 <img src={logo} alt="Logo" className={classes.logo} />

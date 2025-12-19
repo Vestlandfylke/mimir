@@ -3,6 +3,9 @@
     <RootNamespace>CopilotChat.WebApi</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>5ee045b0-aea3-4f08-8d31-32d1a6f8fed0</UserSecretsId>
+    <Version>2.0.0</Version>
+    <FileVersion>2.0.0</FileVersion>
+    <AssemblyVersion>2.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -17,10 +17,12 @@ import {
     DialogTrigger,
     Divider,
     Label,
+    Link,
     makeStyles,
     shorthands,
     tokens,
 } from '@fluentui/react-components';
+import { CommentMultiple24Regular } from '@fluentui/react-icons';
 import React from 'react';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
@@ -45,6 +47,21 @@ const useClasses = makeStyles({
     },
     footer: {
         paddingTop: tokens.spacingVerticalL,
+    },
+    feedbackSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: tokens.spacingVerticalM,
+        marginTop: tokens.spacingVerticalL,
+        paddingTop: tokens.spacingVerticalM,
+        paddingBottom: tokens.spacingVerticalXL,
+        borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    },
+    feedbackLink: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: tokens.spacingHorizontalS,
+        fontWeight: tokens.fontWeightSemibold,
     },
 });
 
@@ -107,6 +124,21 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                                         <br />
                                         {process.env.REACT_APP_SK_BUILD_INFO}
                                     </Body1>
+                                    <div className={classes.feedbackSection}>
+                                        <Body1>
+                                            Har du tilbakemeldingar eller forslag til forbetringar? Vi set pris på å
+                                            høyre frå deg!
+                                        </Body1>
+                                        <Link
+                                            href="https://forms.office.com/e/nPZciRWFFc"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={classes.feedbackLink}
+                                        >
+                                            <CommentMultiple24Regular />
+                                            Gje innspel
+                                        </Link>
+                                    </div>
                                 </AccordionPanel>
                             </AccordionItem>
                             <Divider />
@@ -115,7 +147,7 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                 </DialogBody>
                 <DialogActions position="start" className={dialogClasses.footer}>
                     <Label size="small" color="brand" className={classes.footer}>
-                        Pilot prosjekt for VLFK{' '}
+                        Mimir – KI-assistent for Vestland fylkeskommune{' '}
                         <a
                             href="https://vlfksky.sharepoint.com/sites/IT/SitePages/Kunstig-intelligens.aspx"
                             target="_blank"

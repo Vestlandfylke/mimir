@@ -5,6 +5,7 @@ import { Body1, Button, Image, Spinner, Title3 } from '@fluentui/react-component
 import React, { useEffect, useState } from 'react';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { EmbeddedAppHelper } from '../../libs/utils/EmbeddedAppHelper';
+import { logger } from '../../libs/utils/Logger';
 import signInLogo from '../../ms-symbollockup_signin_light.png';
 import { useSharedClasses } from '../../styles';
 import { getErrorDetails } from '../utils/TextUtils';
@@ -19,24 +20,24 @@ export const Login: React.FC = () => {
     useEffect(() => {
         const attemptSilentAuth = async () => {
             try {
-                console.log('Login component: Attempting silent authentication...');
+                logger.debug('Login component: Attempting silent authentication...');
                 setSilentAuthInProgress(true);
                 setSilentAuthMessage('Prøver automatisk pålogging...');
 
                 const success = await AuthHelper.attemptSilentLogin(instance);
 
                 if (success) {
-                    console.log('Login component: Silent authentication successful');
+                    logger.debug('Login component: Silent authentication successful');
                     setSilentAuthMessage('Pålogging vellykket! Laster inn...');
                     // The app will automatically redirect once authentication is detected
                 } else {
-                    console.log('Login component: Silent authentication not available');
+                    logger.debug('Login component: Silent authentication not available');
                     setSilentAuthInProgress(false);
 
                     // If we are in Teams (desktop/web) and silent SSO failed, kick off Teams auth immediately.
                     // This fixes the desktop case where the login button isn't clickable.
                     if (EmbeddedAppHelper.isInTeams()) {
-                        console.log('Login component: In Teams and silent SSO failed, starting Teams auth');
+                        logger.debug('Login component: In Teams and silent SSO failed, starting Teams auth');
                         setSilentAuthInProgress(true);
                         setSilentAuthMessage('Logger inn via Teams...');
                         void AuthHelper.loginAsync(instance).catch((e: unknown) => {
@@ -47,7 +48,7 @@ export const Login: React.FC = () => {
                     }
                 }
             } catch (error) {
-                console.error('Login component: Silent authentication error:', error);
+                logger.error('Login component: Silent authentication error:', error);
                 setSilentAuthInProgress(false);
             }
         };

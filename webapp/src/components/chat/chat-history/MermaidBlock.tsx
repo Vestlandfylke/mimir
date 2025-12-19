@@ -1,5 +1,17 @@
-import { Button, Spinner, Tooltip, makeStyles, shorthands, tokens } from '@fluentui/react-components';
-import { ArrowDownload20Regular } from '@fluentui/react-icons';
+import {
+    Button,
+    Menu,
+    MenuItem,
+    MenuList,
+    MenuPopover,
+    MenuTrigger,
+    Spinner,
+    Tooltip,
+    makeStyles,
+    shorthands,
+    tokens,
+} from '@fluentui/react-components';
+import { ArrowDownload20Regular, ChevronDown16Regular } from '@fluentui/react-icons';
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 type MermaidSecurityLevel = 'strict' | 'loose' | 'antiscript';
@@ -31,21 +43,26 @@ const useClasses = makeStyles({
         maxWidth: '100%',
         // Minimum height prevents layout shifts during loading
         minHeight: '60px',
-        ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalS),
+        ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalS),
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
         backgroundColor: tokens.colorNeutralBackground2,
     },
     actions: {
         position: 'absolute',
         top: tokens.spacingVerticalXS,
-        right: tokens.spacingHorizontalXS,
-        zIndex: 1,
+        right: tokens.spacingHorizontalS,
+        zIndex: 10,
+        backgroundColor: tokens.colorNeutralBackground2,
+        ...shorthands.borderRadius(tokens.borderRadiusMedium),
+        boxShadow: tokens.shadow4,
     },
     scroll: {
         maxWidth: '100%',
         overflowX: 'auto',
         overflowY: 'hidden',
         WebkitOverflowScrolling: 'touch',
+        // Add padding at top for the download button
+        paddingTop: tokens.spacingVerticalXXL,
     },
     loading: {
         display: 'flex',
@@ -68,6 +85,21 @@ export interface MermaidBlockProps {
 
 // Debounce delay in ms - wait for streaming to settle before rendering
 const RENDER_DEBOUNCE_MS = 300;
+
+// Resolution options for JPG download
+interface ResolutionOption {
+    label: string;
+    description: string;
+    scale: number;
+}
+
+const JPG_RESOLUTION_OPTIONS: ResolutionOption[] = [
+    { label: 'Liten (1x)', description: 'For nett og rask deling', scale: 1 },
+    { label: 'Medium (2x)', description: 'Standard kvalitet', scale: 2 },
+    { label: 'Stor (4x)', description: 'For presentasjonar', scale: 4 },
+    { label: 'Ekstra stor (6x)', description: 'For trykk', scale: 6 },
+    { label: 'Maksimal (8x)', description: 'Høgaste kvalitet', scale: 8 },
+];
 
 export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
     const classes = useClasses();
@@ -153,97 +185,130 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
         };
     }, [normalized]);
 
-    const downloadJpg = async () => {
+    // Download as SVG (vector format - infinitely scalable)
+    const downloadSvg = () => {
         if (!svg) return;
         setDownloading(true);
 
         try {
-            // Use data URL instead of blob URL to avoid tainting the canvas
-            const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
+            const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'diagram.svg';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+    // Download as PNG (supports transparency, works with all SVG types)
+    const downloadPng = async (scale = 2) => {
+        if (!svg) return;
+        setDownloading(true);
+
+        try {
+            // Parse SVG to get dimensions
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(svg, 'image/svg+xml');
+            const svgEl = svgDoc.documentElement;
+
+            // Get dimensions from SVG
+            let width = 0;
+            let height = 0;
+
+            const widthAttr = svgEl.getAttribute('width') ?? '';
+            const heightAttr = svgEl.getAttribute('height') ?? '';
+            const viewBox = svgEl.getAttribute('viewBox') ?? '';
+
+            const parsePx = (v: string) => {
+                const n = Number.parseFloat(v.replace('px', '').trim());
+                return Number.isFinite(n) ? n : null;
+            };
+
+            width = parsePx(widthAttr) ?? 0;
+            height = parsePx(heightAttr) ?? 0;
+
+            if ((!width || !height) && viewBox) {
+                const parts = viewBox.split(/\s+|,/).map((p) => Number.parseFloat(p));
+                if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+                    width = parts[2];
+                    height = parts[3];
+                }
+            }
+
+            // Fallback dimensions
+            width = width && width > 0 ? width : 800;
+            height = height && height > 0 ? height : 600;
+
+            // Set explicit dimensions on SVG for consistent rendering
+            svgEl.setAttribute('width', String(width * scale));
+            svgEl.setAttribute('height', String(height * scale));
+
+            // Serialize to string
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgEl);
+
+            // Create data URL
+            const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
             const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
 
-            // Load the image first to get its natural dimensions
+            // Load image
             const img = new Image();
+            img.crossOrigin = 'anonymous';
+
             await new Promise<void>((resolve, reject) => {
                 img.onload = () => {
                     resolve();
                 };
                 img.onerror = () => {
-                    reject(new Error('Klarte ikkje å laste SVG som bilete.'));
+                    reject(new Error('Klarte ikkje å laste SVG.'));
                 };
                 img.src = dataUrl;
             });
 
-            // Use the image's natural dimensions (what the browser rendered)
-            // This correctly handles all diagram types regardless of their aspect ratio
-            let width = img.naturalWidth;
-            let height = img.naturalHeight;
-
-            // Fallback to parsing SVG attributes if natural dimensions are 0
-            if (!width || !height) {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(svg, 'image/svg+xml');
-                const svgEl = doc.documentElement;
-
-                const widthAttr = svgEl.getAttribute('width') ?? '';
-                const heightAttr = svgEl.getAttribute('height') ?? '';
-                const viewBox = svgEl.getAttribute('viewBox') ?? '';
-
-                const parsePx = (v: string) => {
-                    const n = Number.parseFloat(v.replace('px', '').trim());
-                    return Number.isFinite(n) ? n : null;
-                };
-
-                width = parsePx(widthAttr) ?? 0;
-                height = parsePx(heightAttr) ?? 0;
-
-                if ((!width || !height) && viewBox) {
-                    const parts = viewBox.split(/\s+|,/).map((p) => Number.parseFloat(p));
-                    if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
-                        width = parts[2];
-                        height = parts[3];
-                    }
-                }
-            }
-
-            // Final fallback
-            width = width && width > 0 ? width : 1200;
-            height = height && height > 0 ? height : 800;
-
-            const scale = 2;
+            // Create canvas
             const canvas = document.createElement('canvas');
             canvas.width = Math.round(width * scale);
             canvas.height = Math.round(height * scale);
 
             const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error('Klarte ikkje å lage canvas-context.');
+            if (!ctx) throw new Error('Klarte ikkje å lage canvas.');
 
-            // White background (JPEG has no alpha)
+            // White background
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.scale(scale, scale);
 
-            // Draw image at its natural size
-            ctx.drawImage(img, 0, 0, width, height);
+            // Draw image
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            const jpgBlob: Blob | null = await new Promise((resolve) => {
-                canvas.toBlob(
-                    (b) => {
-                        resolve(b);
-                    },
-                    'image/jpeg',
-                    0.92,
-                );
+            // Export as PNG
+            const pngBlob: Blob | null = await new Promise((resolve) => {
+                canvas.toBlob((b) => {
+                    resolve(b);
+                }, 'image/png');
             });
-            if (!jpgBlob) throw new Error('Klarte ikkje å generere JPG.');
 
+            if (!pngBlob) {
+                // Canvas was tainted - fall back to SVG download
+                downloadSvg();
+                return;
+            }
+
+            const filename = `diagram-${scale}x.png`;
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(jpgBlob);
-            a.download = 'diagram.jpg';
+            a.href = URL.createObjectURL(pngBlob);
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             a.remove();
             URL.revokeObjectURL(a.href);
+        } catch {
+            // If PNG export fails, fall back to SVG
+            downloadSvg();
         } finally {
             setDownloading(false);
         }
@@ -256,18 +321,53 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
         <div className={classes.root}>
             {!error && svg && (
                 <div className={classes.actions}>
-                    <Tooltip content="Last ned JPG" relationship="label">
-                        <Button
-                            size="small"
-                            appearance="subtle"
-                            icon={<ArrowDownload20Regular />}
-                            onClick={() => {
-                                void downloadJpg();
-                            }}
-                            disabled={!svg || downloading}
-                            aria-label="Last ned JPG"
-                        />
-                    </Tooltip>
+                    <Menu>
+                        <MenuTrigger disableButtonEnhancement>
+                            <Tooltip content="Last ned JPG" relationship="label">
+                                <Button
+                                    size="small"
+                                    appearance="subtle"
+                                    icon={<ArrowDownload20Regular />}
+                                    iconPosition="before"
+                                    disabled={!svg || downloading}
+                                    aria-label="Last ned JPG"
+                                >
+                                    <ChevronDown16Regular />
+                                </Button>
+                            </Tooltip>
+                        </MenuTrigger>
+                        <MenuPopover>
+                            <MenuList>
+                                <MenuItem
+                                    onClick={() => {
+                                        downloadSvg();
+                                    }}
+                                    disabled={downloading}
+                                >
+                                    <div>
+                                        <div style={{ fontWeight: 500 }}>SVG (vektor)</div>
+                                        <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                                            Beste kvalitet, skalerbar til alle storleikar
+                                        </div>
+                                    </div>
+                                </MenuItem>
+                                {JPG_RESOLUTION_OPTIONS.map((option) => (
+                                    <MenuItem
+                                        key={option.scale}
+                                        onClick={() => {
+                                            void downloadPng(option.scale);
+                                        }}
+                                        disabled={downloading}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: 500 }}>PNG {option.label}</div>
+                                            <div style={{ fontSize: '12px', opacity: 0.7 }}>{option.description}</div>
+                                        </div>
+                                    </MenuItem>
+                                ))}
+                            </MenuList>
+                        </MenuPopover>
+                    </Menu>
                 </div>
             )}
             {error ? (

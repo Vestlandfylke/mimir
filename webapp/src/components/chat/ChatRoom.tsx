@@ -3,6 +3,7 @@
 import { makeStyles, shorthands, tokens } from '@fluentui/react-components';
 import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
+import { logger } from '../../libs/utils/Logger';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys, Features } from '../../redux/features/app/AppState';
@@ -53,7 +54,7 @@ export const ChatRoom: React.FC = () => {
 
     // Debug logging for message updates
     React.useEffect(() => {
-        console.log(`📋 ChatRoom: messages updated, count: ${messages.length}`);
+        logger.debug(`📋 ChatRoom: messages updated, count: ${messages.length}`);
     }, [messages.length]);
 
     const scrollViewTargetRef = React.useRef<HTMLDivElement>(null);

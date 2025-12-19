@@ -2,6 +2,7 @@
 
 import { makeStyles } from '@fluentui/react-components';
 import React, { forwardRef } from 'react';
+import { logger } from '../libs/utils/Logger';
 
 const useClasses = makeStyles({
     root: { display: 'none' },
@@ -25,14 +26,14 @@ const FileUploaderComponent = (
             event.stopPropagation();
             event.preventDefault();
             if (!selectedFiles || selectedFiles.length !== 1) {
-                console.error('There are none or multiple selected files.');
+                logger.error('There are none or multiple selected files.');
                 return;
             }
             const file = selectedFiles.item(0);
             if (file) {
                 onSelectedFile(file);
             } else {
-                console.error('The selected file contains no file object.');
+                logger.error('The selected file contains no file object.');
             }
         },
         [onSelectedFile],

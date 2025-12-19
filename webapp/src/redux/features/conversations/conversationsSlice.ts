@@ -3,6 +3,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ChatMessageType, IChatMessage, UserFeedback } from '../../../libs/models/ChatMessage';
 import { IChatUser } from '../../../libs/models/ChatUser';
+import { logger } from '../../../libs/utils/Logger';
 import { ChatState } from './ChatState';
 import {
     ConversationInputChange,
@@ -154,15 +155,15 @@ export const conversationsSlice = createSlice({
                     : conversation.messages.findIndex((m) => m.id === messageIdOrIndex);
 
             if (messageIndex === -1) {
-                console.warn(`⚠️ updateMessageProperty: Message ${messageIdOrIndex} not found in chat ${chatId}`);
+                logger.warn(`⚠️ updateMessageProperty: Message ${messageIdOrIndex} not found in chat ${chatId}`);
                 return;
             }
 
             const conversationMessage = conversation.messages[messageIndex];
 
-            // Log the update
+            // Debug logging for update
             const oldVal = conversationMessage[property];
-            console.log(`📝 Updating message[${messageIndex}].${String(property)}`, {
+            logger.debug(`📝 Updating message[${messageIndex}].${String(property)}`, {
                 messageId: conversationMessage.id,
                 oldValue: typeof oldVal === 'string' ? oldVal.substring(0, 30) : oldVal,
                 newValue: typeof value === 'string' ? value.substring(0, 30) : value,
@@ -236,7 +237,7 @@ const updateConversation = (state: ConversationsState, chatId: string, message: 
     if (message.id) {
         const existingMessage = conversation.messages.find((m) => m.id === message.id);
         if (existingMessage) {
-            console.log(`ℹ️ Message ${message.id} already exists, skipping add`);
+            logger.debug(`ℹ️ Message ${message.id} already exists, skipping add`);
             return;
         }
     }
@@ -251,7 +252,7 @@ const updateConversation = (state: ConversationsState, chatId: string, message: 
     conversation.messages = [...conversation.messages, newMessage];
     conversation.lastUpdatedTimestamp = message.timestamp;
 
-    console.log(`✓ Message added to chat ${chatId}, total messages: ${conversation.messages.length}`);
+    logger.debug(`✓ Message added to chat ${chatId}, total messages: ${conversation.messages.length}`);
     frontLoadChat(state, chatId);
 };
 

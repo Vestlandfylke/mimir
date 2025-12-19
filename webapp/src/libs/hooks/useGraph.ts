@@ -9,6 +9,7 @@ import { AuthHelper } from '../auth/AuthHelper';
 import { TokenHelper } from '../auth/TokenHelper';
 import { AlertType } from '../models/AlertType';
 import { BatchRequest, BatchResponse, GraphService } from '../services/GraphService';
+import { logger } from '../utils/Logger';
 
 export const useGraph = () => {
     const { instance, inProgress } = useMsal();
@@ -60,7 +61,7 @@ export const useGraph = () => {
 
                 // Retry any users that failed with transient (5xx) errors up to 3 times
                 while (usersToRetry.length > 0 && retries <= MAX_RETRIES) {
-                    console.log(`Retrying batch request  ${retries}/${MAX_RETRIES}`);
+                    logger.debug(`Retrying batch request  ${retries}/${MAX_RETRIES}`);
                     await makeBatchGetUsersRequest(usersToRetry, loadedUsers, usersToRetry);
                     retries++;
                 }

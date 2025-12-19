@@ -9,10 +9,11 @@ import { AuthConfig, AuthHelper } from './libs/auth/AuthHelper';
 import { store } from './redux/app/store';
 
 import React from 'react';
+import { teamsAuthHelper } from './libs/auth/TeamsAuthHelper';
 import { BackendServiceUrl } from './libs/services/BaseService';
 import { EmbeddedAppHelper } from './libs/utils/EmbeddedAppHelper';
+import { logger } from './libs/utils/Logger';
 import { setAuthConfig } from './redux/features/app/appSlice';
-import { teamsAuthHelper } from './libs/auth/TeamsAuthHelper';
 
 if (!localStorage.getItem('debug')) {
     localStorage.setItem('debug', `${Constants.debug.root}:*`);
@@ -38,16 +39,16 @@ async function initializeAndRenderApp() {
     // Initialize Teams SDK FIRST if we're in Teams
     // This MUST happen before any other app initialization
     if (EmbeddedAppHelper.isInTeams()) {
-        console.log('Detected Teams context, initializing Teams SDK...');
+        logger.debug('Detected Teams context, initializing Teams SDK...');
         try {
             const teamsInitSuccess = await teamsAuthHelper.initialize();
             if (teamsInitSuccess) {
-                console.log('Teams SDK initialized successfully');
+                logger.debug('Teams SDK initialized successfully');
             } else {
-                console.warn('Teams SDK initialization failed');
+                logger.warn('Teams SDK initialization failed');
             }
         } catch (error) {
-            console.error('Error initializing Teams SDK:', error);
+            logger.error('Error initializing Teams SDK:', error);
         }
     }
 
@@ -55,10 +56,10 @@ async function initializeAndRenderApp() {
 }
 
 export function renderApp() {
-    // Log the app context for debugging
-    console.log(`Mimir running in: ${EmbeddedAppHelper.getAppContext()}`);
-    console.log(`Auth method: ${Constants.msal.method}`);
-    console.log(`Is in Teams: ${EmbeddedAppHelper.isInTeams()}`);
+    // Log the app context for debugging (only in development)
+    logger.info(`Mimir running in: ${EmbeddedAppHelper.getAppContext()}`);
+    logger.info(`Auth method: ${Constants.msal.method}`);
+    logger.info(`Is in Teams: ${EmbeddedAppHelper.isInTeams()}`);
 
     fetch(new URL('authConfig', BackendServiceUrl))
         .then((response) => (response.ok ? (response.json() as Promise<AuthConfig>) : Promise.reject()))
@@ -73,17 +74,17 @@ export function renderApp() {
                 void msalInstance.handleRedirectPromise().then((response) => {
                     if (response) {
                         msalInstance.setActiveAccount(response.account);
-                        console.log('Authentication successful via redirect');
+                        logger.debug('Authentication successful via redirect');
                     }
                 });
 
                 // Attempt silent SSO on startup
-                console.log('Attempting silent SSO...');
+                logger.debug('Attempting silent SSO...');
                 const ssoAccount = await AuthHelper.initializeAndAttemptSso(msalInstance);
                 if (ssoAccount) {
-                    console.log('Silent SSO successful:', ssoAccount.username);
+                    logger.debug('Silent SSO successful:', ssoAccount.username);
                 } else {
-                    console.log('Silent SSO not available - user will need to login interactively');
+                    logger.debug('Silent SSO not available - user will need to login interactively');
                 }
 
                 // render with the MsalProvider if AAD is enabled

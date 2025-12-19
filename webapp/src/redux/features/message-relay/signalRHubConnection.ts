@@ -9,6 +9,7 @@ import { AuthorRoles, ChatMessageType, IChatMessage } from '../../../libs/models
 import { IChatUser } from '../../../libs/models/ChatUser';
 import { PlanState } from '../../../libs/models/Plan';
 import { BackendServiceUrl } from '../../../libs/services/BaseService';
+import { logger } from '../../../libs/utils/Logger';
 import { StoreMiddlewareAPI } from '../../app/store';
 import { addAlert, setMaintenance } from '../app/appSlice';
 import { ChatState } from '../conversations/ChatState';
@@ -79,7 +80,7 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
                     id: Constants.app.CONNECTION_ALERT_ID,
                 }),
             );
-            console.log(errorMessage, error);
+            logger.log(errorMessage, error);
         }
     });
 
@@ -93,7 +94,7 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
                     id: Constants.app.CONNECTION_ALERT_ID,
                 }),
             );
-            console.log(errorMessage, error);
+            logger.log(errorMessage, error);
         }
     });
 
@@ -101,7 +102,7 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
         if (hubConnection.state === signalR.HubConnectionState.Connected) {
             const message = 'Tilkobling gjenoppretta. Oppdater sida for å sikre at du har dei nyaste dataene.';
             store.dispatch(addAlert({ message, type: AlertType.Success, id: Constants.app.CONNECTION_ALERT_ID }));
-            console.log(message + ` Connected with connectionId ${connectionId}`);
+            logger.log(message + ` Connected with connectionId ${connectionId}`);
         }
     });
 };
@@ -111,19 +112,17 @@ const startSignalRConnection = (hubConnection: signalR.HubConnection, store: Sto
     hubConnection
         .start()
         .then(() => {
-            console.assert(hubConnection.state === signalR.HubConnectionState.Connected);
-            console.log('SignalR connection established');
+            logger.debug('SignalR connection established');
         })
         .catch((err) => {
-            console.assert(hubConnection.state === signalR.HubConnectionState.Disconnected);
-            console.error('SignalR Connection Error: ', err);
+            logger.error('SignalR Connection Error: ', err);
             setTimeout(() => {
                 startSignalRConnection(hubConnection, store);
             }, 5000);
         });
 };
 
-// Add connection state monitoring for debugging
+// Add connection state monitoring for debugging (only in development)
 const monitorConnectionState = (hubConnection: signalR.HubConnection) => {
     // Log connection state every 10 seconds during active requests
     setInterval(() => {
@@ -137,9 +136,9 @@ const monitorConnectionState = (hubConnection: signalR.HubConnection) => {
         };
 
         if (state !== signalR.HubConnectionState.Connected) {
-            console.warn(`⚠️ SignalR connection state: ${stateNames[state] || state}`);
+            logger.warn(`⚠️ SignalR connection state: ${stateNames[state] || state}`);
         } else {
-            console.log(`✓ SignalR connection: ${stateNames[state]}`);
+            logger.debug(`✓ SignalR connection: ${stateNames[state]}`);
         }
     }, 10000); // Check every 10 seconds
 };
@@ -150,8 +149,8 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
     hubConnection.on(
         SignalRCallbackMethods.ReceiveMessage,
         (chatId: string, senderId: string, message: IChatMessage) => {
-            // Enhanced logging for debugging
-            console.log('📨 SignalR ReceiveMessage:', {
+            // Debug logging
+            logger.debug('📨 SignalR ReceiveMessage:', {
                 chatId,
                 senderId,
                 messageId: message.id,
@@ -168,7 +167,7 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
                         ? PlanState.PlanApprovalRequired
                         : PlanState.Disabled;
 
-                console.log('🤖 Bot message received, dispatching to Redux', {
+                logger.debug('🤖 Bot message received, dispatching to Redux', {
                     chatId,
                     messageId: message.id,
                     contentPreview: message.content.substring(0, 50),
@@ -182,7 +181,7 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
 
             // Verify message was added
             const afterCount = store.getState().conversations.conversations[chatId].messages.length;
-            console.log(`✓ Message dispatched to Redux store (messages: ${beforeCount} → ${afterCount})`);
+            logger.debug(`✓ Message dispatched to Redux store (messages: ${beforeCount} → ${afterCount})`);
 
             // Safety: clear spinner when a bot message is received
             if (message.authorRole === AuthorRoles.Bot) {
@@ -197,8 +196,8 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
     hubConnection.on(SignalRCallbackMethods.ReceiveMessageUpdate, (message: IChatMessage) => {
         const { chatId, id: messageId, content } = message;
 
-        // Enhanced logging for message updates
-        console.log('📝 SignalR ReceiveMessageUpdate:', {
+        // Debug logging for message updates
+        logger.debug('📝 SignalR ReceiveMessageUpdate:', {
             chatId,
             messageId,
             hasContent: !!content,
@@ -211,7 +210,7 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
         const property = message.tokenUsage ? 'tokenUsage' : 'content';
         const value = message.tokenUsage ?? content;
 
-        console.log(`📝 Updating message property: ${property}`, {
+        logger.debug(`📝 Updating message property: ${property}`, {
             messageId,
             valuePreview: typeof value === 'string' ? value.substring(0, 50) : value,
         });
@@ -259,8 +258,8 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
     );
 
     hubConnection.on(SignalRCallbackMethods.ReceiveBotResponseStatus, (chatId: string, status: string | null) => {
-        // Enhanced logging for bot status
-        console.log('🔄 SignalR ReceiveBotResponseStatus:', {
+        // Debug logging for bot status
+        logger.debug('🔄 SignalR ReceiveBotResponseStatus:', {
             chatId,
             status: status ?? 'null (done/clear)',
             timestamp: new Date().toISOString(),
@@ -275,7 +274,7 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
         });
 
         if (!normalizedStatus) {
-            console.log('✓ Bot response complete - spinner should clear');
+            logger.debug('✓ Bot response complete - spinner should clear');
         }
     });
 

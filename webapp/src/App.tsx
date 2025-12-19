@@ -8,6 +8,7 @@ import { Loading, Login } from './components/views';
 import { AuthHelper } from './libs/auth/AuthHelper';
 import { useChat, useFile } from './libs/hooks';
 import { AlertType } from './libs/models/AlertType';
+import { logger } from './libs/utils/Logger';
 import { useAppDispatch, useAppSelector } from './redux/app/hooks';
 import { RootState } from './redux/app/store';
 import { FeatureKeys } from './redux/features/app/AppState';
@@ -112,7 +113,7 @@ const App = () => {
                         handleAppStateChange(AppState.Chat);
                     })
                     .catch((error) => {
-                        console.error('Error loading chats:', error);
+                        logger.error('Error loading chats:', error);
                         handleAppStateChange(AppState.ErrorLoadingChats);
                     }),
                 file.getContentSafetyStatus(),

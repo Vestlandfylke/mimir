@@ -1,5 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
+import { logger } from '../utils/Logger';
+
 /**
  * ChatRequestQueue - Ensures chat requests are processed sequentially
  *
@@ -35,7 +37,7 @@ class ChatRequestQueue {
             };
 
             this.queue.push(request);
-            console.log(`📋 Request queued (${this.queue.length} in queue):`, request.id);
+            logger.debug(`📋 Request queued (${this.queue.length} in queue):`, request.id);
 
             // Start processing if not already processing
             if (!this.processing) {
@@ -57,20 +59,20 @@ class ChatRequestQueue {
                 continue;
             }
 
-            console.log(`⚙️ Processing request (${this.queue.length} remaining):`, request.id);
+            logger.debug(`⚙️ Processing request (${this.queue.length} remaining):`, request.id);
 
             try {
                 await request.execute();
-                console.log(`✅ Request completed:`, request.id);
+                logger.debug(`✅ Request completed:`, request.id);
                 request.resolve();
             } catch (error) {
-                console.error(`❌ Request failed:`, request.id, error);
+                logger.error(`❌ Request failed:`, request.id, error);
                 request.reject(error);
             }
         }
 
         this.processing = false;
-        console.log(`✅ Queue empty - ready for new requests`);
+        logger.debug(`✅ Queue empty - ready for new requests`);
     }
 
     /**

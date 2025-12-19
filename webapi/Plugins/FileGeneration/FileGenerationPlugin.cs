@@ -47,23 +47,55 @@ public class FileGenerationPlugin
   }
 
   /// <summary>
+  /// Gets the chat ID from the current HTTP request route.
+  /// The chat endpoint is /chats/{chatId:guid}/messages, so we can extract the chatId from route values.
+  /// </summary>
+  private string GetChatIdFromRequest()
+  {
+    var httpContext = this._httpContextAccessor.HttpContext;
+    if (httpContext?.Request.RouteValues.TryGetValue("chatId", out var chatIdValue) == true && chatIdValue != null)
+    {
+      // Route can bind chatId as either string or Guid depending on the route constraint
+      if (chatIdValue is string chatIdString && !string.IsNullOrEmpty(chatIdString))
+      {
+        return chatIdString;
+      }
+
+      if (chatIdValue is Guid chatIdGuid)
+      {
+        return chatIdGuid.ToString();
+      }
+
+      // Try converting to string as fallback
+      var converted = chatIdValue.ToString();
+      if (!string.IsNullOrEmpty(converted))
+      {
+        return converted;
+      }
+    }
+
+    this._logger.LogWarning("Could not extract chatId from HTTP request route. Using fallback.");
+    return "default";
+  }
+
+  /// <summary>
   /// Creates a downloadable text file (markdown, plain text, etc.).
   /// </summary>
   /// <param name="fileName">The name of the file (e.g., "dokument.md")</param>
   /// <param name="content">The text content of the file</param>
-  /// <param name="chatId">The chat ID</param>
   /// <returns>A download URL for the file</returns>
   [KernelFunction, Description("Lag ei nedlastbar tekstfil (markdown, txt, osv.) som brukaren kan laste ned")]
   public async Task<string> CreateTextFile(
       [Description("Filnamn (t.d. 'dokument.md', 'rapport.txt')")] string fileName,
-      [Description("Innhaldet i fila")] string content,
-      [Description("Chat ID")] string chatId)
+      [Description("Innhaldet i fila")] string content)
   {
     try
     {
       EnsureTextFileExtension(fileName);
       var fileId = Guid.NewGuid().ToString();
       var contentType = GetContentType(fileName);
+      // Get chatId from HTTP request route - don't trust LLM to supply it
+      var chatId = this.GetChatIdFromRequest();
 
       var file = new GeneratedFile
       {
@@ -82,8 +114,8 @@ public class FileGenerationPlugin
 
       await this._fileRepository.CreateAsync(file);
 
-      var downloadUrl = this.GetDownloadUrl(fileId);
-      this._logger.LogInformation("Created downloadable file {FileName} with ID {FileId}", fileName, fileId);
+      var downloadUrl = this.GetDownloadUrl(fileId, chatId);
+      this._logger.LogInformation("Created downloadable file {FileName} with ID {FileId} in chat {ChatId}", fileName, fileId, chatId);
 
       return downloadUrl;
     }
@@ -101,15 +133,14 @@ public class FileGenerationPlugin
   [KernelFunction, Description("Lag ei ekte Word-fil (.docx) som brukaren kan laste ned. Innhald er vanleg tekst; serveren byggjer ei gyldig .docx.")]
   public async Task<string> CreateWordFile(
       [Description("Filnamn (t.d. 'rapport.docx')")] string fileName,
-      [Description("Tekstinnhald som skal inn i Word-dokumentet")] string content,
-      [Description("Chat ID")] string chatId)
+      [Description("Tekstinnhald som skal inn i Word-dokumentet")] string content)
   {
     try
     {
       fileName = EnsureExtension(fileName, ".docx");
       var bytes = BuildDocxFromPlainText(content);
       var contentBase64 = Convert.ToBase64String(bytes);
-      return await this.CreateBinaryFile(fileName, contentBase64, chatId);
+      return await this.CreateBinaryFile(fileName, contentBase64);
     }
     catch (Exception ex)
     {
@@ -125,15 +156,14 @@ public class FileGenerationPlugin
   [KernelFunction, Description("Lag ei ekte Excel-fil (.xlsx) frå tabelldata. Send inn data som CSV (semikolon- eller kommaseparert) eller JSON array.")]
   public async Task<string> CreateExcelFile(
       [Description("Filnamn (t.d. 'data.xlsx')")] string fileName,
-      [Description("Tabelldata som CSV (rad per linje, kolonnar med ; eller ,) eller JSON array [{\"kolonne1\": \"verdi1\", ...}, ...]")] string tableData,
-      [Description("Chat ID")] string chatId)
+      [Description("Tabelldata som CSV (rad per linje, kolonnar med ; eller ,) eller JSON array [{\"kolonne1\": \"verdi1\", ...}, ...]")] string tableData)
   {
     try
     {
       fileName = EnsureExtension(fileName, ".xlsx");
       var bytes = BuildXlsxFromData(tableData);
       var contentBase64 = Convert.ToBase64String(bytes);
-      return await this.CreateBinaryFile(fileName, contentBase64, chatId);
+      return await this.CreateBinaryFile(fileName, contentBase64);
     }
     catch (Exception ex)
     {
@@ -148,15 +178,14 @@ public class FileGenerationPlugin
   [KernelFunction, Description("Lag ei ekte PowerPoint-fil (.pptx). Send inn lysbilete som JSON array med tittel og innhald for kvart lysbilde.")]
   public async Task<string> CreatePowerPointFile(
       [Description("Filnamn (t.d. 'presentasjon.pptx')")] string fileName,
-      [Description("Lysbilete som JSON array: [{\"title\": \"Tittel\", \"content\": \"Punktliste eller tekst\"}, ...]")] string slidesJson,
-      [Description("Chat ID")] string chatId)
+      [Description("Lysbilete som JSON array: [{\"title\": \"Tittel\", \"content\": \"Punktliste eller tekst\"}, ...]")] string slidesJson)
   {
     try
     {
       fileName = EnsureExtension(fileName, ".pptx");
       var bytes = BuildPptxFromSlides(slidesJson);
       var contentBase64 = Convert.ToBase64String(bytes);
-      return await this.CreateBinaryFile(fileName, contentBase64, chatId);
+      return await this.CreateBinaryFile(fileName, contentBase64);
     }
     catch (Exception ex)
     {
@@ -172,15 +201,14 @@ public class FileGenerationPlugin
   public async Task<string> CreatePdfFile(
       [Description("Filnamn (t.d. 'dokument.pdf')")] string fileName,
       [Description("Tekstinnhald som skal inn i PDF-dokumentet")] string content,
-      [Description("Valfri tittel for dokumentet")] string? title,
-      [Description("Chat ID")] string chatId)
+      [Description("Valfri tittel for dokumentet")] string? title)
   {
     try
     {
       fileName = EnsureExtension(fileName, ".pdf");
       var bytes = BuildPdfFromText(content, title);
       var contentBase64 = Convert.ToBase64String(bytes);
-      return await this.CreateBinaryFile(fileName, contentBase64, chatId);
+      return await this.CreateBinaryFile(fileName, contentBase64);
     }
     catch (Exception ex)
     {
@@ -194,18 +222,18 @@ public class FileGenerationPlugin
   /// </summary>
   /// <param name="fileName">The name of the file</param>
   /// <param name="contentBase64">The base64-encoded content of the file</param>
-  /// <param name="chatId">The chat ID</param>
   /// <returns>A download URL for the file</returns>
   [KernelFunction, Description("Lag ei nedlastbar binærfil (PDF, Word, osv.) som brukaren kan laste ned")]
   public async Task<string> CreateBinaryFile(
       [Description("Filnamn (t.d. 'dokument.pdf', 'rapport.docx')")] string fileName,
-      [Description("Base64-enkoda innhald")] string contentBase64,
-      [Description("Chat ID")] string chatId)
+      [Description("Base64-enkoda innhald")] string contentBase64)
   {
     try
     {
       var fileId = Guid.NewGuid().ToString();
       var contentType = GetContentType(fileName);
+      // Get chatId from HTTP request route - don't trust LLM to supply it
+      var chatId = this.GetChatIdFromRequest();
 
       // Decode base64 to get actual size
       byte[] bytes = Convert.FromBase64String(contentBase64);
@@ -227,8 +255,8 @@ public class FileGenerationPlugin
 
       await this._fileRepository.CreateAsync(file);
 
-      var downloadUrl = this.GetDownloadUrl(fileId);
-      this._logger.LogInformation("Created binary file {FileName} with ID {FileId}", fileName, fileId);
+      var downloadUrl = this.GetDownloadUrl(fileId, chatId);
+      this._logger.LogInformation("Created binary file {FileName} with ID {FileId} in chat {ChatId}", fileName, fileId, chatId);
 
       return downloadUrl;
     }
@@ -696,18 +724,18 @@ public class FileGenerationPlugin
   /// <summary>
   /// Gets the full download URL for a file based on the current request context.
   /// </summary>
-  private string GetDownloadUrl(string fileId)
+  private string GetDownloadUrl(string fileId, string chatId)
   {
     var httpContext = this._httpContextAccessor.HttpContext;
     if (httpContext != null)
     {
       var request = httpContext.Request;
       var baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}";
-      return $"{baseUrl}/files/{fileId}";
+      return $"{baseUrl}/files/{fileId}?chatId={chatId}";
     }
 
     // Fallback to relative URL if HttpContext is not available
-    return $"/files/{fileId}";
+    return $"/files/{fileId}?chatId={chatId}";
   }
 }
 
