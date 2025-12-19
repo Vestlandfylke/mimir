@@ -57,7 +57,22 @@ public class FileDownloadController : ControllerBase
           chatId ?? "<not provided>");
 
       // Get the file from storage - use chatId as partition key if provided
-      var file = await this._fileRepository.FindByIdAsync(fileId, chatId);
+      Models.Storage.GeneratedFile? file = null;
+      
+      if (!string.IsNullOrEmpty(chatId))
+      {
+        // ChatId provided - use it as partition key (fast lookup)
+        file = await this._fileRepository.FindByIdAsync(fileId, chatId);
+      }
+      
+      if (file == null)
+      {
+        // Fallback: search across all partitions (for backward compatibility with old URLs)
+        // This is a cross-partition query and slower, but handles URLs generated before v2.0
+        this._logger.LogInformation("File {FileId} not found with chatId, trying cross-partition search", fileId);
+        file = await this._fileRepository.FindByFileIdAcrossPartitionsAsync(fileId);
+      }
+      
       if (file == null)
       {
         this._logger.LogWarning("File {FileId} not found (chatId: {ChatId})", fileId, chatId ?? "<not provided>");

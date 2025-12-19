@@ -28,6 +28,19 @@ public class GeneratedFileRepository : Repository<GeneratedFile>
   }
 
   /// <summary>
+  /// Finds a generated file by its ID across all partitions.
+  /// This is a cross-partition query and should only be used as a fallback
+  /// when the chatId (partition key) is not known.
+  /// </summary>
+  /// <param name="fileId">The file ID</param>
+  /// <returns>The file if found, null otherwise</returns>
+  public async Task<GeneratedFile?> FindByFileIdAcrossPartitionsAsync(string fileId)
+  {
+    var results = await base.StorageContext.QueryEntitiesAsync(e => e.Id == fileId);
+    return results.FirstOrDefault();
+  }
+
+  /// <summary>
   /// Deletes expired files older than the specified date.
   /// </summary>
   /// <param name="expirationDate">The expiration date</param>
