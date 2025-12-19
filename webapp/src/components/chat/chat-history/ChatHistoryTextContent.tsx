@@ -104,10 +104,7 @@ const remarkPlugins = [remarkGfm, remarkMath];
 const rehypePlugins = [rehypeKatex];
 
 // Custom comparison function for memo - only re-render if message content or citations change
-const arePropsEqual = (
-    prevProps: ChatHistoryTextContentProps,
-    nextProps: ChatHistoryTextContentProps,
-): boolean => {
+const arePropsEqual = (prevProps: ChatHistoryTextContentProps, nextProps: ChatHistoryTextContentProps): boolean => {
     // Only re-render if the actual content changed
     return (
         prevProps.message.content === nextProps.message.content &&

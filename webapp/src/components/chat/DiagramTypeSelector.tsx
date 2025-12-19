@@ -311,11 +311,7 @@ export interface DiagramTypeSelectorProps {
     disabled?: boolean;
 }
 
-export const DiagramTypeSelector: React.FC<DiagramTypeSelectorProps> = ({
-    selectedType,
-    onSelectType,
-    disabled,
-}) => {
+export const DiagramTypeSelector: React.FC<DiagramTypeSelectorProps> = ({ selectedType, onSelectType, disabled }) => {
     const classes = useClasses();
     const [isOpen, setIsOpen] = useState(false);
 
@@ -331,7 +327,13 @@ export const DiagramTypeSelector: React.FC<DiagramTypeSelectorProps> = ({
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}>
-            <Popover open={isOpen} onOpenChange={(_, data) => { setIsOpen(data.open); }} positioning="above-start">
+            <Popover
+                open={isOpen}
+                onOpenChange={(_, data) => {
+                    setIsOpen(data.open);
+                }}
+                positioning="above-start"
+            >
                 <PopoverTrigger disableButtonEnhancement>
                     <Tooltip content="Vel diagramtype" relationship="label">
                         <Button
@@ -347,17 +349,22 @@ export const DiagramTypeSelector: React.FC<DiagramTypeSelectorProps> = ({
                     <div className={classes.header}>
                         <h3 className={classes.title}>📊 Vel diagramtype</h3>
                     </div>
-                    <p className={classes.subtitle}>
-                        Vel ein type for å få betre resultat når du ber om diagram
-                    </p>
+                    <p className={classes.subtitle}>Vel ein type for å få betre resultat når du ber om diagram</p>
                     <div className={classes.grid}>
                         {DIAGRAM_TYPES.map((type) => (
-                            <Tooltip key={type.id} content={type.description} relationship="description" positioning="above">
+                            <Tooltip
+                                key={type.id}
+                                content={type.description}
+                                relationship="description"
+                                positioning="above"
+                            >
                                 <div
                                     className={`${classes.diagramOption} ${
                                         selectedType?.id === type.id ? classes.diagramOptionSelected : ''
                                     }`}
-                                    onClick={() => { handleSelect(type); }}
+                                    onClick={() => {
+                                        handleSelect(type);
+                                    }}
                                     role="button"
                                     tabIndex={0}
                                     onKeyDown={(e) => {
