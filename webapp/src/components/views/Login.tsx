@@ -7,6 +7,7 @@ import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { EmbeddedAppHelper } from '../../libs/utils/EmbeddedAppHelper';
 import { logger } from '../../libs/utils/Logger';
 import { getErrorDetails } from '../utils/TextUtils';
+import logo from '../../assets/sidestilt-logo-vlfk.svg';
 
 const useClasses = makeStyles({
     container: {
@@ -42,7 +43,8 @@ const useClasses = makeStyles({
         padding: tokens.spacingHorizontalXXL,
     },
     logo: {
-        fontSize: '48px',
+        width: '120px',
+        height: 'auto',
         marginBottom: tokens.spacingVerticalL,
     },
     title: {
@@ -152,7 +154,7 @@ export const Login: React.FC = () => {
         <div className={classes.container}>
             <div className={classes.backgroundPattern} />
             <div className={classes.content}>
-                <div className={classes.logo}>🌳</div>
+                <img src={logo} alt="Vestland fylkeskommune" className={classes.logo} />
                 <h1 className={classes.title}>Mimir</h1>
                 <p className={classes.subtitle}>KI-assistent for Vestland fylkeskommune</p>
 
