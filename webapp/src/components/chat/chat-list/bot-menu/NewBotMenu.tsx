@@ -27,10 +27,6 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
         void chat.createChat();
     };
 
-    const onAddKlarsprakChat = () => {
-        void chat.createChat('klarsprak');
-    };
-
     const onJoinClick = () => {
         setIsJoiningBot(true);
     };
@@ -55,9 +51,6 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
                     <MenuList>
                         <MenuItem data-testid="addNewBotMenuItem" icon={<BotAdd20Regular />} onClick={onAddChat}>
                             Legg til ein ny bot
-                        </MenuItem>
-                        <MenuItem data-testid="addKlarsprakBotMenuItem" onClick={onAddKlarsprakChat}>
-                            📝 Klarspråk-assistent
                         </MenuItem>
                         <MenuItem
                             data-testid="uploadABotMenuItem"

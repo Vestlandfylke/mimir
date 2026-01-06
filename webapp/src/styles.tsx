@@ -29,14 +29,27 @@ export const semanticKernelBrandRamp: BrandVariants = {
     160: '#007096',
 };
 
-export const semanticKernelLightTheme: Theme & { colorMeBackground: string } = {
+export const semanticKernelLightTheme: Theme & { colorMeBackground: string; colorBotBackground: string } = {
     ...createLightTheme(semanticKernelBrandRamp),
-    colorMeBackground: '#e8ebf9',
+    colorMeBackground: '#e8ebf9', // Brukar-meldingar i lys modus
+    colorBotBackground: '#ffffff', // Bot-meldingar i lys modus (original)
 };
 
-export const semanticKernelDarkTheme: Theme & { colorMeBackground: string } = {
+export const semanticKernelDarkTheme: Theme & { colorMeBackground: string; colorBotBackground: string } = {
     ...createDarkTheme(semanticKernelBrandRamp),
-    colorMeBackground: '#2b2b3e',
+    // Mjukare mørk modus - nøytral grå som Cursor
+    colorNeutralBackground1: '#1e1e1e', // Hovudbakgrunn
+    colorNeutralBackground2: '#252526', // Sekundær bakgrunn
+    colorNeutralBackground3: '#2d2d2d', // Tertiær bakgrunn
+    colorNeutralBackground4: '#333333', // Fjerde nivå
+    colorNeutralBackground5: '#3c3c3c', // Femte nivå
+    colorNeutralBackground6: '#454545', // Sjette nivå
+    colorSubtleBackground: '#252526',
+    colorSubtleBackgroundHover: '#2d2d2d',
+    colorSubtleBackgroundPressed: '#333333',
+    colorNeutralBackgroundStatic: '#1e1e1e',
+    colorMeBackground: '#3c3c3c', // Brukar-meldingar i mørk modus
+    colorBotBackground: '#333333', // Bot-meldingar i mørk modus
 };
 
 export const customTokens = themeToTokensObject(semanticKernelLightTheme);

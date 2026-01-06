@@ -35,10 +35,6 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
         void chat.createChat();
     };
 
-    const onAddKlarsprakChat = () => {
-        void chat.createChat('klarsprak');
-    };
-
     const onJoinClick = () => {
         setIsJoiningBot(true);
     };
@@ -59,9 +55,6 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
                     <MenuList>
                         <MenuItem data-testid="addNewBotMenuItem" onClick={onAddChat}>
                             Ny samtaleøkt
-                        </MenuItem>
-                        <MenuItem data-testid="addKlarsprakBotMenuItem" onClick={onAddKlarsprakChat}>
-                            📝 Klarspråk-assistent
                         </MenuItem>
                         <Divider />
                         <MenuItem

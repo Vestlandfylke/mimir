@@ -59,6 +59,7 @@ export interface AppState {
     settings: Setting[];
     serviceInfo: ServiceInfo;
     isMaintenance: boolean;
+    connectionReconnected: boolean; // Flag to trigger message sync after reconnection
 }
 
 export enum FeatureKeys {
@@ -83,8 +84,8 @@ export const Features = {
     },
     [FeatureKeys.PluginsPlannersAndPersonas]: {
         enabled: true,
-        label: 'Tillegg & Planleggjarar & Personar',
-        description: 'Planar- og personflikkane er skjulte inntil du slår dette på',
+        label: 'Planar & Tilpassing',
+        description: 'Planar- og tilpassingsflikkane er skjulte inntil du slår dette på',
     },
     [FeatureKeys.AzureContentSafety]: {
         enabled: false,
@@ -127,11 +128,6 @@ export const Settings = [
         stackVertically: true,
     },
     {
-        title: 'Azure AI',
-        features: [FeatureKeys.AzureContentSafety, FeatureKeys.AzureAISearch],
-        stackVertically: true,
-    },
-    {
         title: 'Eksperimentell',
         description: 'Dei relaterte ikona og menyvalga er skjulte inntil du slår dette på',
         features: [FeatureKeys.BotAsDocs, FeatureKeys.MultiUserChat, FeatureKeys.RLHF],
@@ -152,4 +148,5 @@ export const initialState: AppState = {
         isContentSafetyEnabled: false,
     },
     isMaintenance: false,
+    connectionReconnected: false,
 };

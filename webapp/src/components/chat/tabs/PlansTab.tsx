@@ -27,7 +27,7 @@ import { TabView } from './TabView';
 
 const useClasses = makeStyles({
     table: {
-        backgroundColor: tokens.colorNeutralBackground1,
+        backgroundColor: tokens.colorNeutralBackground3,
     },
     tableHeader: {
         fontWeight: tokens.fontSizeBase600,
@@ -58,7 +58,7 @@ export const PlansTab: React.FC<IPlansTabProps> = ({ setChatTab }) => {
 
     const { columns, rows } = useTable(planMessages, setChatTab);
     return (
-        <TabView title="Planar" learnMoreDescription="Tilpassa planar" learnMoreLink="https://aka.ms/sk-docs-planner">
+        <TabView title="Planar">
             <Table aria-label="Prosessar plantabell" className={classes.table}>
                 <TableHeader>
                     <TableRow>{columns.map((column) => column.renderHeaderCell())}</TableRow>
@@ -109,7 +109,7 @@ function useTable(planMessages: IChatMessage[], setChatTab: () => void) {
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
-                <TableCell key={item.createdOn.timestamp} title={new Date(item.createdOn.timestamp).toLocaleString()}>
+                <TableCell key={item.createdOn.timestamp} title={new Date(item.createdOn.timestamp).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}>
                     {item.createdOn.label}
                 </TableCell>
             ),

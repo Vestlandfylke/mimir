@@ -10,7 +10,8 @@ import {
     tokens,
 } from '@fluentui/react-components';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import logo from '../../../assets/logo.png';
+import logoLight from '../../../assets/sidestilt-logo-vlfk.svg';
+import logoDark from '../../../assets/sidestilt-logo-kvit-skrift-vlfk.svg';
 import { useChat, useFile } from '../../../libs/hooks';
 import { getFriendlyChatName } from '../../../libs/hooks/useChat';
 import { AlertType } from '../../../libs/models/AlertType';
@@ -260,7 +261,11 @@ export const ChatList: FC = () => {
                 )}
             </div>
             <div className={classes.logoContainer}>
-                <img src={logo} alt="Logo" className={classes.logo} />
+                <img
+                    src={features[FeatureKeys.DarkMode].enabled ? logoDark : logoLight}
+                    alt="Vestland fylkeskommune logo"
+                    className={classes.logo}
+                />
             </div>
         </div>
     );

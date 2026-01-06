@@ -10,15 +10,7 @@ import {
     DialogSurface,
     DialogTitle,
     DialogTrigger,
-    Label,
-    Menu,
-    MenuItem,
-    MenuList,
-    MenuPopover,
-    MenuTrigger,
     ProgressBar,
-    Radio,
-    RadioGroup,
     Spinner,
     Table,
     TableBody,
@@ -58,7 +50,6 @@ import { DocumentImportService } from '../../../libs/services/DocumentImportServ
 import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { addAlert } from '../../../redux/features/app/appSlice';
-import { Add20 } from '../../shared/BundledIcons';
 import { timestampToDateString } from '../../utils/TextUtils';
 import { TabView } from './TabView';
 
@@ -82,17 +73,6 @@ const useClasses = makeStyles({
             ...shorthands.margin('0'),
         },
     },
-    vectorDatabase: {
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        marginLeft: 'auto',
-        ...shorthands.gap(tokens.spacingHorizontalSNudge),
-        '@media (max-width: 744px)': {
-            marginLeft: '0',
-            flexWrap: 'wrap',
-        },
-    },
     hiddenFileInput: {
         display: 'none',
     },
@@ -103,7 +83,7 @@ const useClasses = makeStyles({
         },
     },
     table: {
-        backgroundColor: tokens.colorNeutralBackground1,
+        backgroundColor: tokens.colorNeutralBackground3,
     },
     tableHeader: {
         fontWeight: tokens.fontSizeBase600,
@@ -118,7 +98,7 @@ const useClasses = makeStyles({
         },
     },
     documentCard: {
-        backgroundColor: tokens.colorNeutralBackground1,
+        backgroundColor: tokens.colorNeutralBackground3,
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
         ...shorthands.padding(tokens.spacingVerticalM),
         boxShadow: tokens.shadow4,
@@ -185,7 +165,6 @@ export const DocumentsTab: React.FC = () => {
     const dispatch = useAppDispatch();
     const { instance, inProgress } = useMsal();
 
-    const { serviceInfo } = useAppSelector((state: RootState) => state.app);
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
     const { importingDocuments } = conversations[selectedId];
 
@@ -272,11 +251,7 @@ export const DocumentsTab: React.FC = () => {
 
     const { columns, rows } = useTable(resources, handleDeleteDocument, handlePinDocument, deletingDocumentId);
     return (
-        <TabView
-            title="Dokument"
-            learnMoreDescription="dokument innvevingar"
-            learnMoreLink="https://aka.ms/sk-docs-vectordb"
-        >
+        <TabView title="Dokument">
             <div className={classes.functional}>
                 {/* Skjult input for filopplasting. Godtar bare .txt og .pdf filer for nå. */}
                 <input
@@ -301,69 +276,21 @@ export const DocumentsTab: React.FC = () => {
                         void fileHandler.handleImport(selectedId, globalDocumentFileRef, true);
                     }}
                 />
-                <Menu>
-                    <MenuTrigger disableButtonEnhancement>
-                        <Tooltip content="Bygg inn fil i chatøkta" relationship="label">
-                            <Button
-                                className={classes.uploadButton}
-                                icon={<DocumentArrowUp20Regular />}
-                                disabled={
-                                    conversations[selectedId].disabled ||
-                                    (importingDocuments && importingDocuments.length > 0)
-                                }
-                            >
-                                Last opp
-                            </Button>
-                        </Tooltip>
-                    </MenuTrigger>
-                    <MenuPopover>
-                        <MenuList>
-                            <MenuItem
-                                data-testid="addNewLocalDoc"
-                                onClick={() => localDocumentFileRef.current?.click()}
-                                icon={<Add20 />}
-                                disabled={
-                                    conversations[selectedId].disabled ||
-                                    (importingDocuments && importingDocuments.length > 0)
-                                }
-                            >
-                                Nytt lokalt chatdokument
-                            </MenuItem>
-                            {/*                             { <MenuItem
-                            data-testid="addNewLocalDoc"
-                            onClick={() => globalDocumentFileRef.current?.click()}
-                            icon={<GlobeAdd20Regular />}
-                            disabled={
-                                conversations[selectedId].disabled ||
-                                (importingDocuments && importingDocuments.length > 0)
-                            }
-                        >
-                            Nytt globalt dokument
-                        </MenuItem>} */}
-                        </MenuList>
-                    </MenuPopover>
-                </Menu>
-                {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
-                {/* Hardkoda vektor database siden vi ikke støtter å bytte vektorlager dynamisk nå. */}
-                <div className={classes.vectorDatabase}>
-                    <Label size="large">Vektor Database:</Label>
-                    <RadioGroup
-                        defaultValue={serviceInfo.memoryStore.selectedType}
-                        layout="horizontal"
-                        disabled={conversations[selectedId].disabled}
+                <Tooltip content="Last opp fil til chatøkta" relationship="label">
+                    <Button
+                        data-testid="addNewLocalDoc"
+                        className={classes.uploadButton}
+                        icon={<DocumentArrowUp20Regular />}
+                        disabled={
+                            conversations[selectedId].disabled ||
+                            (importingDocuments && importingDocuments.length > 0)
+                        }
+                        onClick={() => localDocumentFileRef.current?.click()}
                     >
-                        {serviceInfo.memoryStore.types.map((storeType) => {
-                            return (
-                                <Radio
-                                    key={storeType}
-                                    value={storeType}
-                                    label={storeType}
-                                    disabled={storeType !== serviceInfo.memoryStore.selectedType}
-                                />
-                            );
-                        })}
-                    </RadioGroup>
-                </div>
+                        Last opp
+                    </Button>
+                </Tooltip>
+                {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
             </div>
             {/* Desktop: Table view */}
             <div className={classes.tableContainer}>
@@ -512,7 +439,7 @@ function useTable(
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
-                <TableCell key={item.createdOn.timestamp} title={new Date(item.createdOn.timestamp).toLocaleString()}>
+                <TableCell key={item.createdOn.timestamp} title={new Date(item.createdOn.timestamp).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}>
                     {item.id.startsWith('in-progress') ? 'N/A' : item.createdOn.label}
                 </TableCell>
             ),

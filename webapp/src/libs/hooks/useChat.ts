@@ -81,8 +81,8 @@ export const useChat = () => {
     const createChat = async (template?: string) => {
         const chatTitle =
             template === 'klarsprak'
-                ? `Klarspråk-assistent @ ${new Date().toLocaleString()}`
-                : `Mimir @ ${new Date().toLocaleString()}`;
+                ? `Klarspråk-assistent @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`
+                : `Mimir @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`;
         try {
             await chatService
                 .createChatAsync(chatTitle, await AuthHelper.getSKaaSAccessToken(instance, inProgress), template)
@@ -115,7 +115,7 @@ export const useChat = () => {
     const getResponse = async ({ messageType, value, chatId, kernelArguments, processPlan }: GetResponseOptions) => {
         // Use request queue to prevent race conditions when sending multiple messages quickly
         // This ensures messages are processed one at a time, preventing lost responses
-        await chatRequestQueue.enqueue(async () => {
+        await chatRequestQueue.enqueue(chatId, async (signal: AbortSignal) => {
             // Generate a unique ID for the user message to avoid duplicate detection issues
             const messageId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -157,6 +157,7 @@ export const useChat = () => {
                         await AuthHelper.getSKaaSAccessToken(instance, inProgress),
                         getEnabledPlugins(),
                         processPlan,
+                        signal, // Pass abort signal to allow cancellation
                     )
                     .catch((e: any) => {
                         throw e;
@@ -172,7 +173,18 @@ export const useChat = () => {
                 // Clear spinner on error as well
                 dispatch(updateBotResponseStatus({ chatId, status: undefined }));
 
+                // Don't show alert for user-initiated cancellation
+                if (e instanceof DOMException && e.name === 'AbortError') {
+                    return;
+                }
+
                 const errorDetails = getErrorDetails(e);
+                
+                // Don't show alert for cancelled requests
+                if (errorDetails.includes('Request cancelled')) {
+                    return;
+                }
+                
                 if (errorDetails.includes('Failed to process plan')) {
                     // Error should already be reflected in bot response message. Skip alert.
                     return;

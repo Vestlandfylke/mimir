@@ -1,10 +1,10 @@
 import { AuthenticatedTemplate, UnauthenticatedTemplate, useIsAuthenticated, useMsal } from '@azure/msal-react';
-import { FluentProvider, Subtitle1, makeStyles, shorthands, tokens } from '@fluentui/react-components';
+import { FluentProvider, makeStyles, shorthands, tokens } from '@fluentui/react-components';
 
 import * as React from 'react';
 import { useCallback, useEffect } from 'react';
 import Chat from './components/chat/Chat';
-import { Loading, Login } from './components/views';
+import { LoadingOverlay, Login } from './components/views';
 import { AuthHelper } from './libs/auth/AuthHelper';
 import { useChat, useFile } from './libs/hooks';
 import { AlertType } from './libs/models/AlertType';
@@ -133,12 +133,9 @@ const App = () => {
             {AuthHelper.isAuthAAD() ? (
                 <>
                     <UnauthenticatedTemplate>
-                        <div className={classes.container}>
-                            <div className={classes.header} aria-label="Application Header">
-                                <Subtitle1 as="h1">Mimir</Subtitle1>
-                            </div>
-                            {appState === AppState.SigningOut && <Loading text="Signing you out..." />}
-                            {appState !== AppState.SigningOut && <Login />}
+                        <div className={classes.container} style={{ position: 'relative' }}>
+                            <Login />
+                            {appState === AppState.SigningOut && <LoadingOverlay text="Logger ut..." />}
                         </div>
                     </UnauthenticatedTemplate>
                     <AuthenticatedTemplate>

@@ -71,6 +71,9 @@ public sealed class Program
             .AddLogging(logBuilder => logBuilder.AddApplicationInsights())
             .AddSingleton<ITelemetryService, AppInsightsTelemetryService>();
 
+        // Add chat cancellation service for stopping LLM requests
+        builder.Services.AddSingleton<ChatCancellationService>();
+
         TelemetryDebugWriter.IsTracingDisabled = Debugger.IsAttached;
 
         // Add named HTTP clients for IHttpClientFactory

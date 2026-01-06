@@ -44,6 +44,7 @@ public class ChatController : ControllerBase, IDisposable
     private readonly MsGraphOboPluginOptions _msGraphOboPluginOptions;
     private readonly PromptsOptions _promptsOptions;
     private readonly IDictionary<string, Plugin> _plugins;
+    private readonly ChatCancellationService _cancellationService;
 
     private const string ChatPluginName = nameof(ChatPlugin);
     private const string ChatFunctionName = "Chat";
@@ -56,7 +57,8 @@ public class ChatController : ControllerBase, IDisposable
         IOptions<ServiceOptions> serviceOptions,
         IOptions<MsGraphOboPluginOptions> msGraphOboPluginOptions,
         IOptions<PromptsOptions> promptsOptions,
-        IDictionary<string, Plugin> plugins)
+        IDictionary<string, Plugin> plugins,
+        ChatCancellationService cancellationService)
     {
         this._logger = logger;
         this._httpClientFactory = httpClientFactory;
@@ -66,6 +68,7 @@ public class ChatController : ControllerBase, IDisposable
         this._msGraphOboPluginOptions = msGraphOboPluginOptions.Value;
         this._promptsOptions = promptsOptions.Value;
         this._plugins = plugins;
+        this._cancellationService = cancellationService;
     }
 
     /// <summary>
@@ -128,16 +131,17 @@ public class ChatController : ControllerBase, IDisposable
         // Get the function to invoke
         KernelFunction? chatFunction = kernel.Plugins.GetFunction(ChatPluginName, ChatFunctionName);
 
+        // Register cancellation token for this chat request
+        // This allows the request to be cancelled via the cancel endpoint
+        var cancellationToken = this._cancellationService.RegisterRequest(
+            chatIdString, 
+            this._serviceOptions.TimeoutLimitInS.HasValue ? (int)this._serviceOptions.TimeoutLimitInS.Value : null);
+
         // Run the function.
         FunctionResult? result = null;
         try
         {
-            using CancellationTokenSource? cts = this._serviceOptions.TimeoutLimitInS is not null
-                // Create a cancellation token source with the timeout if specified
-                ? new CancellationTokenSource(TimeSpan.FromSeconds((double)this._serviceOptions.TimeoutLimitInS))
-                : null;
-
-            result = await kernel.InvokeAsync(chatFunction!, contextVariables, cts?.Token ?? default);
+            result = await kernel.InvokeAsync(chatFunction!, contextVariables, cancellationToken);
             this._telemetryService.TrackPluginFunction(ChatPluginName, ChatFunctionName, true);
         }
         catch (Exception ex)
@@ -147,14 +151,33 @@ public class ChatController : ControllerBase, IDisposable
 
             if (ex is OperationCanceledException || ex.InnerException is OperationCanceledException)
             {
-                // Log the timeout and return a 504 response
-                this._logger.LogError("The {FunctionName} operation timed out.", ChatFunctionName);
-                return this.StatusCode(StatusCodes.Status504GatewayTimeout, $"The chat {ChatFunctionName} timed out.");
+                // Check if this was a user-initiated cancellation vs timeout
+                if (this._cancellationService.HasActiveRequest(chatIdString))
+                {
+                    // Timeout - the request is still registered
+                    this._logger.LogError("The {FunctionName} operation timed out.", ChatFunctionName);
+                    return this.StatusCode(StatusCodes.Status504GatewayTimeout, $"The chat {ChatFunctionName} timed out.");
+                }
+                else
+                {
+                    // User cancelled - return OK with message
+                    this._logger.LogInformation("The {FunctionName} operation was cancelled by user for chat {ChatId}.", ChatFunctionName, chatIdString);
+                    return this.Ok(new AskResult
+                    {
+                        Value = string.Empty,
+                        Variables = Enumerable.Empty<KeyValuePair<string, object?>>()
+                    });
+                }
             }
 
             this._telemetryService.TrackPluginFunction(ChatPluginName, ChatFunctionName, false);
 
             throw;
+        }
+        finally
+        {
+            // Clean up the cancellation token
+            this._cancellationService.CompleteRequest(chatIdString);
         }
 
         AskResult chatAskResult = new()
@@ -167,6 +190,53 @@ public class ChatController : ControllerBase, IDisposable
         await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(GeneratingResponseClientCall, chatIdString, null);
 
         return this.Ok(chatAskResult);
+    }
+
+    /// <summary>
+    /// Cancel an in-progress chat request.
+    /// This will stop the LLM from generating further tokens and save costs.
+    /// </summary>
+    /// <param name="messageRelayHubContext">Message Hub for notifying clients.</param>
+    /// <param name="chatSessionRepository">Repository of chat sessions.</param>
+    /// <param name="chatParticipantRepository">Repository of chat participants.</param>
+    /// <param name="authInfo">Auth info for the current request.</param>
+    /// <param name="chatId">Chat ID.</param>
+    /// <returns>Result indicating whether a request was cancelled.</returns>
+    [Route("chats/{chatId:guid}/cancel")]
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelChatAsync(
+        [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
+        [FromServices] ChatSessionRepository chatSessionRepository,
+        [FromServices] ChatParticipantRepository chatParticipantRepository,
+        [FromServices] IAuthInfo authInfo,
+        [FromRoute] Guid chatId)
+    {
+        string chatIdString = chatId.ToString();
+
+        this._logger.LogInformation("Cancel request received for chat {ChatId}", chatIdString);
+
+        // Verify that the chat exists
+        if (!(await chatSessionRepository.TryFindByIdAsync(chatIdString)))
+        {
+            return this.NotFound("Chat session not found.");
+        }
+
+        // Verify that the user has access to the chat
+        if (!(await chatParticipantRepository.IsUserInChatAsync(authInfo.UserId, chatIdString)))
+        {
+            return this.Forbid("User does not have access to this chat.");
+        }
+
+        // Cancel the request
+        bool wasCancelled = this._cancellationService.CancelRequest(chatIdString);
+
+        // Clear the bot response status to update the UI
+        await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(GeneratingResponseClientCall, chatIdString, null);
+
+        return this.Ok(new { cancelled = wasCancelled, chatId = chatIdString });
     }
 
     /// <summary>

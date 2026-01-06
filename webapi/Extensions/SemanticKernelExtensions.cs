@@ -6,13 +6,13 @@ using CopilotChat.WebApi.Models.Response;
 using CopilotChat.WebApi.Options;
 using CopilotChat.WebApi.Plugins.Chat;
 using CopilotChat.WebApi.Plugins.FileGeneration;
+using CopilotChat.WebApi.Plugins.Utils;
 using CopilotChat.WebApi.Services;
 using CopilotChat.WebApi.Storage;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Plugins.Core;
 
 namespace CopilotChat.WebApi.Extensions;
 
@@ -125,8 +125,8 @@ internal static class SemanticKernelExtensions
         // Chat Copilot functions
         kernel.RegisterChatPlugin(sp);
 
-        // Time plugin
-        kernel.ImportPluginFromObject(new TimePlugin(), nameof(TimePlugin));
+        // Norwegian Time plugin - provides date/time in Norwegian timezone and format
+        kernel.ImportPluginFromObject(new NorwegianTimePlugin(), "TimePlugin");
 
         // File generation plugin - allows AI to create downloadable files
         kernel.ImportPluginFromObject(

@@ -9,9 +9,10 @@ import { AuthorRoles, ChatMessageType, IChatMessage } from '../../../libs/models
 import { IChatUser } from '../../../libs/models/ChatUser';
 import { PlanState } from '../../../libs/models/Plan';
 import { BackendServiceUrl } from '../../../libs/services/BaseService';
+import { chatRequestQueue } from '../../../libs/services/ChatRequestQueue';
 import { logger } from '../../../libs/utils/Logger';
 import { StoreMiddlewareAPI } from '../../app/store';
-import { addAlert, setMaintenance } from '../app/appSlice';
+import { addAlert, setConnectionReconnected, setMaintenance } from '../app/appSlice';
 import { ChatState } from '../conversations/ChatState';
 import { UpdatePluginStatePayload } from '../conversations/ConversationsState';
 
@@ -72,37 +73,47 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
     // Re-establish the connection if connection dropped
     hubConnection.onclose((error) => {
         if (hubConnection.state === signalR.HubConnectionState.Disconnected) {
-            const errorMessage = 'Connection closed due to error. Try refreshing this page to restart the connection';
+            const userMessage = 'Tilkoblinga vart avbroten. Prøv å oppdatere sida for å kople til på nytt.';
             store.dispatch(
                 addAlert({
-                    message: String(errorMessage),
-                    type: AlertType.Error,
+                    message: userMessage,
+                    type: AlertType.Warning,
                     id: Constants.app.CONNECTION_ALERT_ID,
                 }),
             );
-            logger.log(errorMessage, error);
+            logger.log('Connection closed', error);
         }
     });
 
     hubConnection.onreconnecting((error) => {
         if (hubConnection.state === signalR.HubConnectionState.Reconnecting) {
-            const errorMessage = 'Connection lost due to error. Reconnecting...';
+            const userMessage = 'Tilkoblinga vart mellombels avbroten. Koplar til på nytt...';
             store.dispatch(
                 addAlert({
-                    message: String(errorMessage),
+                    message: userMessage,
                     type: AlertType.Info,
                     id: Constants.app.CONNECTION_ALERT_ID,
                 }),
             );
-            logger.log(errorMessage, error);
+            logger.log('Reconnecting', error);
         }
     });
 
     hubConnection.onreconnected((connectionId = '') => {
         if (hubConnection.state === signalR.HubConnectionState.Connected) {
-            const message = 'Tilkobling gjenoppretta. Oppdater sida for å sikre at du har dei nyaste dataene.';
-            store.dispatch(addAlert({ message, type: AlertType.Success, id: Constants.app.CONNECTION_ALERT_ID }));
-            logger.log(message + ` Connected with connectionId ${connectionId}`);
+            logger.log(`🔄 Connection restored with connectionId ${connectionId}. Triggering message sync...`);
+
+            // Show temporary info message while sync is in progress
+            store.dispatch(
+                addAlert({
+                    message: 'Tilkobling gjenoppretta. Synkroniserer meldingar...',
+                    type: AlertType.Info,
+                    id: Constants.app.CONNECTION_ALERT_ID,
+                }),
+            );
+
+            // Dispatch the reconnected flag to trigger the useConnectionSync hook
+            store.dispatch(setConnectionReconnected(true));
         }
     });
 };
@@ -149,6 +160,19 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
     hubConnection.on(
         SignalRCallbackMethods.ReceiveMessage,
         (chatId: string, senderId: string, message: IChatMessage) => {
+            // Check if this chat's request was cancelled - ignore bot messages for cancelled chats
+            if (message.authorRole === AuthorRoles.Bot && chatRequestQueue.isChatCancelled(chatId)) {
+                logger.debug('🚫 Ignoring bot message for cancelled chat:', chatId);
+                // Clear the cancelled status after ignoring the message
+                chatRequestQueue.clearCancelledChat(chatId);
+                // Still clear the spinner
+                store.dispatch({
+                    type: 'conversations/updateBotResponseStatus',
+                    payload: { chatId, status: undefined },
+                });
+                return;
+            }
+
             // Debug logging
             logger.debug('📨 SignalR ReceiveMessage:', {
                 chatId,
@@ -195,6 +219,12 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
 
     hubConnection.on(SignalRCallbackMethods.ReceiveMessageUpdate, (message: IChatMessage) => {
         const { chatId, id: messageId, content } = message;
+
+        // Check if this chat's request was cancelled - ignore updates for cancelled chats
+        if (message.authorRole === AuthorRoles.Bot && chatRequestQueue.isChatCancelled(chatId)) {
+            logger.debug('🚫 Ignoring bot message update for cancelled chat:', chatId);
+            return;
+        }
 
         // Debug logging for message updates
         logger.debug('📝 SignalR ReceiveMessageUpdate:', {

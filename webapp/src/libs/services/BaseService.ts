@@ -8,6 +8,7 @@ interface ServiceRequest {
     method?: string;
     body?: unknown;
     query?: URLSearchParams;
+    signal?: AbortSignal;
 }
 
 const noResponseBodyStatusCodes = [202, 204];
@@ -26,7 +27,7 @@ export class BaseService {
         accessToken?: string,
         enabledPlugins?: Plugin[],
     ): Promise<T> => {
-        const { commandPath, method, body, query } = request;
+        const { commandPath, method, body, query, signal } = request;
 
         const isFormData = body instanceof FormData;
 
@@ -60,6 +61,7 @@ export class BaseService {
                 method: method ?? 'GET',
                 body: isFormData ? body : JSON.stringify(body),
                 headers,
+                signal,
             });
 
             if (!response.ok) {
@@ -80,6 +82,11 @@ export class BaseService {
 
             return (noResponseBodyStatusCodes.includes(response.status) ? {} : await response.json()) as T;
         } catch (e: any) {
+            // Re-throw abort errors as-is so they can be handled specially
+            if (e instanceof DOMException && e.name === 'AbortError') {
+                throw e;
+            }
+            
             let isNetworkError = false;
             if (e instanceof TypeError) {
                 // fetch() will reject with a TypeError when a network error is encountered.

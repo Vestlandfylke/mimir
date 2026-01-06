@@ -37,8 +37,8 @@ const useClasses = makeStyles({
         flexDirection: 'column',
         width: '100%',
         height: '100%',
-        backgroundColor: tokens.colorNeutralBackground3,
-        boxShadow: 'rgb(0 0 0 / 25%) 0 0.2rem 0.4rem -0.075rem',
+        backgroundColor: tokens.colorNeutralBackground3, // Same gray background as ChatRoom
+        ...shorthands.overflow('hidden'), // Prevent scrollbars
     },
     header: {
         ...shorthands.borderBottom('1px', 'solid', 'rgb(0 0 0 / 10%)'),
@@ -197,10 +197,10 @@ export const ChatWindow: React.FC = () => {
                                     id="persona"
                                     value="persona"
                                     icon={<Person16Regular />}
-                                    aria-label="Persona-fane"
-                                    title="Persona-fane"
+                                    aria-label="Tilpassing-fane"
+                                    title="Tilpassing-fane"
                                 >
-                                    Persona
+                                    Tilpassing
                                 </Tab>
                             </>
                         )}

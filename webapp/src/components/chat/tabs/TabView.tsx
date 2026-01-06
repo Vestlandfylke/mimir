@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { Label, Link, makeStyles, shorthands } from '@fluentui/react-components';
-import { tokens } from '@fluentui/tokens';
+import { Label, Link, makeStyles, shorthands, tokens } from '@fluentui/react-components';
 import { SharedStyles } from '../../../styles';
 
 const useClasses = makeStyles({
@@ -10,6 +9,9 @@ const useClasses = makeStyles({
         ...SharedStyles.scroll,
         display: 'flex',
         flexDirection: 'column',
+        backgroundColor: tokens.colorNeutralBackground3, // Same gray as ChatRoom
+        height: '100%',
+        overflowX: 'hidden', // Hide horizontal scrollbar
         '@media (max-width: 744px)': {
             ...shorthands.margin(tokens.spacingVerticalS, tokens.spacingHorizontalS),
         },
@@ -32,8 +34,8 @@ const useClasses = makeStyles({
 
 interface ITabViewProps {
     title: string;
-    learnMoreDescription: string;
-    learnMoreLink: string;
+    learnMoreDescription?: string;
+    learnMoreLink?: string;
     children?: React.ReactNode;
 }
 
@@ -44,13 +46,15 @@ export const TabView: React.FC<ITabViewProps> = ({ title, learnMoreDescription, 
         <div className={classes.root}>
             <h2 className={classes.title}>{title}</h2>
             {children}
-            <Label size="small" color="brand" className={classes.footer}>
-                Vil du lære meir om {learnMoreDescription}? Klikk{' '}
-                <Link href={learnMoreLink} target="_blank" rel="noreferrer">
-                    her
-                </Link>
-                .
-            </Label>
+            {learnMoreDescription && learnMoreLink && (
+                <Label size="small" color="brand" className={classes.footer}>
+                    Vil du lære meir om {learnMoreDescription}? Klikk{' '}
+                    <Link href={learnMoreLink} target="_blank" rel="noreferrer">
+                        her
+                    </Link>
+                    .
+                </Label>
+            )}
         </div>
     );
 };

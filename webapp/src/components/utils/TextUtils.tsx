@@ -10,16 +10,20 @@ export function isToday(date: Date) {
 
 /*
  * Function to render the date and/or time of a message.
+ * Uses Norwegian locale (nb-NO) with 24-hour format.
  */
 export function timestampToDateString(timestamp: number, alwaysShowTime = false) {
     const date = new Date(timestamp);
-    const dateString = date.toLocaleDateString([], {
-        month: 'numeric',
+    // Norwegian date format: day.month
+    const dateString = date.toLocaleDateString('nb-NO', {
         day: 'numeric',
+        month: 'numeric',
     });
-    const timeString = date.toLocaleTimeString([], {
-        hour: 'numeric',
+    // 24-hour time format without AM/PM
+    const timeString = date.toLocaleTimeString('nb-NO', {
+        hour: '2-digit',
         minute: '2-digit',
+        hour12: false,
     });
 
     return date.toDateString() !== new Date().toDateString()

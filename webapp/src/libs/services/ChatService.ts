@@ -170,6 +170,7 @@ export class ChatService extends BaseService {
         accessToken: string,
         enabledPlugins?: Plugin[],
         processPlan = false,
+        signal?: AbortSignal,
     ): Promise<IAskResult> => {
         // If function requires any additional api properties, append to context
         if (enabledPlugins && enabledPlugins.length > 0) {
@@ -228,6 +229,7 @@ export class ChatService extends BaseService {
                 commandPath: `chats/${chatId}/${processPlan ? 'plan' : 'messages'}`,
                 method: 'POST',
                 body: ask,
+                signal,
             },
             accessToken,
             enabledPlugins,
@@ -302,6 +304,22 @@ export class ChatService extends BaseService {
             {
                 commandPath: `info`,
                 method: 'GET',
+            },
+            accessToken,
+        );
+
+        return result;
+    };
+
+    /**
+     * Cancel an in-progress chat request.
+     * This will stop the LLM from generating further tokens and save costs.
+     */
+    public cancelChatAsync = async (chatId: string, accessToken: string): Promise<{ cancelled: boolean; chatId: string }> => {
+        const result = await this.getResponseAsync<{ cancelled: boolean; chatId: string }>(
+            {
+                commandPath: `chats/${chatId}/cancel`,
+                method: 'POST',
             },
             accessToken,
         );

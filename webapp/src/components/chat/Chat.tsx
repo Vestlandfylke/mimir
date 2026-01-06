@@ -4,7 +4,7 @@ import { AuthHelper } from '../..//libs/auth/AuthHelper';
 import { AppState, useClasses } from '../../App';
 import { UserSettingsMenu } from '../header/UserSettingsMenu';
 import { PluginGallery } from '../open-api-plugins/PluginGallery';
-import { BackendProbe, ChatView, Error, Loading } from '../views';
+import { BackendProbe, ChatView, Error, LoadingOverlay } from '../views';
 
 const Chat = ({
     classes,
@@ -24,8 +24,17 @@ const Chat = ({
                   AppState.LoadChats,
         );
     }, [setAppState]);
+
+    // Determine if we're in a loading state that should show the overlay
+    const isLoading = appState === AppState.SettingUserInfo || appState === AppState.LoadingChats;
+    const loadingText = appState === AppState.SettingUserInfo 
+        ? 'Hentar brukarinfo...' 
+        : appState === AppState.LoadingChats 
+            ? 'Lastar inn...' 
+            : '';
+
     return (
-        <div className={classes.container}>
+        <div className={classes.container} style={{ position: 'relative' }}>
             <div className={classes.header}>
                 <Subtitle1 as="h1">Mimir</Subtitle1>
                 {appState > AppState.SettingUserInfo && (
@@ -41,18 +50,23 @@ const Chat = ({
                     </div>
                 )}
             </div>
-            {appState === AppState.ProbeForBackend && <BackendProbe onBackendFound={onBackendFound} />}
-            {appState === AppState.SettingUserInfo && (
-                <Loading text={'Venligst vent, me henter informasjonen din...'} />
+            
+            {/* Always render ChatView as background when past ProbeForBackend */}
+            {appState > AppState.ProbeForBackend && appState !== AppState.ErrorLoadingUserInfo && appState !== AppState.ErrorLoadingChats && (
+                <ChatView />
             )}
+            
+            {/* Show loading overlay on top of ChatView */}
+            {isLoading && <LoadingOverlay text={loadingText} />}
+            
+            {/* Backend probe and errors */}
+            {appState === AppState.ProbeForBackend && <BackendProbe onBackendFound={onBackendFound} />}
             {appState === AppState.ErrorLoadingUserInfo && (
                 <Error text={'Klarte ikkje å laste brukarinfo. Vennligst prøv å logge ut og inn igjen.'} />
             )}
             {appState === AppState.ErrorLoadingChats && (
                 <Error text={'Klarte ikkje å laste samtalar. Vennligst prøv å oppdatere sida.'} />
             )}
-            {appState === AppState.LoadingChats && <Loading text="Laster inn..." />}
-            {appState === AppState.Chat && <ChatView />}
         </div>
     );
 };

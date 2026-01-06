@@ -71,18 +71,18 @@ export const MemoryBiasSlider: React.FC = () => {
     return (
         <div className={classes.root}>
             <div className={classes.horizontal}>
-                <h3>Minnejustering</h3>
+                <h3>Minnebalanse</h3>
                 <Popover withArrow>
                     <PopoverTrigger disableButtonEnhancement>
                         <Button icon={<Info16 />} appearance="transparent" />
                     </PopoverTrigger>
                     <PopoverSurface>
-                        Dette er ein glidebrytar som lar brukaren justere chattebotten mot kort- eller langsiktig minne.
+                        Juster balansen mellom nyleg kontekst og oppsamla fakta i denne samtalen. Dra mot venstre for meir fokus på dei siste meldingane. Dra mot høgre for meir fokus på heilskapen av samtalen.
                     </PopoverSurface>
                 </Popover>
             </div>
             <div>
-                <Label>Kortsiktig</Label>
+                <Label>Nyleg kontekst</Label>
                 <Slider
                     min={0}
                     max={100}
@@ -92,7 +92,7 @@ export const MemoryBiasSlider: React.FC = () => {
                     }}
                     disabled={conversations[selectedId].disabled}
                 />
-                <Label>Langsiktig</Label>
+                <Label>Heilskap</Label>
             </div>
         </div>
     );

@@ -3,6 +3,7 @@
 import { makeStyles, shorthands, tokens } from '@fluentui/react-components';
 import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
+import { useConnectionSync } from '../../libs/hooks/useConnectionSync';
 import { logger } from '../../libs/utils/Logger';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
@@ -46,6 +47,9 @@ const useClasses = makeStyles({
 export const ChatRoom: React.FC = () => {
     const classes = useClasses();
     const chat = useChat();
+
+    // Automatically sync messages when connection is restored
+    useConnectionSync();
 
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
     const conversation = conversations[selectedId];

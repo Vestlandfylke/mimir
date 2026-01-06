@@ -29,6 +29,12 @@ export const appSlice = createSlice({
         removeAlert: (state: AppState, action: PayloadAction<number>) => {
             state.alerts.splice(action.payload, 1);
         },
+        removeAlertById: (state: AppState, action: PayloadAction<string>) => {
+            const alertIndex = state.alerts.findIndex((alert) => alert.id === action.payload);
+            if (alertIndex !== -1) {
+                state.alerts.splice(alertIndex, 1);
+            }
+        },
         setActiveUserInfo: (state: AppState, action: PayloadAction<ActiveUserInfo>) => {
             state.activeUserInfo = action.payload;
         },
@@ -74,12 +80,16 @@ export const appSlice = createSlice({
         setAuthConfig: (state: AppState, action: PayloadAction<AppState['authConfig']>) => {
             state.authConfig = action.payload;
         },
+        setConnectionReconnected: (state: AppState, action: PayloadAction<boolean>) => {
+            state.connectionReconnected = action.payload;
+        },
     },
 });
 
 export const {
     addAlert,
     removeAlert,
+    removeAlertById,
     setAlerts,
     setActiveUserInfo,
     toggleFeatureFlag,
@@ -88,6 +98,7 @@ export const {
     setServiceInfo,
     setMaintenance,
     setAuthConfig,
+    setConnectionReconnected,
 } = appSlice.actions;
 
 export default appSlice.reducer;
@@ -122,7 +133,7 @@ const updateConnectionStatus = (state: AppState, statusUpdate: Alert) => {
     if (isServerConnectionError(statusUpdate.message)) {
         statusUpdate.message =
             // Constant message so alert UI doesn't feel glitchy on every connection error from SignalR
-            'Cannot send data due to lost connection or server timeout. Try refreshing this page to restart the connection.';
+            'Kunne ikkje sende data akkurat no. Prøv å oppdatere sida viss dette held fram.';
     }
 
     // There should only ever be one connection alert at a time,

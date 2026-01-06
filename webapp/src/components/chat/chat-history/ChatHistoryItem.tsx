@@ -61,7 +61,6 @@ const useClasses = makeStyles({
         paddingTop: customTokens.spacingVerticalS,
     },
     item: {
-        backgroundColor: customTokens.colorNeutralBackground1,
         ...shorthands.borderRadius(customTokens.borderRadiusMedium),
         ...shorthands.padding(customTokens.spacingVerticalXS, customTokens.spacingHorizontalS),
         // Allow the bubble to shrink within the row and wrap long strings instead of expanding page width
@@ -72,7 +71,6 @@ const useClasses = makeStyles({
         wordBreak: 'break-word',
     },
     me: {
-        backgroundColor: customTokens.colorMeBackground,
         // Fill remaining space next to the avatar without forcing overflow
         flexGrow: 1,
         minWidth: 0,
@@ -194,7 +192,14 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                     }
                 />
             }
-            <div className={isMe ? mergeClasses(classes.item, classes.me) : classes.item}>
+            <div
+                className={isMe ? mergeClasses(classes.item, classes.me) : classes.item}
+                style={{
+                    backgroundColor: isMe
+                        ? (features[FeatureKeys.DarkMode].enabled ? '#3c3c3c' : '#e8ebf9')
+                        : (features[FeatureKeys.DarkMode].enabled ? '#333333' : '#ffffff'),
+                }}
+            >
                 <div className={classes.header}>
                     {!isMe && <Text weight="semibold">{fullName}</Text>}
                     <Text className={classes.time}>{timestampToDateString(message.timestamp, true)}</Text>
