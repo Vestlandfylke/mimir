@@ -77,7 +77,8 @@ export const MemoryBiasSlider: React.FC = () => {
                         <Button icon={<Info16 />} appearance="transparent" />
                     </PopoverTrigger>
                     <PopoverSurface>
-                        Juster balansen mellom nyleg kontekst og oppsamla fakta i denne samtalen. Dra mot venstre for meir fokus på dei siste meldingane. Dra mot høgre for meir fokus på heilskapen av samtalen.
+                        Juster balansen mellom nyleg kontekst og oppsamla fakta i denne samtalen. Dra mot venstre for
+                        meir fokus på dei siste meldingane. Dra mot høgre for meir fokus på heilskapen av samtalen.
                     </PopoverSurface>
                 </Popover>
             </div>

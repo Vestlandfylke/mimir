@@ -29,7 +29,7 @@ class ChatRequestQueue {
     private currentRequestId: string | null = null;
     private currentChatId: string | null = null;
     private stateChangeListeners: StateChangeCallback[] = [];
-    
+
     // Track cancelled chat IDs to ignore incoming SignalR messages
     private cancelledChatIds = new Set<string>();
 
@@ -44,7 +44,9 @@ class ChatRequestQueue {
     }
 
     private notifyStateChange() {
-        this.stateChangeListeners.forEach((cb) => { cb(); });
+        this.stateChangeListeners.forEach((cb) => {
+            cb();
+        });
     }
 
     /**
@@ -89,7 +91,7 @@ class ChatRequestQueue {
             }
 
             logger.debug(`⚙️ Processing request (${this.queue.length} remaining):`, request.id);
-            
+
             // Create abort controller for this request
             this.currentAbortController = new AbortController();
             this.currentRequestId = request.id;

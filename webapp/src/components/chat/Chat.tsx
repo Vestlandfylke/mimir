@@ -27,11 +27,12 @@ const Chat = ({
 
     // Determine if we're in a loading state that should show the overlay
     const isLoading = appState === AppState.SettingUserInfo || appState === AppState.LoadingChats;
-    const loadingText = appState === AppState.SettingUserInfo 
-        ? 'Hentar brukarinfo...' 
-        : appState === AppState.LoadingChats 
-            ? 'Lastar inn...' 
-            : '';
+    const loadingText =
+        appState === AppState.SettingUserInfo
+            ? 'Hentar brukarinfo...'
+            : appState === AppState.LoadingChats
+              ? 'Lastar inn...'
+              : '';
 
     return (
         <div className={classes.container} style={{ position: 'relative' }}>
@@ -50,15 +51,15 @@ const Chat = ({
                     </div>
                 )}
             </div>
-            
+
             {/* Always render ChatView as background when past ProbeForBackend */}
-            {appState > AppState.ProbeForBackend && appState !== AppState.ErrorLoadingUserInfo && appState !== AppState.ErrorLoadingChats && (
-                <ChatView />
-            )}
-            
+            {appState > AppState.ProbeForBackend &&
+                appState !== AppState.ErrorLoadingUserInfo &&
+                appState !== AppState.ErrorLoadingChats && <ChatView />}
+
             {/* Show loading overlay on top of ChatView */}
             {isLoading && <LoadingOverlay text={loadingText} />}
-            
+
             {/* Backend probe and errors */}
             {appState === AppState.ProbeForBackend && <BackendProbe onBackendFound={onBackendFound} />}
             {appState === AppState.ErrorLoadingUserInfo && (

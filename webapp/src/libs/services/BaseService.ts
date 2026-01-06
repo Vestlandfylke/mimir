@@ -86,7 +86,7 @@ export class BaseService {
             if (e instanceof DOMException && e.name === 'AbortError') {
                 throw e;
             }
-            
+
             let isNetworkError = false;
             if (e instanceof TypeError) {
                 // fetch() will reject with a TypeError when a network error is encountered.

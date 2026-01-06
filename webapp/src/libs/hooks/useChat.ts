@@ -179,12 +179,12 @@ export const useChat = () => {
                 }
 
                 const errorDetails = getErrorDetails(e);
-                
+
                 // Don't show alert for cancelled requests
                 if (errorDetails.includes('Request cancelled')) {
                     return;
                 }
-                
+
                 if (errorDetails.includes('Failed to process plan')) {
                     // Error should already be reflected in bot response message. Skip alert.
                     return;

@@ -154,9 +154,7 @@ export const Login: React.FC = () => {
             <div className={classes.content}>
                 <div className={classes.logo}>🌳</div>
                 <h1 className={classes.title}>Mimir</h1>
-                <p className={classes.subtitle}>
-                    KI-assistent for Vestland fylkeskommune
-                </p>
+                <p className={classes.subtitle}>KI-assistent for Vestland fylkeskommune</p>
 
                 {silentAuthInProgress ? (
                     <div className={classes.loadingContainer}>
@@ -175,9 +173,7 @@ export const Login: React.FC = () => {
                 )}
 
                 {EmbeddedAppHelper.isInIframe() && (
-                    <Body1 className={classes.embeddedNote}>
-                        Køyrer i {EmbeddedAppHelper.getAppContext()}
-                    </Body1>
+                    <Body1 className={classes.embeddedNote}>Køyrer i {EmbeddedAppHelper.getAppContext()}</Body1>
                 )}
             </div>
         </div>

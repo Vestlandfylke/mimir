@@ -196,8 +196,12 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                 className={isMe ? mergeClasses(classes.item, classes.me) : classes.item}
                 style={{
                     backgroundColor: isMe
-                        ? (features[FeatureKeys.DarkMode].enabled ? '#3c3c3c' : '#e8ebf9')
-                        : (features[FeatureKeys.DarkMode].enabled ? '#333333' : '#ffffff'),
+                        ? features[FeatureKeys.DarkMode].enabled
+                            ? '#3c3c3c'
+                            : '#e8ebf9'
+                        : features[FeatureKeys.DarkMode].enabled
+                          ? '#333333'
+                          : '#ffffff',
                 }}
             >
                 <div className={classes.header}>

@@ -1,6 +1,15 @@
 // Copyright (c) Microsoft. All rights reserved.
 import { useMsal } from '@azure/msal-react';
-import { Button, Spinner, Textarea, Tooltip, makeStyles, mergeClasses, shorthands, tokens } from '@fluentui/react-components';
+import {
+    Button,
+    Spinner,
+    Textarea,
+    Tooltip,
+    makeStyles,
+    mergeClasses,
+    shorthands,
+    tokens,
+} from '@fluentui/react-components';
 import { AttachRegular, DeleteRegular, MicRegular, SendRegular } from '@fluentui/react-icons';
 import { BsStopFill } from 'react-icons/bs';
 import debug from 'debug';
@@ -184,7 +193,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
     const [queueLength, setQueueLength] = useState(0);
     const [queuedRequests, setQueuedRequests] = useState<Array<{ id: string; chatId: string }>>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    
+
     // Local state to track when we're waiting for a response
     const [waitingForResponse, setWaitingForResponse] = useState(false);
 
@@ -230,7 +239,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
 
         // Reset to minimum height first to get accurate scrollHeight
         textarea.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
-        
+
         // Get the scroll height which represents the content height
         const scrollHeight = textarea.scrollHeight;
 
@@ -299,7 +308,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
 
     // Track last submitted message to prevent exact duplicates from rapid clicks
     const lastSubmittedRef = useRef<string>('');
-    
+
     const handleSubmit = useCallback(
         (inputValue: string, messageType: ChatMessageType = ChatMessageType.Message) => {
             if (inputValue.trim() === '') {
@@ -313,7 +322,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                 return;
             }
             lastSubmittedRef.current = inputValue;
-            
+
             // Clear the duplicate prevention after a short delay to allow re-sending the same message later
             setTimeout(() => {
                 lastSubmittedRef.current = '';
@@ -329,10 +338,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
             setValue('');
             dispatch(editConversationInput({ id: selectedId, newInput: '' }));
             dispatch(updateBotResponseStatus({ chatId: selectedId, status: 'Kallar på kjernen' }));
-            
+
             // Clear any previous cancelled status for this chat
             chatRequestQueue.clearCancelledChat(selectedId);
-            
+
             // Mark that we're waiting for a response
             setWaitingForResponse(true);
 
@@ -395,7 +404,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
     // Handle stop button click - cancel on server first (to stop LLM ASAP), then cleanup client
     const handleStopRequest = useCallback(async () => {
         log('Stop button clicked - cancelling request for chat:', selectedId);
-        
+
         // Call the server FIRST to cancel the LLM request (stops token generation immediately)
         try {
             const chatService = new ChatService();
@@ -440,7 +449,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                                     appearance="subtle"
                                     size="small"
                                     icon={<DeleteRegular />}
-                                    onClick={() => { handleCancelQueuedRequest(req.id); }}
+                                    onClick={() => {
+                                        handleCancelQueuedRequest(req.id);
+                                    }}
                                     className={classes.cancelQueueBtn}
                                     aria-label={`Slett melding ${index + 1} frå køen`}
                                 />
@@ -459,7 +470,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         resize="none"
                         disabled={conversations[selectedId].disabled || dragging}
                         textarea={{
-                            className: dragging ? mergeClasses(classes.dragAndDrop, classes.textarea) : classes.textarea,
+                            className: dragging
+                                ? mergeClasses(classes.dragAndDrop, classes.textarea)
+                                : classes.textarea,
                             style: {
                                 height: `${textareaHeight}px`,
                                 overflowY: textareaHeight >= MAX_TEXTAREA_HEIGHT ? 'auto' : 'hidden',
@@ -479,7 +492,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                             // User is considered typing if the input is in focus
                             if (activeUserInfo) {
                                 dispatch(
-                                    updateUserIsTyping({ userId: activeUserInfo.id, chatId: selectedId, isTyping: true }),
+                                    updateUserIsTyping({
+                                        userId: activeUserInfo.id,
+                                        chatId: selectedId,
+                                        isTyping: true,
+                                    }),
                                 );
                             }
                         }}
@@ -501,7 +518,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                             // User is considered not typing if the input is not  in focus
                             if (activeUserInfo) {
                                 dispatch(
-                                    updateUserIsTyping({ userId: activeUserInfo.id, chatId: selectedId, isTyping: false }),
+                                    updateUserIsTyping({
+                                        userId: activeUserInfo.id,
+                                        chatId: selectedId,
+                                        isTyping: false,
+                                    }),
                                 );
                             }
                         }}
@@ -522,7 +543,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                             />
                             <Button
                                 disabled={
-                                    conversations[selectedId].disabled || dragging || (importingDocuments?.length ?? 0) > 0
+                                    conversations[selectedId].disabled ||
+                                    dragging ||
+                                    (importingDocuments?.length ?? 0) > 0
                                 }
                                 appearance="transparent"
                                 size="large"
@@ -556,7 +579,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                                         appearance="transparent"
                                         size="large"
                                         icon={<BsStopFill />}
-                                        onClick={() => { void handleStopRequest(); }}
+                                        onClick={() => {
+                                            void handleStopRequest();
+                                        }}
                                         className={classes.stopButton}
                                     />
                                 </Tooltip>

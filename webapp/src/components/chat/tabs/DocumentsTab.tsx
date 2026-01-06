@@ -282,8 +282,7 @@ export const DocumentsTab: React.FC = () => {
                         className={classes.uploadButton}
                         icon={<DocumentArrowUp20Regular />}
                         disabled={
-                            conversations[selectedId].disabled ||
-                            (importingDocuments && importingDocuments.length > 0)
+                            conversations[selectedId].disabled || (importingDocuments && importingDocuments.length > 0)
                         }
                         onClick={() => localDocumentFileRef.current?.click()}
                     >
@@ -439,7 +438,14 @@ function useTable(
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
-                <TableCell key={item.createdOn.timestamp} title={new Date(item.createdOn.timestamp).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}>
+                <TableCell
+                    key={item.createdOn.timestamp}
+                    title={new Date(item.createdOn.timestamp).toLocaleString('nb-NO', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                        hour12: false,
+                    })}
+                >
                     {item.id.startsWith('in-progress') ? 'N/A' : item.createdOn.label}
                 </TableCell>
             ),

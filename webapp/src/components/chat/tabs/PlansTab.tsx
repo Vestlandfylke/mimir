@@ -109,7 +109,14 @@ function useTable(planMessages: IChatMessage[], setChatTab: () => void) {
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
-                <TableCell key={item.createdOn.timestamp} title={new Date(item.createdOn.timestamp).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}>
+                <TableCell
+                    key={item.createdOn.timestamp}
+                    title={new Date(item.createdOn.timestamp).toLocaleString('nb-NO', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                        hour12: false,
+                    })}
+                >
                     {item.createdOn.label}
                 </TableCell>
             ),

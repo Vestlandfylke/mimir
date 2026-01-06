@@ -131,11 +131,11 @@ const CUSTOM_INSTRUCTIONS_MARKER = '\n\n--- EIGNE INSTRUKSJONAR ---\n';
 const extractSavedTone = (systemDescription: string): string => {
     const quickIndex = systemDescription.indexOf(QUICK_SETTINGS_MARKER);
     if (quickIndex === -1) return 'standard';
-    
+
     const quickSection = systemDescription.substring(quickIndex + QUICK_SETTINGS_MARKER.length);
     const endIndex = quickSection.indexOf('\n\n---');
     const quickText = endIndex !== -1 ? quickSection.substring(0, endIndex) : quickSection;
-    
+
     if (quickText.toLowerCase().includes('formell')) return 'formal';
     if (quickText.toLowerCase().includes('uformell')) return 'casual';
     if (quickText.toLowerCase().includes('pedagogisk')) return 'pedagogisk';
@@ -146,11 +146,11 @@ const extractSavedTone = (systemDescription: string): string => {
 const extractSavedLength = (systemDescription: string): string => {
     const quickIndex = systemDescription.indexOf(QUICK_SETTINGS_MARKER);
     if (quickIndex === -1) return 'standard';
-    
+
     const quickSection = systemDescription.substring(quickIndex + QUICK_SETTINGS_MARKER.length);
     const endIndex = quickSection.indexOf('\n\n---');
     const quickText = endIndex !== -1 ? quickSection.substring(0, endIndex) : quickSection;
-    
+
     if (quickText.toLowerCase().includes('korte og konsise')) return 'kort';
     if (quickText.toLowerCase().includes('detaljerte og utfyllande')) return 'detaljert';
     return 'standard';
@@ -184,20 +184,20 @@ const getBaseSystemDescription = (systemDescription: string): string => {
             result = result.substring(0, quickIndex);
         }
     }
-    
+
     // Remove custom instructions section if present
     const customIndex = result.indexOf(CUSTOM_INSTRUCTIONS_MARKER);
     if (customIndex !== -1) {
         result = result.substring(0, customIndex);
     }
-    
+
     // Fallback for old format
     const oldMarker = '\n\n--- TILLEGGSINSTRUKSJONAR ---\n';
     const oldIndex = result.indexOf(oldMarker);
     if (oldIndex !== -1) {
         result = result.substring(0, oldIndex);
     }
-    
+
     return result;
 };
 
@@ -205,18 +205,18 @@ const getBaseSystemDescription = (systemDescription: string): string => {
 const buildFullSystemDescription = (
     baseDescription: string,
     quickSettingsText: string,
-    customInstructions: string
+    customInstructions: string,
 ): string => {
     let result = baseDescription;
-    
+
     if (quickSettingsText.trim()) {
         result += `${QUICK_SETTINGS_MARKER}${quickSettingsText.trim()}`;
     }
-    
+
     if (customInstructions.trim()) {
         result += `${CUSTOM_INSTRUCTIONS_MARKER}${customInstructions.trim()}`;
     }
-    
+
     return result;
 };
 
@@ -259,14 +259,14 @@ export const PersonaTab: React.FC = () => {
         const extractedInstructions = extractCustomInstructions(chatState.systemDescription);
         const extractedTone = extractSavedTone(chatState.systemDescription);
         const extractedLength = extractSavedLength(chatState.systemDescription);
-        
+
         setCustomInstructions(extractedInstructions);
         setInitialInstructions(extractedInstructions);
         setSelectedTone(extractedTone);
         setInitialTone(extractedTone);
         setSelectedLength(extractedLength);
         setInitialLength(extractedLength);
-        
+
         // Reset state when changing chat
         setIsSaved(false);
         setHasChanges(false);
@@ -278,10 +278,10 @@ export const PersonaTab: React.FC = () => {
         const toneChanged = selectedTone !== initialTone;
         const lengthChanged = selectedLength !== initialLength;
         const instructionsChanged = customInstructions !== initialInstructions;
-        
+
         const changed = toneChanged || lengthChanged || instructionsChanged;
         setHasChanges(changed);
-        
+
         // If user makes changes after saving, hide the saved indicator
         if (changed && isSaved) {
             setIsSaved(false);
@@ -295,7 +295,7 @@ export const PersonaTab: React.FC = () => {
             // Build the tone/length instructions
             let quickSettingsText = '';
             if (selectedTone !== 'standard') {
-                const toneText = TONE_OPTIONS.find(t => t.key === selectedTone)?.text ?? '';
+                const toneText = TONE_OPTIONS.find((t) => t.key === selectedTone)?.text ?? '';
                 quickSettingsText += `Bruk ein ${toneText.toLowerCase()} tone i svara dine. `;
             }
             if (selectedLength !== 'standard') {
@@ -310,7 +310,7 @@ export const PersonaTab: React.FC = () => {
             const newSystemDescription = buildFullSystemDescription(
                 baseDescription,
                 quickSettingsText,
-                customInstructions
+                customInstructions,
             );
 
             await chat.editChat(selectedId, chatState.title, newSystemDescription, chatState.memoryBalance);
@@ -320,12 +320,12 @@ export const PersonaTab: React.FC = () => {
                     newSystemDescription: newSystemDescription,
                 }),
             );
-            
+
             // Update initial values to current values (so hasChanges becomes false)
             setInitialTone(selectedTone);
             setInitialLength(selectedLength);
             setInitialInstructions(customInstructions);
-            
+
             // Show saved indicator
             setIsSaved(true);
             setHasChanges(false);
@@ -346,17 +346,17 @@ export const PersonaTab: React.FC = () => {
             {/* Quick Settings Section */}
             <div className={classes.section}>
                 <h3 className={classes.sectionTitle}>Svarstil</h3>
-                <p className={classes.description}>
-                    Juster korleis Mimir svarar deg i denne samtalen.
-                </p>
+                <p className={classes.description}>Juster korleis Mimir svarar deg i denne samtalen.</p>
                 <div className={classes.quickSettings}>
                     <div className={classes.settingRow}>
                         <Label className={classes.settingLabel}>Tone:</Label>
                         <Dropdown
                             className={classes.dropdown}
-                            value={TONE_OPTIONS.find(t => t.key === selectedTone)?.text ?? 'Standard'}
+                            value={TONE_OPTIONS.find((t) => t.key === selectedTone)?.text ?? 'Standard'}
                             selectedOptions={[selectedTone]}
-                            onOptionSelect={(_, data) => { setSelectedTone(data.optionValue ?? 'standard'); }}
+                            onOptionSelect={(_, data) => {
+                                setSelectedTone(data.optionValue ?? 'standard');
+                            }}
                             disabled={chatState.disabled}
                         >
                             {TONE_OPTIONS.map((option) => (
@@ -370,9 +370,11 @@ export const PersonaTab: React.FC = () => {
                         <Label className={classes.settingLabel}>Svarlengde:</Label>
                         <Dropdown
                             className={classes.dropdown}
-                            value={LENGTH_OPTIONS.find(l => l.key === selectedLength)?.text ?? 'Standard'}
+                            value={LENGTH_OPTIONS.find((l) => l.key === selectedLength)?.text ?? 'Standard'}
                             selectedOptions={[selectedLength]}
-                            onOptionSelect={(_, data) => { setSelectedLength(data.optionValue ?? 'standard'); }}
+                            onOptionSelect={(_, data) => {
+                                setSelectedLength(data.optionValue ?? 'standard');
+                            }}
                             disabled={chatState.disabled}
                         >
                             {LENGTH_OPTIONS.map((option) => (
@@ -389,14 +391,16 @@ export const PersonaTab: React.FC = () => {
             <div className={classes.section}>
                 <h3 className={classes.sectionTitle}>Eigne instruksjonar</h3>
                 <p className={classes.description}>
-                    Skriv eventuelle spesielle instruksjonar til Mimir. Til dømes: &quot;Svar alltid på bokmål&quot; 
+                    Skriv eventuelle spesielle instruksjonar til Mimir. Til dømes: &quot;Svar alltid på bokmål&quot;
                     eller &quot;Forklar ting som om eg er nybyrjar&quot;.
                 </p>
                 <Textarea
                     className={classes.textarea}
                     placeholder="Skriv dine eigne instruksjonar her (valfritt)..."
                     value={customInstructions}
-                    onChange={(_, data) => { setCustomInstructions(data.value); }}
+                    onChange={(_, data) => {
+                        setCustomInstructions(data.value);
+                    }}
                     rows={5}
                     resize="none"
                     disabled={chatState.disabled}
@@ -410,7 +414,9 @@ export const PersonaTab: React.FC = () => {
                     )}
                     <Button
                         appearance={hasChanges ? 'primary' : 'secondary'}
-                        onClick={() => { void handleSaveCustomizations(); }}
+                        onClick={() => {
+                            void handleSaveCustomizations();
+                        }}
                         disabled={chatState.disabled || isSaving || !hasChanges}
                     >
                         {isSaving ? 'Lagrar...' : 'Lagre tilpassingar'}
@@ -425,9 +431,7 @@ export const PersonaTab: React.FC = () => {
             <div className={classes.advancedSection}>
                 <Accordion collapsible>
                     <AccordionItem value="advanced">
-                        <AccordionHeader expandIcon={<ChevronDown16Regular />}>
-                            Avansert
-                        </AccordionHeader>
+                        <AccordionHeader expandIcon={<ChevronDown16Regular />}>Avansert</AccordionHeader>
                         <AccordionPanel>
                             <div className={classes.advancedContent}>
                                 <PromptEditor

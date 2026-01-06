@@ -332,7 +332,11 @@ export const DiagramTypeSelector: React.FC<DiagramTypeSelectorProps> = ({ select
                             size="large"
                             icon={<DiagramRegular />}
                             disabled={disabled}
-                            className={selectedType ? mergeClasses(classes.selectedButton, classes.triggerButton) : classes.triggerButton}
+                            className={
+                                selectedType
+                                    ? mergeClasses(classes.selectedButton, classes.triggerButton)
+                                    : classes.triggerButton
+                            }
                             aria-label="Vel diagramtype"
                         />
                     </Tooltip>

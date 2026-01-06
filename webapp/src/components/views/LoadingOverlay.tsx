@@ -44,4 +44,3 @@ export const LoadingOverlay: FC<ILoadingOverlayProps> = ({ text, isDark = false 
         </div>
     );
 };
-

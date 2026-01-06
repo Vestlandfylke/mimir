@@ -315,7 +315,10 @@ export class ChatService extends BaseService {
      * Cancel an in-progress chat request.
      * This will stop the LLM from generating further tokens and save costs.
      */
-    public cancelChatAsync = async (chatId: string, accessToken: string): Promise<{ cancelled: boolean; chatId: string }> => {
+    public cancelChatAsync = async (
+        chatId: string,
+        accessToken: string,
+    ): Promise<{ cancelled: boolean; chatId: string }> => {
         const result = await this.getResponseAsync<{ cancelled: boolean; chatId: string }>(
             {
                 commandPath: `chats/${chatId}/cancel`,
