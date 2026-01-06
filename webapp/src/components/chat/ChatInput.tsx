@@ -480,7 +480,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                         }}
                         className={classes.input}
                         value={dragging ? 'Slepp filene dine her' : value}
-                        placeholder="Skriv meldinga di her. Du kan lime inn bilete med Ctrl+V."
+                        placeholder="Skriv meldinga di her"
                         onDrop={handleDrop}
                         onPaste={handlePaste}
                         onFocus={() => {
