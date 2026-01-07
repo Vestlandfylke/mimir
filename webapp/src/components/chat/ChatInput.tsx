@@ -11,10 +11,10 @@ import {
     tokens,
 } from '@fluentui/react-components';
 import { AttachRegular, DeleteRegular, MicRegular, SendRegular } from '@fluentui/react-icons';
-import { BsStopFill } from 'react-icons/bs';
 import debug from 'debug';
 import * as speechSdk from 'microsoft-cognitiveservices-speech-sdk';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { BsStopFill } from 'react-icons/bs';
 import { Constants } from '../../Constants';
 import { COPY } from '../../assets/strings';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
@@ -68,25 +68,44 @@ const useClasses = makeStyles({
         ...shorthands.borderRadius(tokens.borderRadiusXLarge),
         backgroundColor: tokens.colorNeutralBackground3,
         ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke1),
+        ...shorthands.overflow('hidden'), // Clip content at rounded corners
+        transitionProperty: 'border-color, box-shadow',
+        transitionDuration: '0.1s',
+        transitionTimingFunction: 'ease',
+        '&:hover': {
+            ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke1Hover),
+        },
         '&:focus-within': {
             ...shorthands.border('1px', 'solid', tokens.colorBrandStroke1),
+            boxShadow: `0 0 0 1px ${tokens.colorBrandStroke1}`,
         },
     },
     input: {
         width: '100%',
+        // Remove all borders from Fluent UI Textarea - outer wrapper has the border
+        ...shorthands.border('none'),
         '& textarea': {
             ...shorthands.border('none'),
             backgroundColor: 'transparent',
             resize: 'none',
             ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
             paddingBottom: tokens.spacingVerticalXS,
+            // Remove focus outline - we show focus on the wrapper instead
+            '&:focus, &:focus-visible': {
+                ...shorthands.outline('none'),
+            },
         },
-        '& .fui-Textarea__root': {
+        // Remove all Fluent UI internal borders - we use inputWrapper for border styling
+        '& .fui-Textarea__root, & .fui-Textarea, & > span': {
             ...shorthands.border('none'),
             backgroundColor: 'transparent',
         },
-        '& .fui-Textarea': {
-            ...shorthands.border('none'),
+        // Hide Fluent UI's ::after and ::before border indicators in ALL states
+        '& span::after, & span::before, & .fui-Textarea::after, & .fui-Textarea::before': {
+            display: 'none !important',
+            border: 'none !important',
+            height: '0 !important',
+            width: '0 !important',
         },
     },
     textarea: {
@@ -329,9 +348,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
             }, 1000);
 
             // If a diagram type is selected, prepend the diagram instruction to the message
+            // but keep the original message for display in the chat UI
             let finalValue = inputValue;
+            let displayValue: string | undefined;
             if (selectedDiagramType) {
                 finalValue = `[Diagram request: ${selectedDiagramType.prompt}]\n\nUser request: ${inputValue}`;
+                displayValue = inputValue; // Show only user's message in chat
             }
 
             // Clear input immediately - don't wait for response
@@ -350,7 +372,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
 
             // Fire and forget - onSubmit handles queuing internally
             // The queue will process requests one at a time
-            onSubmit({ value: finalValue, messageType, chatId: selectedId }).catch((error) => {
+            onSubmit({ value: finalValue, displayValue, messageType, chatId: selectedId }).catch((error) => {
                 const message = `Feil ved innsending av chat-input: ${(error as Error).message}`;
                 log(message);
                 dispatch(

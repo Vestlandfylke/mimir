@@ -182,13 +182,23 @@ export const conversationsSlice = createSlice({
             }
         },
         deleteConversation: (state: ConversationsState, action: PayloadAction<string>) => {
-            const keys = Object.keys(state.conversations);
             const id = action.payload;
 
-            // If the conversation being deleted is the selected conversation, select the first remaining conversation
+            // If the conversation being deleted is the selected conversation, select the newest remaining conversation
             if (id === state.selectedId) {
-                if (keys.length > 1) {
-                    state.selectedId = id === keys[0] ? keys[1] : keys[0];
+                // Get all remaining conversations (excluding the one being deleted)
+                const remainingConversations = Object.entries(state.conversations)
+                    .filter(([chatId]) => chatId !== id)
+                    .map(([chatId, chat]) => ({ chatId, chat }));
+
+                if (remainingConversations.length > 0) {
+                    // Sort by lastUpdatedTimestamp descending (newest first), fallback to first message timestamp
+                    remainingConversations.sort((a, b) => {
+                        const aTime = a.chat.lastUpdatedTimestamp ?? (a.chat.messages[0]?.timestamp || 0);
+                        const bTime = b.chat.lastUpdatedTimestamp ?? (b.chat.messages[0]?.timestamp || 0);
+                        return bTime - aTime; // Descending order (newest first)
+                    });
+                    state.selectedId = remainingConversations[0].chatId;
                 } else {
                     state.selectedId = '';
                 }

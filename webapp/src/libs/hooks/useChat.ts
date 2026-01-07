@@ -38,10 +38,14 @@ import { getErrorDetails } from '../../components/utils/TextUtils';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import { PlanState } from '../models/Plan';
 import { ContextVariable } from '../semantic-kernel/model/AskResult';
+import { ensureConnected, isConnectionHealthy, getConnectionState } from '../../redux/features/message-relay/signalRHubConnection';
+import { logger } from '../utils/Logger';
 
 export interface GetResponseOptions {
     messageType: ChatMessageType;
     value: string;
+    /** Optional: The message to display in chat UI. If not provided, 'value' is used. */
+    displayValue?: string;
     chatId: string;
     kernelArguments?: IAskVariables[];
     processPlan?: boolean;
@@ -112,20 +116,22 @@ export const useChat = () => {
         }
     };
 
-    const getResponse = async ({ messageType, value, chatId, kernelArguments, processPlan }: GetResponseOptions) => {
+    const getResponse = async ({ messageType, value, displayValue, chatId, kernelArguments, processPlan }: GetResponseOptions) => {
         // Use request queue to prevent race conditions when sending multiple messages quickly
         // This ensures messages are processed one at a time, preventing lost responses
         await chatRequestQueue.enqueue(chatId, async (signal: AbortSignal) => {
             // Generate a unique ID for the user message to avoid duplicate detection issues
             const messageId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
+            // Use displayValue for chat UI if provided, otherwise use value
+            // This allows us to show user's original message while sending enhanced prompt to backend
             const chatInput: IChatMessage = {
                 id: messageId,
                 chatId: chatId,
                 timestamp: new Date().getTime(),
                 userId: activeUserInfo?.id as string,
                 userName: activeUserInfo?.username as string,
-                content: value,
+                content: displayValue ?? value,
                 type: messageType,
                 authorRole: AuthorRoles.User,
             };
@@ -148,6 +154,26 @@ export const useChat = () => {
 
             if (kernelArguments) {
                 ask.variables.push(...kernelArguments);
+            }
+
+            // Check SignalR connection before sending - if stale, try to reconnect
+            if (!isConnectionHealthy()) {
+                logger.warn(`⚠️ SignalR connection not healthy (${getConnectionState()}), attempting to reconnect before sending...`);
+                dispatch(updateBotResponseStatus({ chatId, status: 'Koplar til på nytt...' }));
+                try {
+                    await ensureConnected();
+                    logger.log('✅ SignalR reconnected, proceeding with request');
+                } catch (reconnectError) {
+                    logger.error('❌ Failed to reconnect SignalR before sending:', reconnectError);
+                    dispatch(
+                        addAlert({
+                            message: 'Tilkoblinga er nede. Prøv å oppdatere sida.',
+                            type: AlertType.Warning,
+                        }),
+                    );
+                    dispatch(updateBotResponseStatus({ chatId, status: undefined }));
+                    return;
+                }
             }
 
             try {

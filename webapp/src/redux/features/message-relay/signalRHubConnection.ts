@@ -371,16 +371,165 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
 
 // This is a singleton instance of the SignalR connection
 let hubConnection: signalR.HubConnection | undefined = undefined;
+let storeRef: StoreMiddlewareAPI | undefined = undefined;
+
+// Track last activity time to detect stale connections after inactivity
+let lastActivityTime = Date.now();
+const INACTIVITY_THRESHOLD_MS = 60000; // 1 minute of inactivity triggers connection check
+
+/**
+ * Check if the SignalR connection is healthy and connected.
+ */
+export const isConnectionHealthy = (): boolean => {
+    return hubConnection?.state === signalR.HubConnectionState.Connected;
+};
+
+/**
+ * Get the current connection state as a string.
+ */
+export const getConnectionState = (): string => {
+    if (!hubConnection) return 'NotInitialized';
+    const stateNames: Record<signalR.HubConnectionState, string> = {
+        [signalR.HubConnectionState.Disconnected]: 'Disconnected',
+        [signalR.HubConnectionState.Connecting]: 'Connecting',
+        [signalR.HubConnectionState.Connected]: 'Connected',
+        [signalR.HubConnectionState.Disconnecting]: 'Disconnecting',
+        [signalR.HubConnectionState.Reconnecting]: 'Reconnecting',
+    };
+    return stateNames[hubConnection.state] || 'Unknown';
+};
+
+/**
+ * Force reconnect if the connection is not healthy.
+ * Returns a promise that resolves when connected or rejects on failure.
+ */
+export const ensureConnected = async (): Promise<void> => {
+    if (!hubConnection) {
+        throw new Error('SignalR connection not initialized');
+    }
+
+    if (hubConnection.state === signalR.HubConnectionState.Connected) {
+        return; // Already connected
+    }
+
+    if (hubConnection.state === signalR.HubConnectionState.Connecting ||
+        hubConnection.state === signalR.HubConnectionState.Reconnecting) {
+        // Wait for current connection attempt to complete
+        await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Connection timeout'));
+            }, 10000);
+
+            const checkState = setInterval(() => {
+                if (hubConnection?.state === signalR.HubConnectionState.Connected) {
+                    clearInterval(checkState);
+                    clearTimeout(timeout);
+                    resolve();
+                } else if (hubConnection?.state === signalR.HubConnectionState.Disconnected) {
+                    clearInterval(checkState);
+                    clearTimeout(timeout);
+                    reject(new Error('Connection failed'));
+                }
+            }, 100);
+        });
+        return;
+    }
+
+    // Connection is disconnected, try to start it
+    logger.log('🔄 SignalR connection lost, attempting to reconnect...');
+    try {
+        await hubConnection.start();
+        logger.log('✅ SignalR reconnection successful');
+        if (storeRef) {
+            storeRef.dispatch(setConnectionReconnected(true));
+        }
+    } catch (err) {
+        logger.error('❌ SignalR reconnection failed:', err);
+        throw err;
+    }
+};
+
+/**
+ * Handle page visibility changes - check connection when user returns to tab.
+ */
+const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
+    if (typeof document === 'undefined') return;
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && hubConnection) {
+            const inactivityDuration = Date.now() - lastActivityTime;
+            const wasInactiveForAWhile = inactivityDuration > INACTIVITY_THRESHOLD_MS;
+
+            logger.debug(`👁️ Page became visible. Inactivity: ${Math.round(inactivityDuration / 1000)}s, Connection: ${getConnectionState()}`);
+
+            // If we were inactive for a while or connection isn't healthy, check/reconnect
+            if (wasInactiveForAWhile || !isConnectionHealthy()) {
+                logger.log('🔄 Checking connection after returning to tab...');
+                
+                if (hubConnection.state === signalR.HubConnectionState.Disconnected) {
+                    // Connection is definitely dead, try to restart
+                    store.dispatch(
+                        addAlert({
+                            message: 'Koplar til på nytt etter inaktivitet...',
+                            type: AlertType.Info,
+                            id: Constants.app.CONNECTION_ALERT_ID,
+                        }),
+                    );
+                    
+                    hubConnection.start()
+                        .then(() => {
+                            logger.log('✅ Reconnected after visibility change');
+                            store.dispatch(setConnectionReconnected(true));
+                        })
+                        .catch((err) => {
+                            logger.error('❌ Failed to reconnect after visibility change:', err);
+                            store.dispatch(
+                                addAlert({
+                                    message: 'Kunne ikkje kople til på nytt. Prøv å oppdatere sida.',
+                                    type: AlertType.Warning,
+                                    id: Constants.app.CONNECTION_ALERT_ID,
+                                }),
+                            );
+                        });
+                } else if (hubConnection.state === signalR.HubConnectionState.Connected) {
+                    // Connection looks good, but do a quick health check by triggering sync
+                    // This ensures any missed messages are fetched
+                    if (wasInactiveForAWhile) {
+                        logger.log('🔄 Triggering message sync after extended inactivity');
+                        store.dispatch(setConnectionReconnected(true));
+                    }
+                }
+            }
+
+            // Update activity time when page becomes visible
+            lastActivityTime = Date.now();
+        }
+    });
+
+    // Also track user activity to know when they were last active
+    const updateActivity = () => {
+        lastActivityTime = Date.now();
+    };
+    
+    // Track various user activities
+    document.addEventListener('keydown', updateActivity, { passive: true });
+    document.addEventListener('mousedown', updateActivity, { passive: true });
+    document.addEventListener('touchstart', updateActivity, { passive: true });
+};
 
 // This function will return the singleton instance of the SignalR connection
 export const getOrCreateHubConnection = (store: StoreMiddlewareAPI) => {
     if (hubConnection === undefined) {
         hubConnection = setupSignalRConnectionToChatHub();
+        storeRef = store;
 
         // Start the signalR connection to make sure messages are
         // sent to all clients and received by all clients
         startSignalRConnection(hubConnection, store);
         registerSignalREvents(hubConnection, store);
+        
+        // Set up visibility change handler for reconnection after tab switch
+        setupVisibilityChangeHandler(store);
     }
     return hubConnection;
 };

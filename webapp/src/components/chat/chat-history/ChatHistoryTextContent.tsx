@@ -103,6 +103,17 @@ const isFilesEndpointLink = (href: string): boolean => {
 const remarkPlugins = [remarkGfm, remarkMath];
 const rehypePlugins = [rehypeKatex];
 
+/**
+ * Strip diagram request prefix from user messages.
+ * When a user selects a diagram type, the prompt is prepended to their message for the LLM,
+ * but we don't want to display it in the chat UI.
+ * Pattern: "[Diagram request: ...]\n\nUser request: <actual message>"
+ */
+const stripDiagramRequestPrefix = (content: string): string => {
+    const diagramRequestPattern = /^\[Diagram request:[\s\S]*?\]\s*\n\nUser request:\s*/;
+    return content.replace(diagramRequestPattern, '');
+};
+
 // Custom comparison function for memo - only re-render if message content or citations change
 const arePropsEqual = (prevProps: ChatHistoryTextContentProps, nextProps: ChatHistoryTextContentProps): boolean => {
     // Only re-render if the actual content changed
@@ -116,7 +127,9 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
     const classes = useClasses();
     const dispatch = useAppDispatch();
     const { instance, inProgress } = useMsal();
-    const content = utils.replaceCitationLinksWithIndices(utils.formatChatTextContent(message.content), message);
+    // Strip diagram request prefix from user messages (if present) before processing
+    const rawContent = stripDiagramRequestPrefix(message.content);
+    const content = utils.replaceCitationLinksWithIndices(utils.formatChatTextContent(rawContent), message);
 
     const handleFilesLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
         // If auth is disabled, a normal navigation is fine (PassThrough backend).

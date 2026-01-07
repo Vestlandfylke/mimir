@@ -15,10 +15,93 @@ import { ArrowDownload20Regular, ChevronDown16Regular } from '@fluentui/react-ic
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 type MermaidSecurityLevel = 'strict' | 'loose' | 'antiscript';
+type MermaidTheme = 'default' | 'forest' | 'dark' | 'neutral' | 'base';
+interface MermaidConfig {
+    startOnLoad?: boolean;
+    securityLevel?: MermaidSecurityLevel;
+    theme?: MermaidTheme;
+    themeVariables?: Record<string, string>;
+}
 interface MermaidAPI {
-    initialize: (config: { startOnLoad?: boolean; securityLevel?: MermaidSecurityLevel }) => void;
+    initialize: (config: MermaidConfig) => void;
     render: (id: string, text: string) => Promise<{ svg: string }>;
 }
+
+// Vestland fylkeskommune brand colors for diagrams
+const VESTLAND_COLORS = [
+    '#9ADBE8', // Light cyan
+    '#E06287', // Pink/coral
+    '#CAA2DD', // Light purple
+    '#E1D555', // Yellow
+    '#00C7B1', // Teal
+    '#B7DD79', // Light green
+    '#FDDA25', // Bright yellow
+    '#FF5C39', // Orange/red
+    '#50A684', // Sage green
+    '#3CDBC0', // Mint/aqua
+    '#FF9E1B', // Orange
+    '#F8B5C4', // Light pink
+];
+
+// Build theme variables for pie charts, flowcharts, etc.
+const buildVestlandThemeVariables = () => {
+    const themeVariables: Record<string, string> = {
+        // Primary colors
+        primaryColor: VESTLAND_COLORS[4], // Teal
+        primaryTextColor: '#333333',
+        primaryBorderColor: '#008a7b',
+        // Secondary colors
+        secondaryColor: VESTLAND_COLORS[2], // Light purple
+        secondaryTextColor: '#333333',
+        secondaryBorderColor: '#a07fc0',
+        // Tertiary colors
+        tertiaryColor: VESTLAND_COLORS[0], // Light cyan
+        tertiaryTextColor: '#333333',
+        tertiaryBorderColor: '#6bc4d6',
+        // Background
+        background: '#ffffff',
+        mainBkg: '#ffffff',
+        // Line colors
+        lineColor: '#666666',
+        // Text colors - important for readability!
+        textColor: '#333333',
+        titleColor: '#333333',
+        // Pie chart specific
+        pieTitleTextColor: '#333333',
+        pieLegendTextColor: '#333333',
+        pieSectionTextColor: '#ffffff', // White text on colored slices
+        pieStrokeColor: '#ffffff',
+        pieStrokeWidth: '2px',
+        pieOuterStrokeWidth: '2px',
+        // Flowchart
+        nodeBorder: '#666666',
+        clusterBkg: '#f5f5f5',
+        clusterBorder: '#cccccc',
+        defaultLinkColor: '#666666',
+        edgeLabelBackground: '#ffffff',
+        // Sequence diagram
+        actorTextColor: '#333333',
+        actorBorder: '#666666',
+        signalTextColor: '#333333',
+        // General
+        labelTextColor: '#333333',
+        loopTextColor: '#333333',
+        noteBkgColor: '#fff5ad',
+        noteTextColor: '#333333',
+    };
+
+    // Add pie chart colors (pie1 through pie12)
+    VESTLAND_COLORS.forEach((color, index) => {
+        themeVariables[`pie${index + 1}`] = color;
+    });
+
+    // Add cScale colors for other chart types (quadrant, etc.)
+    VESTLAND_COLORS.forEach((color, index) => {
+        themeVariables[`cScale${index}`] = color;
+    });
+
+    return themeVariables;
+};
 
 // Cached mermaid instance - import once, reuse forever
 let mermaidPromise: Promise<MermaidAPI> | null = null;
@@ -27,7 +110,12 @@ const getMermaid = async (): Promise<MermaidAPI> => {
         mermaidPromise = (async () => {
             const mermaidModule = (await import('mermaid')) as unknown as { default: MermaidAPI };
             const mermaid = mermaidModule.default;
-            mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: 'strict',
+                theme: 'base',
+                themeVariables: buildVestlandThemeVariables(),
+            });
             return mermaid;
         })();
     }
@@ -36,6 +124,36 @@ const getMermaid = async (): Promise<MermaidAPI> => {
 
 // Global counter for unique diagram IDs
 let diagramIdCounter = 0;
+
+/**
+ * Adjust SVG viewBox to add padding on the left side for overflowing titles.
+ * Mermaid sometimes generates SVGs where the title extends beyond the viewBox.
+ */
+const adjustSvgViewBox = (svgString: string): string => {
+    // Parse the viewBox attribute
+    const viewBoxMatch = svgString.match(/viewBox="([^"]+)"/);
+    if (!viewBoxMatch) return svgString;
+
+    const viewBox = viewBoxMatch[1].split(/\s+/).map(Number);
+    if (viewBox.length !== 4) return svgString;
+
+    const [minX, minY, width, height] = viewBox;
+
+    // Add padding to the left (negative minX extends the viewBox to the left)
+    const leftPadding = 20; // Extra padding for titles that overflow
+    const newMinX = minX - leftPadding;
+    const newWidth = width + leftPadding;
+
+    const newViewBox = `${newMinX} ${minY} ${newWidth} ${height}`;
+
+    // Update viewBox and max-width in the SVG
+    let adjustedSvg = svgString.replace(/viewBox="[^"]+"/, `viewBox="${newViewBox}"`);
+
+    // Also update max-width style if present
+    adjustedSvg = adjustedSvg.replace(/max-width:\s*[\d.]+px/, `max-width: ${newWidth}px`);
+
+    return adjustedSvg;
+};
 
 const useClasses = makeStyles({
     root: {
@@ -63,6 +181,14 @@ const useClasses = makeStyles({
         WebkitOverflowScrolling: 'touch',
         // Add padding at top for the download button
         paddingTop: tokens.spacingVerticalXXL,
+        // Add padding on left/right for titles that overflow the SVG viewBox
+        paddingLeft: tokens.spacingHorizontalXXL,
+        paddingRight: tokens.spacingHorizontalXXL,
+        '& svg': {
+            // Ensure SVG doesn't clip content - overflow visible allows title to extend beyond viewBox
+            overflow: 'visible',
+            display: 'block',
+        },
     },
     loading: {
         display: 'flex',
@@ -156,7 +282,9 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
                     const result = await mermaid.render(renderId, normalized);
 
                     if (!cancelledRef.current) {
-                        setSvg(result.svg);
+                        // Adjust viewBox to prevent title overflow clipping
+                        const adjustedSvg = adjustSvgViewBox(result.svg);
+                        setSvg(adjustedSvg);
                         setError('');
                         lastRenderedCodeRef.current = normalized;
                     }
