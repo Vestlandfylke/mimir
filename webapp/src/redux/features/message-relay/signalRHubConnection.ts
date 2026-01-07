@@ -412,8 +412,10 @@ export const ensureConnected = async (): Promise<void> => {
         return; // Already connected
     }
 
-    if (hubConnection.state === signalR.HubConnectionState.Connecting ||
-        hubConnection.state === signalR.HubConnectionState.Reconnecting) {
+    if (
+        hubConnection.state === signalR.HubConnectionState.Connecting ||
+        hubConnection.state === signalR.HubConnectionState.Reconnecting
+    ) {
         // Wait for current connection attempt to complete
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
@@ -460,12 +462,14 @@ const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
             const inactivityDuration = Date.now() - lastActivityTime;
             const wasInactiveForAWhile = inactivityDuration > INACTIVITY_THRESHOLD_MS;
 
-            logger.debug(`👁️ Page became visible. Inactivity: ${Math.round(inactivityDuration / 1000)}s, Connection: ${getConnectionState()}`);
+            logger.debug(
+                `👁️ Page became visible. Inactivity: ${Math.round(inactivityDuration / 1000)}s, Connection: ${getConnectionState()}`,
+            );
 
             // If we were inactive for a while or connection isn't healthy, check/reconnect
             if (wasInactiveForAWhile || !isConnectionHealthy()) {
                 logger.log('🔄 Checking connection after returning to tab...');
-                
+
                 if (hubConnection.state === signalR.HubConnectionState.Disconnected) {
                     // Connection is definitely dead, try to restart
                     store.dispatch(
@@ -475,8 +479,9 @@ const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
                             id: Constants.app.CONNECTION_ALERT_ID,
                         }),
                     );
-                    
-                    hubConnection.start()
+
+                    hubConnection
+                        .start()
                         .then(() => {
                             logger.log('✅ Reconnected after visibility change');
                             store.dispatch(setConnectionReconnected(true));
@@ -510,7 +515,7 @@ const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
     const updateActivity = () => {
         lastActivityTime = Date.now();
     };
-    
+
     // Track various user activities
     document.addEventListener('keydown', updateActivity, { passive: true });
     document.addEventListener('mousedown', updateActivity, { passive: true });
@@ -527,7 +532,7 @@ export const getOrCreateHubConnection = (store: StoreMiddlewareAPI) => {
         // sent to all clients and received by all clients
         startSignalRConnection(hubConnection, store);
         registerSignalREvents(hubConnection, store);
-        
+
         // Set up visibility change handler for reconnection after tab switch
         setupVisibilityChangeHandler(store);
     }

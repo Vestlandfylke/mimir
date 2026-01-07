@@ -38,7 +38,11 @@ import { getErrorDetails } from '../../components/utils/TextUtils';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import { PlanState } from '../models/Plan';
 import { ContextVariable } from '../semantic-kernel/model/AskResult';
-import { ensureConnected, isConnectionHealthy, getConnectionState } from '../../redux/features/message-relay/signalRHubConnection';
+import {
+    ensureConnected,
+    isConnectionHealthy,
+    getConnectionState,
+} from '../../redux/features/message-relay/signalRHubConnection';
 import { logger } from '../utils/Logger';
 
 export interface GetResponseOptions {
@@ -116,7 +120,14 @@ export const useChat = () => {
         }
     };
 
-    const getResponse = async ({ messageType, value, displayValue, chatId, kernelArguments, processPlan }: GetResponseOptions) => {
+    const getResponse = async ({
+        messageType,
+        value,
+        displayValue,
+        chatId,
+        kernelArguments,
+        processPlan,
+    }: GetResponseOptions) => {
         // Use request queue to prevent race conditions when sending multiple messages quickly
         // This ensures messages are processed one at a time, preventing lost responses
         await chatRequestQueue.enqueue(chatId, async (signal: AbortSignal) => {
@@ -158,7 +169,9 @@ export const useChat = () => {
 
             // Check SignalR connection before sending - if stale, try to reconnect
             if (!isConnectionHealthy()) {
-                logger.warn(`⚠️ SignalR connection not healthy (${getConnectionState()}), attempting to reconnect before sending...`);
+                logger.warn(
+                    `⚠️ SignalR connection not healthy (${getConnectionState()}), attempting to reconnect before sending...`,
+                );
                 dispatch(updateBotResponseStatus({ chatId, status: 'Koplar til på nytt...' }));
                 try {
                     await ensureConnected();
