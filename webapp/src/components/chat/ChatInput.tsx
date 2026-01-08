@@ -352,7 +352,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
             let finalValue = inputValue;
             let displayValue: string | undefined;
             if (selectedDiagramType) {
-                finalValue = `[Diagram request: ${selectedDiagramType.prompt}]\n\nUser request: ${inputValue}`;
+                const diagramSuffix = `\n\nSVAR-FORMAT: Start svaret med Mermaid-kodeblokken (\`\`\`mermaid ... \`\`\`). ETTER kodeblokken kan du forklare kva diagrammet viser og korleis det fungerer. IKKJE oppsummer eller gjenta kva brukaren ba om - gå rett på diagrammet.`;
+                finalValue = `[Diagram request: ${selectedDiagramType.prompt}${diagramSuffix}]\n\nUser request: ${inputValue}`;
                 displayValue = inputValue; // Show only user's message in chat
             }
 

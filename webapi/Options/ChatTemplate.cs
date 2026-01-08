@@ -20,5 +20,12 @@ public class ChatTemplate
   /// </summary>
   [Required, NotEmptyOrWhitespace]
   public string InitialBotMessage { get; set; } = string.Empty;
+
+  /// <summary>
+  /// Optional static cache prefix for this template.
+  /// If not set, falls back to the global SystemCachePrefix.
+  /// Used for Azure OpenAI prompt caching optimization.
+  /// </summary>
+  public string? SystemCachePrefix { get; set; }
 }
 

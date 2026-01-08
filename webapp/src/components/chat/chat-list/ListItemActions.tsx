@@ -15,7 +15,9 @@ import { DeleteChatDialog } from './dialogs/DeleteChatDialog';
 
 const useClasses = makeStyles({
     root: {
-        display: 'contents',
+        display: 'flex',
+        alignItems: 'center',
+        flexShrink: 0,
         ...Breakpoints.small({
             display: 'none',
         }),

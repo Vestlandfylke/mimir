@@ -38,7 +38,6 @@ const useClasses = makeStyles({
         flexDirection: 'column',
         marginLeft: tokens.spacingHorizontalXS,
         alignSelf: 'center',
-        // Show body on mobile (slide-out menu)
     },
     header: {
         flexGrow: 1,

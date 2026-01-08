@@ -40,6 +40,48 @@ public class AppInsightsTelemetryService : ITelemetryService
         this._telemetryClient.TrackEvent("PluginFunction", properties);
     }
 
+    /// <inheritdoc/>
+    public void TrackPromptCacheMetrics(int promptTokens, int cachedTokens, int completionTokens, string? chatId = null)
+    {
+        // Calculate cache hit rate
+        var cacheHitRate = promptTokens > 0 ? (double)cachedTokens / promptTokens * 100 : 0;
+
+        // Calculate cost savings (GPT-5.2-Chat pricing: $1.75/M input, $0.175/M cached, $14/M output)
+        const double InputCostPerMillion = 1.75;
+        const double CachedCostPerMillion = 0.175;  // 90% discount
+        const double OutputCostPerMillion = 14.0;
+
+        var normalInputCost = promptTokens * InputCostPerMillion / 1_000_000;
+        var actualInputCost = (promptTokens - cachedTokens) * InputCostPerMillion / 1_000_000
+                            + cachedTokens * CachedCostPerMillion / 1_000_000;
+        var outputCost = completionTokens * OutputCostPerMillion / 1_000_000;
+        var savingsUsd = normalInputCost - actualInputCost;
+
+        var properties = new Dictionary<string, string>(this.BuildDefaultProperties());
+        if (!string.IsNullOrEmpty(chatId))
+        {
+            properties["chatId"] = chatId;
+        }
+
+        // Track as an event with all metrics for detailed analysis and dashboards
+        var eventProperties = new Dictionary<string, string>(properties)
+        {
+            { "promptTokens", promptTokens.ToString() },
+            { "cachedTokens", cachedTokens.ToString() },
+            { "completionTokens", completionTokens.ToString() },
+            { "cacheHitRate", cacheHitRate.ToString("F2") },
+            { "savingsUSD", savingsUsd.ToString("F6") },
+            { "totalCostUSD", (actualInputCost + outputCost).ToString("F6") }
+        };
+
+        this._telemetryClient.TrackEvent("PromptCacheMetrics", eventProperties);
+
+        // Also track key metrics individually for easier querying
+        this._telemetryClient.TrackMetric("AI.CacheHitRate", cacheHitRate);
+        this._telemetryClient.TrackMetric("AI.PromptTokens", promptTokens);
+        this._telemetryClient.TrackMetric("AI.CachedTokens", cachedTokens);
+    }
+
     /// <summary>
     /// Gets the current user's ID from the http context for the current request.
     /// </summary>

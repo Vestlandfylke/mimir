@@ -31,6 +31,7 @@ import {
     useTableSort,
 } from '@fluentui/react-components';
 import {
+    Clock16Regular,
     DeleteRegular,
     DocumentArrowUp20Regular,
     DocumentPdfRegular,
@@ -38,6 +39,7 @@ import {
     FluentIconsProps,
     Pin20Filled,
     Pin20Regular,
+    Storage16Regular,
 } from '@fluentui/react-icons';
 import * as React from 'react';
 import { useRef, useState } from 'react';
@@ -316,11 +318,14 @@ export const DocumentsTab: React.FC = () => {
                             </span>
                         </div>
                         <div className={classes.cardDetails}>
-                            <span>📅 {item.id.startsWith('in-progress') ? 'Lastar...' : item.createdOn.label}</span>
                             <span>
-                                📦 {item.id.startsWith('in-progress') ? '...' : `${item.size.toLocaleString()} bytes`}
+                                <Clock16Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                {item.id.startsWith('in-progress') ? 'Lastar...' : item.createdOn.label}
                             </span>
-                            <span>🔒 {item.chatId === EmptyGuid ? 'Global' : 'Denne samtalen'}</span>
+                            <span>
+                                <Storage16Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                {item.id.startsWith('in-progress') ? '...' : `${item.size.toLocaleString()} bytes`}
+                            </span>
                         </div>
                         <ProgressBar
                             className={classes.progressBar}

@@ -19,9 +19,15 @@ export const useClasses = makeStyles({
     container: {
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: '100vh', // Fallback for older browsers
+        // @ts-expect-error dvh is valid CSS but not in types yet
+        height: '100dvh', // Dynamic viewport height - accounts for mobile browser chrome
         width: '100%',
         ...shorthands.overflow('hidden'),
+        // Ensure the container doesn't exceed the viewport
+        maxHeight: '100vh',
+        // @ts-expect-error dvh is valid CSS but not in types yet
+        maxHeight: '100dvh',
     },
     header: {
         alignItems: 'center',
@@ -33,6 +39,8 @@ export const useClasses = makeStyles({
             display: 'flex',
         },
         height: '48px',
+        minHeight: '48px', // Prevent header from shrinking
+        flexShrink: 0, // Never shrink the header
         justifyContent: 'space-between',
         width: '100%',
     },

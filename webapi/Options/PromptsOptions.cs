@@ -58,6 +58,14 @@ public class PromptsOptions
     [Required, NotEmptyOrWhitespace] public string SystemDescription { get; set; } = string.Empty;
     [Required, NotEmptyOrWhitespace] public string SystemResponse { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Static cache prefix for Azure OpenAI prompt caching optimization.
+    /// This content is placed at the very beginning of the prompt and should be >1024 tokens.
+    /// Azure OpenAI automatically caches prompts where the first 1024+ tokens are identical,
+    /// reducing input token costs by 90% ($1.75 → $0.175 per million tokens for GPT-5.2).
+    /// </summary>
+    public string SystemCachePrefix { get; set; } = string.Empty;
+
     // Templates for specialized chat types
     public Dictionary<string, ChatTemplate>? Templates { get; set; }
 

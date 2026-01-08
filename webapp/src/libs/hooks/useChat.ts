@@ -40,10 +40,13 @@ import { PlanState } from '../models/Plan';
 import { ContextVariable } from '../semantic-kernel/model/AskResult';
 import {
     ensureConnected,
-    isConnectionHealthy,
     getConnectionState,
+    triggerMessageSync,
 } from '../../redux/features/message-relay/signalRHubConnection';
 import { logger } from '../utils/Logger';
+
+// Timeout for bot response - if no response after this time, check connection and sync
+const BOT_RESPONSE_TIMEOUT_MS = 60000; // 60 seconds
 
 export interface GetResponseOptions {
     messageType: ChatMessageType;
@@ -167,27 +170,57 @@ export const useChat = () => {
                 ask.variables.push(...kernelArguments);
             }
 
-            // Check SignalR connection before sending - if stale, try to reconnect
-            if (!isConnectionHealthy()) {
-                logger.warn(
-                    `⚠️ SignalR connection not healthy (${getConnectionState()}), attempting to reconnect before sending...`,
+            // Check SignalR connection before sending - verify it's actually alive
+            logger.debug(`📡 Checking SignalR connection before sending (state: ${getConnectionState()})`);
+            dispatch(updateBotResponseStatus({ chatId, status: 'Sjekkar tilkopling...' }));
+
+            try {
+                // This will ping the server to verify the connection is actually working
+                await ensureConnected();
+                logger.log('✅ SignalR connection verified, proceeding with request');
+            } catch (reconnectError) {
+                logger.error('❌ Failed to verify/reconnect SignalR before sending:', reconnectError);
+                dispatch(
+                    addAlert({
+                        message: 'Tilkoblinga er nede. Prøv å oppdatere sida.',
+                        type: AlertType.Warning,
+                    }),
                 );
-                dispatch(updateBotResponseStatus({ chatId, status: 'Koplar til på nytt...' }));
-                try {
-                    await ensureConnected();
-                    logger.log('✅ SignalR reconnected, proceeding with request');
-                } catch (reconnectError) {
-                    logger.error('❌ Failed to reconnect SignalR before sending:', reconnectError);
+                dispatch(updateBotResponseStatus({ chatId, status: undefined }));
+                return;
+            }
+
+            // Set up a response timeout to detect if SignalR silently failed
+            let responseReceived = false;
+            const responseTimeoutId = setTimeout(() => {
+                if (!responseReceived && !signal.aborted) {
+                    logger.warn(
+                        `⚠️ No bot response received after ${BOT_RESPONSE_TIMEOUT_MS / 1000}s - connection may have died`,
+                    );
+
+                    // Check if we actually have the response in the chat (SignalR might have worked)
+                    const currentChat = conversations[chatId];
+                    const lastMessage = currentChat.messages[currentChat.messages.length - 1];
+                    if (lastMessage.authorRole === AuthorRoles.Bot) {
+                        // Response was received, just clear spinner
+                        logger.log('✓ Bot response found in chat - clearing spinner');
+                        dispatch(updateBotResponseStatus({ chatId, status: undefined }));
+                        return;
+                    }
+
+                    // No response in chat - try to sync messages
                     dispatch(
                         addAlert({
-                            message: 'Tilkoblinga er nede. Prøv å oppdatere sida.',
-                            type: AlertType.Warning,
+                            message: 'Ventar på svar... Sjekkar tilkopling.',
+                            type: AlertType.Info,
+                            id: Constants.app.CONNECTION_ALERT_ID,
                         }),
                     );
-                    dispatch(updateBotResponseStatus({ chatId, status: undefined }));
-                    return;
+
+                    // Trigger message sync to fetch any missed messages
+                    triggerMessageSync();
                 }
-            }
+            }, BOT_RESPONSE_TIMEOUT_MS);
 
             try {
                 const askResult = await chatService
@@ -202,6 +235,9 @@ export const useChat = () => {
                         throw e;
                     });
 
+                responseReceived = true;
+                clearTimeout(responseTimeoutId);
+
                 // Update token usage of current session
                 const responseTokenUsage = askResult.variables.find((v) => v.key === 'tokenUsage')?.value;
                 if (responseTokenUsage) dispatch(updateTokenUsage(JSON.parse(responseTokenUsage) as TokenUsage));
@@ -209,6 +245,8 @@ export const useChat = () => {
                 // Safety: clear bot response status on success to ensure spinner stops
                 dispatch(updateBotResponseStatus({ chatId, status: undefined }));
             } catch (e: any) {
+                responseReceived = true;
+                clearTimeout(responseTimeoutId);
                 // Clear spinner on error as well
                 dispatch(updateBotResponseStatus({ chatId, status: undefined }));
 

@@ -9,13 +9,28 @@
 body {
     margin: 0;
     overscroll-behavior: none;
+    /* Prevent iOS bounce/pull-to-refresh */
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    /* Support for iOS safe areas (notch, home indicator) */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+html {
+    /* Prevent iOS address bar from causing layout shifts */
+    overflow: hidden;
 }
 
 html,
 body,
 #root,
 #root > .app-container {
-    height: 100%;
+    /* Use dvh (dynamic viewport height) with fallback for older browsers */
+    height: 100vh; /* Fallback */
+    height: 100dvh; /* Modern browsers - accounts for mobile browser chrome */
+    max-height: 100vh;
+    max-height: 100dvh;
 }
 
 ::-webkit-scrollbar {

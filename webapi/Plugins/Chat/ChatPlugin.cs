@@ -81,6 +81,11 @@ public class ChatPlugin
     private readonly McpPlanService? _mcpPlanService;
 
     /// <summary>
+    /// Telemetry service for tracking cache metrics and other events.
+    /// </summary>
+    private readonly ITelemetryService? _telemetryService;
+
+    /// <summary>
     /// Create a new instance of <see cref="ChatPlugin"/>.
     /// </summary>
     public ChatPlugin(
@@ -94,7 +99,8 @@ public class ChatPlugin
         IOptions<DocumentMemoryOptions> documentImportOptions,
         ILogger logger,
         AzureContentSafety? contentSafety = null,
-        McpPlanService? mcpPlanService = null)
+        McpPlanService? mcpPlanService = null,
+        ITelemetryService? telemetryService = null)
     {
         this._logger = logger;
         this._kernel = kernel;
@@ -109,6 +115,7 @@ public class ChatPlugin
 
         this._contentSafety = contentSafety;
         this._mcpPlanService = mcpPlanService;
+        this._telemetryService = telemetryService;
     }
 
     /// <summary>
@@ -318,6 +325,9 @@ public class ChatPlugin
 
     /// <summary>
     /// Helper function to render system instruction components.
+    /// Optimized for Azure OpenAI prompt caching by placing static content first.
+    /// Azure OpenAI caches prompts where the first 1024+ tokens are identical,
+    /// reducing input costs by 90% for cached tokens.
     /// </summary>
     /// <param name="chatId">The chat ID</param>
     /// <param name="context">The KernelArguments.</param>
@@ -328,8 +338,25 @@ public class ChatPlugin
         await this.UpdateBotResponseStatusOnClientAsync(chatId, "Førebur spørsmål", cancellationToken);
 
         var promptTemplateFactory = new KernelPromptTemplateFactory();
+
+        // PROMPT CACHING OPTIMIZATION:
+        // Structure the prompt with static content first to maximize cache hits.
+        // Azure OpenAI automatically caches prompts where the first 1024+ tokens match.
+
+        // 1. Static cache prefix (identical for all requests - maximizes caching)
+        var cachePrefix = this._promptOptions.SystemCachePrefix;
+
+        // 2. Session-specific system persona (same for all messages in a session)
         var promptTemplate = promptTemplateFactory.Create(new PromptTemplateConfig(this._promptOptions.SystemPersona));
-        return await promptTemplate.RenderAsync(this._kernel, context, cancellationToken);
+        var systemPersona = await promptTemplate.RenderAsync(this._kernel, context, cancellationToken);
+
+        // Combine: Static prefix first (for optimal caching), then session-specific content
+        if (!string.IsNullOrWhiteSpace(cachePrefix))
+        {
+            return $"{cachePrefix}\n\n{systemPersona}";
+        }
+
+        return systemPersona;
     }
 
     /// <summary>
@@ -584,7 +611,8 @@ public class ChatPlugin
     /// GPT-5.x models require `max_completion_tokens` (not `max_tokens`), so we enable the SK flag.
     /// </summary>
     /// <param name="requireApproval">If true, enables kernel functions without auto-invoke to allow plan approval.</param>
-    private AzureOpenAIPromptExecutionSettings CreateChatRequestSettings(bool requireApproval = false)
+    /// <param name="chatId">Optional chat ID used as the User parameter to improve cache routing.</param>
+    private AzureOpenAIPromptExecutionSettings CreateChatRequestSettings(bool requireApproval = false, string? chatId = null)
     {
         return new AzureOpenAIPromptExecutionSettings
         {
@@ -600,7 +628,12 @@ public class ChatPlugin
             // This allows us to intercept the function calls and show them to the user for approval
             ToolCallBehavior = requireApproval
                 ? ToolCallBehavior.EnableKernelFunctions
-                : ToolCallBehavior.AutoInvokeKernelFunctions
+                : ToolCallBehavior.AutoInvokeKernelFunctions,
+            // PROMPT CACHING OPTIMIZATION:
+            // The User parameter helps Azure route requests with similar prompts together,
+            // improving cache hit rates. Using chatId ensures messages in the same conversation
+            // are more likely to hit the cache for the shared system prompt prefix.
+            User = chatId
         };
     }
 
@@ -702,9 +735,10 @@ public class ChatPlugin
         }
 
         // Standard streaming response (auto-invoke functions)
+        // Pass chatId to improve prompt cache routing
         var stream = chatCompletion.GetStreamingChatMessageContentsAsync(
             prompt.MetaPromptTemplate,
-            this.CreateChatRequestSettings(requireApproval: false),
+            this.CreateChatRequestSettings(requireApproval: false, chatId: chatId),
             this._kernel,
             cancellationToken);
 
@@ -742,12 +776,16 @@ public class ChatPlugin
         string? userIntent = null)
     {
         // Get response without auto-invoking functions
-        var settings = this.CreateChatRequestSettings(requireApproval: true);
+        // Pass chatId to improve prompt cache routing
+        var settings = this.CreateChatRequestSettings(requireApproval: true, chatId: chatId);
         var result = await chatCompletion.GetChatMessageContentAsync(
             prompt.MetaPromptTemplate,
             settings,
             this._kernel,
             cancellationToken);
+
+        // Log prompt cache metrics for cost optimization monitoring
+        this.LogPromptCacheMetrics(result, chatId);
 
         // Check if the response contains function calls
         var functionCalls = result.Items
@@ -808,7 +846,8 @@ public class ChatPlugin
         if (functionCalls.Count > 0)
         {
             // Re-run with auto-invoke for non-MCP functions
-            var autoInvokeSettings = this.CreateChatRequestSettings(requireApproval: false);
+            // Pass chatId to improve prompt cache routing
+            var autoInvokeSettings = this.CreateChatRequestSettings(requireApproval: false, chatId: chatId);
             var autoInvokeStream = chatCompletion.GetStreamingChatMessageContentsAsync(
                 prompt.MetaPromptTemplate,
                 autoInvokeSettings,
@@ -921,6 +960,83 @@ public class ChatPlugin
         {
             this._logger.LogError(ex, "🔴 SIGNALR ERROR: Failed to send ReceiveBotResponseStatus for chatId: {ChatId}", chatId);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Log prompt cache metrics for Azure OpenAI cost optimization monitoring.
+    /// Extracts cached_tokens from the response metadata to track cache hit rates.
+    /// </summary>
+    /// <param name="response">The chat message content response</param>
+    /// <param name="chatId">The chat session ID for correlation</param>
+    private void LogPromptCacheMetrics(ChatMessageContent response, string chatId)
+    {
+        try
+        {
+            var metadata = response.Metadata;
+            if (metadata == null)
+            {
+                return;
+            }
+
+            // Try to extract usage information from the response metadata
+            // The structure varies depending on the SDK version and provider
+            int promptTokens = 0;
+            int cachedTokens = 0;
+            int completionTokens = 0;
+
+            // Check for Azure OpenAI usage format
+            if (metadata.TryGetValue("Usage", out var usageObj) && usageObj != null)
+            {
+                // Try to extract from the usage object using reflection or dynamic
+                var usageType = usageObj.GetType();
+
+                var promptTokensProp = usageType.GetProperty("PromptTokens") ?? usageType.GetProperty("InputTokens");
+                var completionTokensProp = usageType.GetProperty("CompletionTokens") ?? usageType.GetProperty("OutputTokens");
+
+                if (promptTokensProp != null)
+                {
+                    promptTokens = Convert.ToInt32(promptTokensProp.GetValue(usageObj) ?? 0);
+                }
+                if (completionTokensProp != null)
+                {
+                    completionTokens = Convert.ToInt32(completionTokensProp.GetValue(usageObj) ?? 0);
+                }
+
+                // Try to get cached tokens from PromptTokensDetails
+                var detailsProp = usageType.GetProperty("PromptTokensDetails");
+                if (detailsProp != null)
+                {
+                    var details = detailsProp.GetValue(usageObj);
+                    if (details != null)
+                    {
+                        var cachedProp = details.GetType().GetProperty("CachedTokens");
+                        if (cachedProp != null)
+                        {
+                            cachedTokens = Convert.ToInt32(cachedProp.GetValue(details) ?? 0);
+                        }
+                    }
+                }
+            }
+
+            // Calculate and log cache metrics
+            if (promptTokens > 0)
+            {
+                var cacheHitRate = promptTokens > 0 ? (double)cachedTokens / promptTokens * 100 : 0;
+
+                this._logger.LogInformation(
+                    "Prompt Cache Metrics - ChatId: {ChatId}, PromptTokens: {PromptTokens}, CachedTokens: {CachedTokens}, " +
+                    "CompletionTokens: {CompletionTokens}, CacheHitRate: {CacheHitRate:F1}%",
+                    chatId, promptTokens, cachedTokens, completionTokens, cacheHitRate);
+
+                // Track in Application Insights if telemetry service is available
+                this._telemetryService?.TrackPromptCacheMetrics(promptTokens, cachedTokens, completionTokens, chatId);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't let metrics logging break the main flow
+            this._logger.LogWarning(ex, "Failed to extract prompt cache metrics from response");
         }
     }
 

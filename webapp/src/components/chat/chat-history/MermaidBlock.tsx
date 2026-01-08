@@ -21,83 +21,199 @@ interface MermaidConfig {
     securityLevel?: MermaidSecurityLevel;
     theme?: MermaidTheme;
     themeVariables?: Record<string, string>;
+    flowchart?: {
+        nodeSpacing?: number;
+        rankSpacing?: number;
+        curve?: string;
+        padding?: number;
+        htmlLabels?: boolean;
+    };
+    state?: {
+        nodeSpacing?: number;
+        rankSpacing?: number;
+    };
+    sequence?: {
+        boxMargin?: number;
+        noteMargin?: number;
+        messageMargin?: number;
+    };
 }
 interface MermaidAPI {
     initialize: (config: MermaidConfig) => void;
     render: (id: string, text: string) => Promise<{ svg: string }>;
 }
 
-// Vestland fylkeskommune brand colors for diagrams
+// Vestland fylkeskommune official brand colors (PMS) - ordered as per brand guidelines
 const VESTLAND_COLORS = [
-    '#9ADBE8', // Light cyan
-    '#E06287', // Pink/coral
-    '#CAA2DD', // Light purple
-    '#E1D555', // Yellow
-    '#00C7B1', // Teal
-    '#B7DD79', // Light green
-    '#FDDA25', // Bright yellow
-    '#FF5C39', // Orange/red
-    '#50A684', // Sage green
-    '#3CDBC0', // Mint/aqua
-    '#FF9E1B', // Orange
-    '#F8B5C4', // Light pink
+    '#9ADBE8', // 0: Light cyan - PMS 304 C
+    '#CAA2DD', // 1: Light purple - PMS 529 C
+    '#E06287', // 2: Pink/coral - PMS 7423 C
+    '#E1D555', // 3: Yellow - PMS 610 C
+    '#00C7B1', // 4: Teal - PMS 3265 C
+    '#FDDA25', // 5: Bright yellow - PMS 115 C
+    '#FF9E1B', // 6: Orange - PMS 1375 C
+    '#FF5C39', // 7: Orange/red - PMS 171 C
+    '#F8B5C4', // 8: Light pink - PMS 707 C
+    '#B7DD79', // 9: Light green - PMS 366 C
+    '#50A684', // 10: Sage green - PMS 7723 C
+    '#3CDBC0', // 11: Mint/aqua - PMS 333 C
 ];
+
+// Color classification for contrast:
+// Light colors (use dark text): 0, 1, 3, 5, 8, 9, 11 (cyan, purple, yellow, bright yellow, light pink, light green, mint)
+// Dark colors (use white text): 2, 4, 6, 7, 10 (pink, teal, orange, orange/red, sage)
+
+// Text colors for contrast
+const DARK_TEXT = '#333333';
+const LIGHT_TEXT = '#ffffff';
 
 // Build theme variables for pie charts, flowcharts, etc.
 const buildVestlandThemeVariables = () => {
     const themeVariables: Record<string, string> = {
-        // Primary colors
-        primaryColor: VESTLAND_COLORS[4], // Teal
-        primaryTextColor: '#333333',
-        primaryBorderColor: '#008a7b',
-        // Secondary colors
-        secondaryColor: VESTLAND_COLORS[2], // Light purple
-        secondaryTextColor: '#333333',
-        secondaryBorderColor: '#a07fc0',
-        // Tertiary colors
-        tertiaryColor: VESTLAND_COLORS[0], // Light cyan
-        tertiaryTextColor: '#333333',
-        tertiaryBorderColor: '#6bc4d6',
+        // Primary colors - Light cyan with dark text (for state diagrams, flowcharts)
+        primaryColor: VESTLAND_COLORS[0], // Light cyan
+        primaryTextColor: DARK_TEXT, // Dark text for readability
+        primaryBorderColor: '#7ac5d4',
+        // Secondary colors - Light purple with dark text
+        secondaryColor: VESTLAND_COLORS[1], // Light purple
+        secondaryTextColor: DARK_TEXT,
+        secondaryBorderColor: '#a889c0',
+        // Tertiary colors - Light pink with dark text
+        tertiaryColor: VESTLAND_COLORS[8], // Light pink
+        tertiaryTextColor: DARK_TEXT,
+        tertiaryBorderColor: '#d89aab',
         // Background
         background: '#ffffff',
         mainBkg: '#ffffff',
         // Line colors
-        lineColor: '#666666',
-        // Text colors - important for readability!
-        textColor: '#333333',
-        titleColor: '#333333',
-        // Pie chart specific
-        pieTitleTextColor: '#333333',
-        pieLegendTextColor: '#333333',
-        pieSectionTextColor: '#ffffff', // White text on colored slices
+        lineColor: '#444444',
+        // Text colors - for general text elements
+        textColor: DARK_TEXT,
+        titleColor: DARK_TEXT,
+
+        // === PIE CHART ===
+        // Note: Mermaid doesn't support per-slice text colors, so we use dark text
+        // which works better with most of our light colors
+        pieTitleTextColor: DARK_TEXT,
+        pieLegendTextColor: DARK_TEXT,
+        pieSectionTextColor: DARK_TEXT, // Dark text works on most Vestland colors
         pieStrokeColor: '#ffffff',
         pieStrokeWidth: '2px',
         pieOuterStrokeWidth: '2px',
-        // Flowchart
+
+        // === FLOWCHART ===
         nodeBorder: '#666666',
+        nodeTextColor: DARK_TEXT, // Dark text for readability on light node backgrounds
         clusterBkg: '#f5f5f5',
-        clusterBorder: '#cccccc',
+        clusterBorder: '#999999',
         defaultLinkColor: '#666666',
         edgeLabelBackground: '#ffffff',
-        // Sequence diagram
-        actorTextColor: '#333333',
+
+        // === SEQUENCE DIAGRAM ===
+        actorTextColor: LIGHT_TEXT, // Teal background (dark)
         actorBorder: '#666666',
-        signalTextColor: '#333333',
-        // General
-        labelTextColor: '#333333',
-        loopTextColor: '#333333',
-        noteBkgColor: '#fff5ad',
-        noteTextColor: '#333333',
+        actorBkg: VESTLAND_COLORS[4], // Teal (dark)
+        signalTextColor: DARK_TEXT,
+        signalColor: '#666666',
+        activationBkgColor: VESTLAND_COLORS[0], // Light cyan
+        activationBorderColor: '#7ac5d4',
+
+        // === GANTT ===
+        sectionBkgColor: VESTLAND_COLORS[0], // Light cyan
+        sectionBkgColor2: VESTLAND_COLORS[1], // Light purple
+        taskTextColor: LIGHT_TEXT, // Teal background (dark)
+        taskTextOutsideColor: DARK_TEXT,
+        taskTextDarkColor: LIGHT_TEXT,
+        taskTextLightColor: DARK_TEXT,
+        taskBkgColor: VESTLAND_COLORS[4], // Teal (dark)
+        activeTaskBkgColor: VESTLAND_COLORS[7], // Orange/red (dark)
+        doneTaskBkgColor: VESTLAND_COLORS[10], // Sage (dark)
+        critBkgColor: VESTLAND_COLORS[2], // Pink (dark)
+
+        // === QUADRANT CHART ===
+        quadrant1Fill: VESTLAND_COLORS[4], // Teal (dark) - top right
+        quadrant2Fill: VESTLAND_COLORS[10], // Sage (dark) - top left
+        quadrant3Fill: VESTLAND_COLORS[0], // Light cyan - bottom left
+        quadrant4Fill: VESTLAND_COLORS[1], // Light purple - bottom right
+        quadrant1TextFill: LIGHT_TEXT, // White on teal
+        quadrant2TextFill: LIGHT_TEXT, // White on sage
+        quadrant3TextFill: DARK_TEXT, // Dark on light cyan
+        quadrant4TextFill: DARK_TEXT, // Dark on light purple
+        quadrantPointFill: VESTLAND_COLORS[7], // Orange/red for points
+        quadrantPointTextFill: LIGHT_TEXT,
+        quadrantTitleFill: DARK_TEXT,
+        quadrantXAxisTextFill: DARK_TEXT,
+        quadrantYAxisTextFill: DARK_TEXT,
+
+        // === TIMELINE ===
+        // Use darker colors for better text contrast
+        cScale0: VESTLAND_COLORS[4], // Teal (dark)
+        cScale1: VESTLAND_COLORS[2], // Pink (dark)
+        cScale2: VESTLAND_COLORS[7], // Orange/red (dark)
+        cScale3: VESTLAND_COLORS[10], // Sage (dark)
+        cScale4: VESTLAND_COLORS[6], // Orange (dark)
+        cScaleLabel0: LIGHT_TEXT,
+        cScaleLabel1: LIGHT_TEXT,
+        cScaleLabel2: LIGHT_TEXT,
+        cScaleLabel3: LIGHT_TEXT,
+        cScaleLabel4: LIGHT_TEXT,
+
+        // === MINDMAP ===
+        // Root node (center) - use light color with dark text
+        mindmapRootColor: VESTLAND_COLORS[0], // Light cyan for root
+        mindmapRootTextColor: DARK_TEXT,
+        mindmapRootBorderColor: '#7ac5d4',
+        // Level 1 nodes
+        mindmapNode1Color: VESTLAND_COLORS[4], // Teal (dark)
+        mindmapNode1TextColor: LIGHT_TEXT,
+        mindmapNode1BgColor: VESTLAND_COLORS[4],
+        // Level 2 nodes
+        mindmapNode2Color: VESTLAND_COLORS[2], // Pink (dark)
+        mindmapNode2TextColor: LIGHT_TEXT,
+        mindmapNode2BgColor: VESTLAND_COLORS[2],
+        // Level 3 nodes
+        mindmapNode3Color: VESTLAND_COLORS[6], // Orange (dark)
+        mindmapNode3TextColor: LIGHT_TEXT,
+        mindmapNode3BgColor: VESTLAND_COLORS[6],
+
+        // === STATE DIAGRAM ===
+        // State diagrams use primary colors, so we override specifically for states
+        stateBkg: VESTLAND_COLORS[0], // Light cyan background
+        stateLabelColor: DARK_TEXT, // Dark text for labels
+        compositeBackground: '#f5f5f5',
+        compositeBorder: '#666666',
+        compositeTitleBackground: VESTLAND_COLORS[0],
+        stateBorder: '#666666',
+        innerEndBackground: VESTLAND_COLORS[4],
+        specialStateColor: DARK_TEXT,
+        labelColor: DARK_TEXT,
+        altBackground: '#f5f5f5',
+        transitionColor: '#666666',
+        transitionLabelColor: DARK_TEXT,
+
+        // === ER DIAGRAM ===
+        attributeBackgroundColorOdd: '#f5f5f5',
+        attributeBackgroundColorEven: '#ffffff',
+
+        // === JOURNEY ===
+        // Use darker colors
+        fillType0: VESTLAND_COLORS[4], // Teal
+        fillType1: VESTLAND_COLORS[2], // Pink
+        fillType2: VESTLAND_COLORS[7], // Orange/red
+        fillType3: VESTLAND_COLORS[10], // Sage
+        fillType4: VESTLAND_COLORS[6], // Orange
+
+        // General labels
+        labelTextColor: DARK_TEXT,
+        loopTextColor: DARK_TEXT,
+        noteBkgColor: VESTLAND_COLORS[3], // Yellow
+        noteTextColor: DARK_TEXT, // Dark text on yellow
+        noteBorderColor: '#c8c040',
     };
 
     // Add pie chart colors (pie1 through pie12)
     VESTLAND_COLORS.forEach((color, index) => {
         themeVariables[`pie${index + 1}`] = color;
-    });
-
-    // Add cScale colors for other chart types (quadrant, etc.)
-    VESTLAND_COLORS.forEach((color, index) => {
-        themeVariables[`cScale${index}`] = color;
     });
 
     return themeVariables;
@@ -115,6 +231,23 @@ const getMermaid = async (): Promise<MermaidAPI> => {
                 securityLevel: 'strict',
                 theme: 'base',
                 themeVariables: buildVestlandThemeVariables(),
+                // Layout configuration to reduce text overlap
+                flowchart: {
+                    nodeSpacing: 50, // More horizontal space between nodes
+                    rankSpacing: 60, // More vertical space between levels
+                    curve: 'basis', // Smoother curves
+                    padding: 15, // Padding inside nodes
+                    htmlLabels: false, // Use SVG text (more robust with special characters)
+                },
+                state: {
+                    nodeSpacing: 50,
+                    rankSpacing: 60,
+                },
+                sequence: {
+                    boxMargin: 10,
+                    noteMargin: 10,
+                    messageMargin: 35,
+                },
             });
             return mermaid;
         })();
@@ -126,33 +259,90 @@ const getMermaid = async (): Promise<MermaidAPI> => {
 let diagramIdCounter = 0;
 
 /**
- * Adjust SVG viewBox to add padding on the left side for overflowing titles.
- * Mermaid sometimes generates SVGs where the title extends beyond the viewBox.
+ * Adjust SVG for responsive display and add padding for overflowing titles.
+ * Mermaid generates SVGs with fixed dimensions that don't scale on mobile.
+ * This function makes them responsive while preserving aspect ratio.
  */
-const adjustSvgViewBox = (svgString: string): string => {
-    // Parse the viewBox attribute
-    const viewBoxMatch = svgString.match(/viewBox="([^"]+)"/);
-    if (!viewBoxMatch) return svgString;
+const adjustSvgForResponsive = (svgString: string): string => {
+    // Parse the SVG
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgString, 'image/svg+xml');
+    const svgEl = doc.documentElement;
 
-    const viewBox = viewBoxMatch[1].split(/\s+/).map(Number);
-    if (viewBox.length !== 4) return svgString;
+    // Get current viewBox or create one from width/height
+    let viewBox = svgEl.getAttribute('viewBox');
+    const widthAttr = svgEl.getAttribute('width');
+    const heightAttr = svgEl.getAttribute('height');
 
-    const [minX, minY, width, height] = viewBox;
+    // Parse dimensions
+    const parseNum = (v: string | null) => {
+        if (!v) return null;
+        const n = Number.parseFloat(v.replace('px', '').trim());
+        return Number.isFinite(n) && n > 0 ? n : null;
+    };
 
-    // Add padding to the left (negative minX extends the viewBox to the left)
-    const leftPadding = 20; // Extra padding for titles that overflow
-    const newMinX = minX - leftPadding;
-    const newWidth = width + leftPadding;
+    let width = parseNum(widthAttr);
+    let height = parseNum(heightAttr);
 
-    const newViewBox = `${newMinX} ${minY} ${newWidth} ${height}`;
+    // If no viewBox, create one from width/height
+    if (!viewBox && width && height) {
+        viewBox = `0 0 ${width} ${height}`;
+        svgEl.setAttribute('viewBox', viewBox);
+    }
 
-    // Update viewBox and max-width in the SVG
-    let adjustedSvg = svgString.replace(/viewBox="[^"]+"/, `viewBox="${newViewBox}"`);
+    // Parse viewBox if available
+    if (viewBox) {
+        const parts = viewBox.split(/\s+|,/).map(Number);
+        if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+            const [origMinX, minY, origVbWidth, vbHeight] = parts;
 
-    // Also update max-width style if present
-    adjustedSvg = adjustedSvg.replace(/max-width:\s*[\d.]+px/, `max-width: ${newWidth}px`);
+            // Add left padding for titles that overflow
+            const leftPadding = 20;
+            const minX = origMinX - leftPadding;
+            const vbWidth = origVbWidth + leftPadding;
 
-    return adjustedSvg;
+            svgEl.setAttribute('viewBox', `${minX} ${minY} ${vbWidth} ${vbHeight}`);
+
+            // Use viewBox dimensions if no explicit width/height
+            if (!width) width = vbWidth;
+            if (!height) height = vbHeight;
+        }
+    }
+
+    // Make SVG responsive:
+    // - Remove fixed width/height attributes (let CSS control size)
+    // - Add preserveAspectRatio for proper scaling
+    // - Store original dimensions as data attributes for aspect ratio
+    if (width && height) {
+        svgEl.setAttribute('data-original-width', String(width));
+        svgEl.setAttribute('data-original-height', String(height));
+    }
+
+    // Remove fixed dimensions - CSS will handle responsive sizing
+    svgEl.removeAttribute('width');
+    svgEl.removeAttribute('height');
+
+    // Ensure aspect ratio is preserved when scaling
+    if (!svgEl.getAttribute('preserveAspectRatio')) {
+        svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    }
+
+    // Remove any inline max-width style that would prevent scaling
+    const style = svgEl.getAttribute('style') ?? '';
+    const newStyle = style
+        .replace(/max-width:\s*[^;]+;?/g, '')
+        .replace(/width:\s*[^;]+;?/g, '')
+        .replace(/height:\s*[^;]+;?/g, '')
+        .trim();
+    if (newStyle) {
+        svgEl.setAttribute('style', newStyle);
+    } else {
+        svgEl.removeAttribute('style');
+    }
+
+    // Serialize back
+    const serializer = new XMLSerializer();
+    return serializer.serializeToString(svgEl);
 };
 
 const useClasses = makeStyles({
@@ -185,6 +375,10 @@ const useClasses = makeStyles({
         paddingLeft: tokens.spacingHorizontalXXL,
         paddingRight: tokens.spacingHorizontalXXL,
         '& svg': {
+            // Make SVG responsive - scale to fit container
+            width: '100%',
+            height: 'auto',
+            maxWidth: '100%',
             // Ensure SVG doesn't clip content - overflow visible allows title to extend beyond viewBox
             overflow: 'visible',
             display: 'block',
@@ -282,8 +476,8 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
                     const result = await mermaid.render(renderId, normalized);
 
                     if (!cancelledRef.current) {
-                        // Adjust viewBox to prevent title overflow clipping
-                        const adjustedSvg = adjustSvgViewBox(result.svg);
+                        // Make SVG responsive and adjust viewBox for title overflow
+                        const adjustedSvg = adjustSvgForResponsive(result.svg);
                         setSvg(adjustedSvg);
                         setError('');
                         lastRenderedCodeRef.current = normalized;
@@ -344,27 +538,29 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
             const svgDoc = parser.parseFromString(svg, 'image/svg+xml');
             const svgEl = svgDoc.documentElement;
 
-            // Get dimensions from SVG
+            // Get dimensions from SVG (check data attributes first, then viewBox)
             let width = 0;
             let height = 0;
 
-            const widthAttr = svgEl.getAttribute('width') ?? '';
-            const heightAttr = svgEl.getAttribute('height') ?? '';
-            const viewBox = svgEl.getAttribute('viewBox') ?? '';
-
-            const parsePx = (v: string) => {
+            const parsePx = (v: string | null) => {
+                if (!v) return null;
                 const n = Number.parseFloat(v.replace('px', '').trim());
-                return Number.isFinite(n) ? n : null;
+                return Number.isFinite(n) && n > 0 ? n : null;
             };
 
-            width = parsePx(widthAttr) ?? 0;
-            height = parsePx(heightAttr) ?? 0;
+            // Try data attributes first (set by adjustSvgForResponsive)
+            width = parsePx(svgEl.getAttribute('data-original-width')) ?? 0;
+            height = parsePx(svgEl.getAttribute('data-original-height')) ?? 0;
 
-            if ((!width || !height) && viewBox) {
-                const parts = viewBox.split(/\s+|,/).map((p) => Number.parseFloat(p));
-                if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
-                    width = parts[2];
-                    height = parts[3];
+            // Fall back to viewBox
+            if (!width || !height) {
+                const viewBox = svgEl.getAttribute('viewBox') ?? '';
+                if (viewBox) {
+                    const parts = viewBox.split(/\s+|,/).map((p) => Number.parseFloat(p));
+                    if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+                        width = width || parts[2];
+                        height = height || parts[3];
+                    }
                 }
             }
 

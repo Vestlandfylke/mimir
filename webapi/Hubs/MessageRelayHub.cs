@@ -56,4 +56,15 @@ public class MessageRelayHub : Hub
     {
         await this.Clients.OthersInGroup(chatId).SendAsync(ReceiveUserTypingStateClientCall, chatId, userId, isTyping);
     }
+
+    /// <summary>
+    /// Simple ping method to verify the SignalR connection is alive.
+    /// Called from the client to check if the WebSocket connection is working.
+    /// </summary>
+    /// <returns>A task that completes when the ping is acknowledged.</returns>
+    public Task Ping()
+    {
+        this._logger.LogDebug("Ping received from connection {ConnectionId}", this.Context.ConnectionId);
+        return Task.CompletedTask;
+    }
 }

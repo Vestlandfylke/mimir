@@ -14,4 +14,13 @@ public interface ITelemetryService
     /// <param name="functionName">Function name</param>
     /// <param name="success">If the function executed successfully</param>
     void TrackPluginFunction(string pluginName, string functionName, bool success);
+
+    /// <summary>
+    /// Tracks Azure OpenAI prompt cache metrics for cost optimization monitoring.
+    /// </summary>
+    /// <param name="promptTokens">Total prompt tokens in the request</param>
+    /// <param name="cachedTokens">Number of tokens served from cache (90% discount)</param>
+    /// <param name="completionTokens">Tokens generated in the response</param>
+    /// <param name="chatId">The chat session ID</param>
+    void TrackPromptCacheMetrics(int promptTokens, int cachedTokens, int completionTokens, string? chatId = null);
 }

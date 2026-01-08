@@ -20,6 +20,8 @@ const useClasses = makeStyles({
         justifyContent: 'space-between',
         height: '100%',
         flexGrow: 1,
+        // Ensure it never exceeds parent
+        minHeight: 0,
     },
     scroll: {
         ...shorthands.margin(tokens.spacingVerticalXS),
@@ -27,6 +29,9 @@ const useClasses = makeStyles({
         flexGrow: 1,
         flexShrink: 1,
         minHeight: 0, // Important for flex scroll containers
+        // Ensure proper scrolling on mobile
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain', // Prevent scroll chaining
     },
     history: {
         ...shorthands.padding(tokens.spacingVerticalM),
@@ -41,6 +46,8 @@ const useClasses = makeStyles({
         justifyContent: 'center',
         flexShrink: 0, // Don't shrink the input area
         ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingVerticalNone),
+        // Add safe area padding for iPhone home indicator
+        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
     },
 });
 
@@ -74,10 +81,34 @@ export const ChatRoom: React.FC = () => {
         setIsDraggingOver(false);
     };
 
+    // Scroll to bottom when messages change (if auto-scroll is enabled)
     React.useEffect(() => {
         if (!shouldAutoScroll) return;
         scrollViewTargetRef.current?.scrollTo(0, scrollViewTargetRef.current.scrollHeight);
     }, [messages, shouldAutoScroll]);
+
+    // Scroll to bottom on initial load and when conversation changes
+    React.useEffect(() => {
+        // Use requestAnimationFrame to ensure DOM is ready
+        const scrollToBottom = () => {
+            if (scrollViewTargetRef.current) {
+                scrollViewTargetRef.current.scrollTo(0, scrollViewTargetRef.current.scrollHeight);
+            }
+        };
+
+        // Immediate scroll
+        scrollToBottom();
+
+        // Also schedule after a short delay to handle any async rendering
+        const timeoutId = setTimeout(scrollToBottom, 100);
+
+        // Reset auto-scroll on conversation change
+        setShouldAutoScroll(true);
+
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [selectedId]);
 
     React.useEffect(() => {
         const onScroll = () => {

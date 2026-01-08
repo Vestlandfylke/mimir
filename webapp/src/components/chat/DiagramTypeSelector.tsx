@@ -12,25 +12,21 @@ import {
 import { DiagramRegular, DismissRegular } from '@fluentui/react-icons';
 import React, { useState } from 'react';
 import {
-    TbChartTreemap,
-    TbHierarchy2,
     TbArrowsExchange,
-    TbDatabase,
-    TbCircleDot,
+    TbBinaryTree2,
     TbBrain,
     TbBuildingSkyscraper,
-    TbLayoutGrid,
-    TbBox,
-    TbCalendarStats,
-    TbGitBranch,
-    TbLayoutKanban,
+    TbChartLine,
     TbChartPie,
     TbChartRadar,
-    TbTimeline,
-    TbBinaryTree2,
-    TbWalk,
-    TbChartLine,
+    TbChartTreemap,
+    TbCircleDot,
+    TbHierarchy2,
     TbLayoutBoard,
+    TbLayoutGrid,
+    TbLayoutKanban,
+    TbTimeline,
+    TbWalk,
 } from 'react-icons/tb';
 
 const useClasses = makeStyles({
@@ -46,7 +42,7 @@ const useClasses = makeStyles({
         },
     },
     surface: {
-        maxWidth: '480px',
+        maxWidth: 'min(480px, calc(100vw - 32px))', // Responsive max width
         maxHeight: '400px',
         overflowY: 'auto',
         ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
@@ -71,6 +67,9 @@ const useClasses = makeStyles({
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
         ...shorthands.gap(tokens.spacingHorizontalXS),
+        '@media (max-width: 400px)': {
+            gridTemplateColumns: 'repeat(3, 1fr)', // 3 columns on small mobile
+        },
     },
     diagramOption: {
         display: 'flex',
@@ -118,22 +117,37 @@ const useClasses = makeStyles({
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
         backgroundColor: tokens.colorBrandBackground,
         color: tokens.colorNeutralForegroundOnBrand,
-        whiteSpace: 'nowrap',
+        maxWidth: '100%',
+        minWidth: 0, // Allow flex item to shrink below content size
+        overflow: 'hidden',
     },
     selectedName: {
         fontSize: tokens.fontSizeBase300,
         fontWeight: tokens.fontWeightSemibold,
         color: tokens.colorNeutralForegroundOnBrand,
+        flexShrink: 0, // Don't shrink the name
+        whiteSpace: 'nowrap',
     },
     selectedDivider: {
         width: '1px',
         height: '16px',
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        flexShrink: 0,
+        '@media (max-width: 480px)': {
+            display: 'none', // Hide divider on mobile
+        },
     },
     selectedDescription: {
         fontSize: tokens.fontSizeBase200,
         color: tokens.colorNeutralForegroundOnBrand,
         opacity: 0.9,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        minWidth: 0,
+        '@media (max-width: 480px)': {
+            display: 'none', // Hide description on mobile to save space
+        },
     },
     clearButton: {
         minWidth: 'auto',
@@ -162,76 +176,78 @@ export const DIAGRAM_TYPES: DiagramType[] = [
         label: 'Flytskjema',
         description: 'Vis prosessar, avgjersler og arbeidsflyt steg for steg',
         icon: <TbChartTreemap />,
-        prompt: `Lag eit Mermaid flytskjema. Start med "flowchart TD" eller "flowchart LR". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid flytskjema. VIKTIG: Start med "flowchart TD" (topp-til-botn) eller "flowchart LR" (venstre-til-høgre). Syntaks-døme:
+
 flowchart TD
     A[Start] --> B{Val}
     B -->|Ja| C[Handling]
     B -->|Nei| D[Anna handling]
-\`\`\`
-Bruk tydelege norske (nynorsk) tekstar.`,
+    C --> E[Slutt]
+    D --> E
+
+VIKTIG: Bruk hermeteikn rundt tekst med spesialteikn: A["Tekst med (parentesar)"]. Ikkje bruk ordet "end" med små bokstavar - bruk "End" eller "END". Bruk norske (nynorsk) tekstar.`,
     },
     {
         id: 'classDiagram',
         label: 'Klasse',
         description: 'Vis klassar, eigenskapar og relasjonar i objektorientert kode',
         icon: <TbHierarchy2 />,
-        prompt: `Lag eit Mermaid klassediagram. Start med "classDiagram". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid klassediagram. Start med "classDiagram". Syntaks-døme:
+
 classDiagram
     class Bil {
         +String merke
+        +String modell
         +start()
+        +stopp()
     }
-    Køyretøy <|-- Bil
-\`\`\`
-Bruk norske tekstar der det passar.`,
+    class Koyretoy {
+        +int hjul
+    }
+    Koyretoy <|-- Bil
+
+Relasjonar: <|-- (arv), *-- (komposisjon), o-- (aggregering), --> (assosiasjon). Bruk norske tekstar.`,
     },
     {
         id: 'sequence',
         label: 'Sekvens',
         description: 'Vis kommunikasjon og interaksjonar mellom system over tid',
         icon: <TbArrowsExchange />,
-        prompt: `Lag eit Mermaid sekvensdiagram. Start med "sequenceDiagram". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid sekvensdiagram. Start med "sequenceDiagram". Syntaks-døme:
+
 sequenceDiagram
     participant A as Brukar
     participant B as System
+    participant C as Database
     A->>B: Førespurnad
+    B->>C: Hent data
+    C-->>B: Resultat
     B-->>A: Svar
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
-    },
-    {
-        id: 'erDiagram',
-        label: 'ER-diagram',
-        description: 'Vis databasetabellar og relasjonane mellom dei',
-        icon: <TbDatabase />,
-        prompt: `Lag eit Mermaid ER-diagram. Start med "erDiagram". Døme:
-\`\`\`mermaid
-erDiagram
-    KUNDE ||--o{ ORDRE : "har"
-    ORDRE ||--|{ PRODUKT : "inneheld"
-    KUNDE {
-        int id
-        string namn
-    }
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+
+Piler: ->> (synkron), -->> (svar), -) (asynkron). Bruk norske (nynorsk) tekstar.`,
     },
     {
         id: 'stateDiagram',
         label: 'Tilstand',
         description: 'Vis ulike tilstandar og overgangar i eit system',
         icon: <TbCircleDot />,
-        prompt: `Lag eit Mermaid tilstandsdiagram. Start med "stateDiagram-v2". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid tilstandsdiagram. VIKTIG: Start med "stateDiagram-v2" på første linje.
+
+Korrekt syntaks:
+
 stateDiagram-v2
     [*] --> Ventande
     Ventande --> Aktiv : start
-    Aktiv --> [*] : ferdig
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+    Aktiv --> Pausa : pause
+    Pausa --> Aktiv : hald fram
+    Aktiv --> Ferdig : fullfør
+    Ferdig --> [*]
+
+VIKTIG:
+- [*] er start/slutt-tilstand
+- Tilstandsnamn UTAN hermeteikn (skriv Ventande, ikkje "Ventande")
+- Bruk : for å legge til tekst på pilar
+- Kvar overgang på si eiga linje`,
     },
     // Row 2 - Project & planning
     {
@@ -239,145 +255,147 @@ Bruk norske (nynorsk) tekstar.`,
         label: 'Tankekart',
         description: 'Organiser idear og konsept hierarkisk rundt eit sentralt tema',
         icon: <TbBrain />,
-        prompt: `Lag eit Mermaid tankekart. Start med "mindmap" og bruk innrykk for hierarki. Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid tankekart. Start med "mindmap". Bruk innrykk (4 mellomrom) for hierarki. Syntaks-døme:
+
 mindmap
     root((Hovudtema))
         Emne 1
             Detalj A
             Detalj B
         Emne 2
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+            Detalj C
+        Emne 3
+
+Former: ((sirkel)), (avrunda), [firkant], ))sky((. Bruk norske (nynorsk) tekstar.`,
     },
     {
         id: 'architecture',
         label: 'Arkitektur',
         description: 'Vis systemkomponentar, tenester og infrastruktur',
         icon: <TbBuildingSkyscraper />,
-        prompt: `Lag eit Mermaid arkitektur-diagram. Bruk "architecture-beta" med grupper og tenester. Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid arkitektur-diagram.
+
+OFFISIELL SYNTAKS:
+- group id(ikon)[Tittel]
+- group id(ikon)[Tittel] in foreldregruppe
+- service id(ikon)[Tittel] in gruppe
+- junction id in gruppe
+- Kantar: id:RETNING -- RETNING:id  eller  id:RETNING --> RETNING:id
+- Retningar: L (venstre), R (hogre), T (topp), B (botn)
+- Ikon: cloud, database, disk, internet, server
+
+KORREKT EKSEMPEL:
+
 architecture-beta
     group api(cloud)[API]
+
     service db(database)[Database] in api
+    service disk1(disk)[Storage] in api
+    service disk2(disk)[Storage] in api
     service server(server)[Server] in api
+
     db:L -- R:server
-\`\`\`
-Bruk tydelege norske (nynorsk) tekstar.`,
+    disk1:T -- B:server
+    disk2:T -- B:db
+
+VIKTIG:
+- ID-ar (db, disk1, server) MÅ vere enkle utan mellomrom
+- Titlar i [klammer] kan ha mellomrom
+- Bruk engelske ord for betre kompatibilitet
+- Alle services MÅ ha "in gruppenamn"`,
     },
     {
         id: 'block',
         label: 'Blokk',
         description: 'Vis enkle blokkar og koplingane mellom dei',
         icon: <TbLayoutBoard />,
-        prompt: `Lag eit Mermaid blokkdiagram. Start med "block-beta". Døme:
-\`\`\`mermaid
-block-beta
+        prompt: `Lag eit Mermaid blokkdiagram. Start med "block" (IKKJE "block-beta").
+
+KORREKT SYNTAKS:
+
+block
     columns 3
-    a["Blokk A"]:3
-    b["B"] c["C"] d["D"]
-    b --> d
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
-    },
-    {
-        id: 'c4',
-        label: 'C4',
-        description: 'Vis programvarearkitektur med C4-modellen (Context, Container, Component)',
-        icon: <TbBox />,
-        prompt: `Lag eit Mermaid C4Context-diagram. VIKTIG: Bruk KORREKT Mermaid C4-syntax (IKKJE PlantUML):
-\`\`\`mermaid
-C4Context
-    title Systemnamn
-    Person(alias, "Namn", "Beskriving")
-    System(alias, "Namn", "Beskriving")
-    System_Ext(alias, "Namn", "Beskriving")
-    Rel(frå, til, "label")
-\`\`\`
-Bruk tydelege norske (nynorsk) tekstar.`,
-    },
-    {
-        id: 'gantt',
-        label: 'Gantt',
-        description: 'Vis prosjektplan med oppgåver, tidslinje og avhengigheiter',
-        icon: <TbCalendarStats />,
-        prompt: `Lag eit Mermaid Gantt-diagram. Start med "gantt". Døme:
-\`\`\`mermaid
-gantt
-    title Prosjektplan
-    dateFormat YYYY-MM-DD
-    section Fase 1
-        Oppgåve 1 :a1, 2024-01-01, 7d
-        Oppgåve 2 :after a1, 5d
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
-    },
-    // Row 3 - Git & Dev
-    {
-        id: 'git',
-        label: 'Git',
-        description: 'Vis Git-greiner, commits og merge-historikk',
-        icon: <TbGitBranch />,
-        prompt: `Lag eit Mermaid gitGraph-diagram. Start med "gitGraph". Døme:
-\`\`\`mermaid
-gitGraph
-    commit id: "Init"
-    branch feature
-    commit id: "Ny funksjon"
-    checkout main
-    merge feature
-\`\`\`
-Bruk norske tekstar for commit-meldingar.`,
+    a["Hovudblokk"]:3
+    b["Venstre"] c["Midten"] d["Hogre"]
+    space:3
+    e["Botn"]:3
+    b --> e
+    d --> e
+
+FORMER:
+- id["Tekst"] - vanleg blokk
+- id(("Tekst")) - sirkel
+- id{{"Tekst"}} - heksagon (val)
+- id[("Database")] - sylinder (database)
+
+SYNTAKS:
+- columns N - antal kolonnar
+- id:N - blokk som spenner N kolonnar
+- space eller space:N - tomrom
+- id --> id - pil mellom blokkar
+- style id fill:#696,stroke:#333 - styling`,
     },
     {
         id: 'kanban',
         label: 'Kanban',
         description: 'Vis oppgåvetavle med kolonnar og status',
         icon: <TbLayoutKanban />,
-        prompt: `Lag eit Mermaid kanban-diagram. Start med "kanban". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid kanban-diagram. Start med "kanban". Syntaks-døme:
+
 kanban
-    column1["Å gjere"]
-        task1["Oppgåve 1"]
-    column2["I arbeid"]
-        task2["Oppgåve 2"]
-    column3["Ferdig"]
-        task3["Oppgåve 3"]
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+    Å gjere
+        oppg1[Planlegg møte]
+        oppg2[Skriv rapport]
+    I arbeid
+        oppg3[Utvikle funksjon]
+    Til godkjenning
+        oppg4[Teste løysing]
+    Ferdig
+        oppg5[Dokumentasjon]
+
+Kolonnenamn utan firkantparentesar, oppgåver med id[tekst].`,
     },
     {
         id: 'pie',
         label: 'Sektor',
         description: 'Vis fordeling og prosentdel av ein heilskap',
         icon: <TbChartPie />,
-        prompt: `Lag eit Mermaid sektordiagram. Start med "pie". Døme:
-\`\`\`mermaid
-pie title Fordeling
-    "Kategori A" : 40
-    "Kategori B" : 35
-    "Kategori C" : 25
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+        prompt: `Lag eit Mermaid sektordiagram. Start med "pie". Syntaks-døme:
+
+pie showData
+    title Budsjettfordeling
+    "Lønn" : 45
+    "Drift" : 25
+    "Utvikling" : 20
+    "Anna" : 10
+
+showData viser prosent. Verdiane treng ikkje summere til 100 - dei blir rekna om. Bruk norske (nynorsk) tekstar.`,
     },
     {
         id: 'quadrant',
         label: 'Kvadrant',
         description: 'Plasser element i fire kategoriar for analyse og prioritering',
         icon: <TbLayoutGrid />,
-        prompt: `Lag eit Mermaid kvadrantdiagram. Start med "quadrantChart". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid kvadrantdiagram. KOPIER DENNE STRUKTUREN NØYAKTIG:
+
 quadrantChart
-    title Prioritering
-    x-axis Låg innsats --> Høg innsats
-    y-axis Låg verdi --> Høg verdi
-    quadrant-1 Gjer først
+    title Prioriteringsmatrise
+    x-axis Lav innsats --> Hoy innsats
+    y-axis Lav verdi --> Hoy verdi
+    quadrant-1 Gjer forst
     quadrant-2 Planlegg
     quadrant-3 Deleger
-    quadrant-4 Unngå
-    Oppgåve A: [0.8, 0.9]
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+    quadrant-4 Unnga
+    Prosjekt A: [0.3, 0.8]
+    Prosjekt B: [0.7, 0.9]
+    Prosjekt C: [0.2, 0.3]
+    Prosjekt D: [0.8, 0.2]
+
+KRITISK:
+- Start med "quadrantChart" (med stor C)
+- Kvar linje på si eiga linje
+- Koordinatar [x, y] mellom 0 og 1
+- quadrant-1 er oppe til hogre, quadrant-3 er nede til venstre`,
     },
     // Row 4 - Advanced
     {
@@ -385,41 +403,60 @@ Bruk norske (nynorsk) tekstar.`,
         label: 'Radar',
         description: 'Vis fleire dimensjonar på ein radargraf (edderkoppnett)',
         icon: <TbChartRadar />,
-        prompt: `Mermaid støttar ikkje radar/spider-diagram direkte. Bruk i staden eit quadrantChart eller pie-diagram for å visualisere fleire dimensjonar. Alternativt, bruk flowchart til å lage ein visuell representasjon. Bruk norske (nynorsk) tekstar.`,
+        prompt: `Lag eit Mermaid radar-diagram. VIKTIG: Start ALLTID med "radar-beta" på første linje. Syntaks-døme:
+
+radar-beta
+  title Kompetanseoversikt
+  axis k["Kommunikasjon"], t["Teknisk"], l["Leiing"], s["Samarbeid"], p["Problemløysing"]
+  curve tilsette["Tilsette"]{80,90,70,85,75}
+  curve leiarar["Leiarar"]{70,85,80,90,80}
+  max 100
+  min 0
+  showLegend true
+
+VIKTIG: Ikkje bruk mellomrom i talverdiane i curve (skriv {80,90,70} ikkje {80, 90, 70}). Bruk norske (nynorsk) tekstar.`,
     },
     {
         id: 'timeline',
         label: 'Tidslinje',
         description: 'Vis hendingar kronologisk langs ein tidslinje',
         icon: <TbTimeline />,
-        prompt: `Lag eit Mermaid tidslinjediagram. Start med "timeline". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid tidslinjediagram. Start med "timeline". Syntaks-døme:
+
 timeline
     title Prosjekthistorikk
-    2023 : Oppstart
-         : Planlegging
-    2024 : Utvikling
-         : Lansering
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+    section Fase 1
+        2023 : Oppstart
+             : Planlegging
+    section Fase 2
+        2024 : Utvikling
+             : Testing
+             : Lansering
+
+Bruk section for grupperingar, kolon for hendingar. Bruk norske (nynorsk) tekstar.`,
     },
     {
         id: 'treemap',
         label: 'Trekart',
         description: 'Vis hierarkisk data som nestla rektangel',
         icon: <TbBinaryTree2 />,
-        prompt: `Lag eit Mermaid treemap-diagram. Start med "treemap-beta". Bruk innrykk for hierarki. Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid treemap-diagram. KOPIER STRUKTUREN NØYAKTIG:
+
 treemap-beta
-"Hovudkategori"
-    "Underkategori A"
-        "Element 1": 30
-        "Element 2": 20
-    "Underkategori B"
-        "Element 3": 25
-        "Element 4": 15
-\`\`\`
-Bruk norske (nynorsk) tekstar og verdiar som reflekterer proporsjonane.`,
+"Organisasjon"
+    "Avdeling A"
+        "Team 1": 30
+        "Team 2": 20
+    "Avdeling B"
+        "Team 3": 25
+        "Team 4": 15
+
+KRITISK SYNTAKS:
+- Start med "treemap-beta"
+- ALLE node-namn MÅ ha hermeteikn: "Namn"
+- Blad-nodar med verdi: "Namn": tal
+- Bruk innrykk (mellomrom) for hierarki
+- Ikkje bruk norske teikn (ø, å, æ) i namn`,
     },
     // Row 5 - User & data
     {
@@ -427,33 +464,37 @@ Bruk norske (nynorsk) tekstar og verdiar som reflekterer proporsjonane.`,
         label: 'Brukarreise',
         description: 'Vis brukaroppleving gjennom ulike fasar med tilfredsheitsscore',
         icon: <TbWalk />,
-        prompt: `Lag eit Mermaid brukarreise-diagram. Start med "journey". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid brukarreise-diagram. Start med "journey". Syntaks-døme:
+
 journey
-    title Brukarreise
-    section Registrering
-        Finn skjema: 5: Brukar
-        Fyll ut: 3: Brukar
-    section Godkjenning
-        Vent på svar: 2: Brukar
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+    title Søknadsprosessen
+    section Førebuing
+        Finn informasjon: 5: Brukar
+        Last ned skjema: 4: Brukar
+    section Utfylling
+        Fyll ut skjema: 3: Brukar
+        Last opp vedlegg: 2: Brukar
+    section Innsending
+        Send inn: 4: Brukar
+        Få kvittering: 5: Brukar, System
+
+Score 1-5 (1=dårleg, 5=bra). Fleire aktørar med komma.`,
     },
     {
         id: 'xy',
         label: 'XY-graf',
         description: 'Vis data i eit koordinatsystem med X- og Y-akse',
         icon: <TbChartLine />,
-        prompt: `Lag eit Mermaid xychart-diagram. Start med "xychart-beta". Døme:
-\`\`\`mermaid
+        prompt: `Lag eit Mermaid xychart-diagram. Start med "xychart-beta". Syntaks-døme:
+
 xychart-beta
-    title "Salstal"
-    x-axis [jan, feb, mar, apr]
-    y-axis "Tal" 0 --> 100
-    bar [30, 45, 60, 80]
-    line [25, 40, 55, 75]
-\`\`\`
-Bruk norske (nynorsk) tekstar.`,
+    title "Salsutvikling 2024"
+    x-axis [Jan, Feb, Mar, Apr, Mai, Jun]
+    y-axis "Sal (tusen kr)" 0 --> 100
+    bar [30, 45, 55, 60, 70, 80]
+    line [25, 40, 50, 55, 65, 75]
+
+bar = søylediagram, line = linjediagram. Kan ha begge. Bruk norske (nynorsk) tekstar.`,
     },
 ];
 
@@ -478,7 +519,16 @@ export const DiagramTypeSelector: React.FC<DiagramTypeSelectorProps> = ({ select
     };
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}>
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: tokens.spacingHorizontalXS,
+                minWidth: 0,
+                maxWidth: '100%',
+                overflow: 'hidden',
+            }}
+        >
             <Popover
                 open={isOpen}
                 onOpenChange={(_, data) => {

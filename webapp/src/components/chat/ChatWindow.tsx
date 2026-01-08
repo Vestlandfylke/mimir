@@ -2,8 +2,18 @@
 
 import {
     Button,
+    Dialog,
+    DialogBody,
+    DialogContent,
+    DialogSurface,
+    DialogTitle,
     Label,
     makeStyles,
+    Menu,
+    MenuItem,
+    MenuList,
+    MenuPopover,
+    MenuTrigger,
     Persona,
     Popover,
     PopoverSurface,
@@ -16,13 +26,15 @@ import {
     tokens,
     Tooltip,
 } from '@fluentui/react-components';
-import { Edit24Filled, EditRegular, Map16Regular, Person16Regular } from '@fluentui/react-icons';
-import React, { useState } from 'react';
+import { Edit24Filled, EditRegular, Map16Regular, MoreVertical24Regular, Person16Regular } from '@fluentui/react-icons';
+import React, { useCallback, useState } from 'react';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
+import { useChat, useFile } from '../../libs/hooks';
 import { Breakpoints } from '../../styles';
 import { Alerts } from '../shared/Alerts';
+import { ArrowDownload16, Delete16, Edit, Share20 } from '../shared/BundledIcons';
 import { ChatRoom } from './ChatRoom';
 import { ParticipantsList } from './controls/ParticipantsList';
 import { ShareBotMenu } from './controls/ShareBotMenu';
@@ -30,6 +42,8 @@ import { EditChatName } from './shared/EditChatName';
 import { DocumentsTab } from './tabs/DocumentsTab';
 import { PersonaTab } from './tabs/PersonaTab';
 import { PlansTab } from './tabs/PlansTab';
+import { DeleteChatDialog } from './chat-list/dialogs/DeleteChatDialog';
+import { InvitationCreateDialog } from './invitation-dialog/InvitationCreateDialog';
 
 const useClasses = makeStyles({
     root: {
@@ -80,6 +94,13 @@ const useClasses = makeStyles({
             display: 'none', // Hide on mobile
         }),
     },
+    mobileActions: {
+        display: 'none',
+        ...Breakpoints.small({
+            display: 'flex',
+            alignItems: 'center',
+        }),
+    },
     popoverHeader: {
         ...shorthands.margin('0'),
         paddingBottom: tokens.spacingVerticalXXS,
@@ -117,11 +138,27 @@ export const ChatWindow: React.FC = () => {
     const showShareBotMenu = features[FeatureKeys.BotAsDocs].enabled || features[FeatureKeys.MultiUserChat].enabled;
     const chatName = conversations[selectedId].title;
 
-    const [isEditing, setIsEditing] = useState<boolean>(false);
+    const chat = useChat();
+    const { downloadFile } = useFile();
+
+    const [isEditingDesktop, setIsEditingDesktop] = useState<boolean>(false);
+    const [isEditingMobile, setIsEditingMobile] = useState<boolean>(false);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
+    const [isSharing, setIsSharing] = useState<boolean>(false);
     const [selectedTab, setSelectedTab] = React.useState<TabValue>('chat');
     const onTabSelect: SelectTabEventHandler = (_event, data) => {
         setSelectedTab(data.value);
     };
+
+    const onDownloadChat = useCallback(() => {
+        void chat.downloadBot(selectedId).then((content) => {
+            downloadFile(
+                `chat-history-${selectedId}-${new Date().toISOString()}.json`,
+                JSON.stringify(content),
+                'text/json',
+            );
+        });
+    }, [chat, selectedId, downloadFile]);
 
     return (
         <div className={classes.root}>
@@ -138,15 +175,15 @@ export const ChatWindow: React.FC = () => {
                             <Label size="large" weight="semibold">
                                 {chatName}
                             </Label>
-                            <Popover open={isEditing}>
+                            <Popover open={isEditingDesktop}>
                                 <PopoverTrigger disableButtonEnhancement>
                                     <Tooltip content={'Rediger samtalenavn'} relationship="label">
                                         <Button
                                             data-testid="editChatTitleButton"
-                                            icon={isEditing ? <Edit24Filled /> : <EditRegular />}
+                                            icon={isEditingDesktop ? <Edit24Filled /> : <EditRegular />}
                                             appearance="transparent"
                                             onClick={() => {
-                                                setIsEditing(true);
+                                                setIsEditingDesktop(true);
                                             }}
                                             disabled={!chatName}
                                             aria-label="Rediger samtalenavn"
@@ -159,7 +196,7 @@ export const ChatWindow: React.FC = () => {
                                         name={chatName}
                                         chatId={selectedId}
                                         exitEdits={() => {
-                                            setIsEditing(false);
+                                            setIsEditingDesktop(false);
                                         }}
                                         textButtons
                                     />
@@ -218,6 +255,91 @@ export const ChatWindow: React.FC = () => {
                         </div>
                     )}
                 </div>
+                {/* Mobile actions menu */}
+                <div className={classes.mobileActions}>
+                    <Menu>
+                        <MenuTrigger disableButtonEnhancement>
+                            <Button
+                                appearance="subtle"
+                                icon={<MoreVertical24Regular />}
+                                aria-label="Fleire handlingar"
+                            />
+                        </MenuTrigger>
+                        <MenuPopover>
+                            <MenuList>
+                                <MenuItem
+                                    icon={<Edit />}
+                                    onClick={() => {
+                                        setIsEditingMobile(true);
+                                    }}
+                                >
+                                    Rediger namn
+                                </MenuItem>
+                                {features[FeatureKeys.BotAsDocs].enabled && (
+                                    <MenuItem icon={<ArrowDownload16 />} onClick={onDownloadChat}>
+                                        Last ned
+                                    </MenuItem>
+                                )}
+                                {features[FeatureKeys.MultiUserChat].enabled && (
+                                    <MenuItem
+                                        icon={<Share20 />}
+                                        onClick={() => {
+                                            setIsSharing(true);
+                                        }}
+                                    >
+                                        Del
+                                    </MenuItem>
+                                )}
+                                <MenuItem
+                                    icon={<Delete16 />}
+                                    onClick={() => {
+                                        setIsDeleting(true);
+                                    }}
+                                >
+                                    Slett samtale
+                                </MenuItem>
+                            </MenuList>
+                        </MenuPopover>
+                    </Menu>
+                </div>
+                <DeleteChatDialog
+                    chatId={selectedId}
+                    open={isDeleting}
+                    onClose={() => {
+                        setIsDeleting(false);
+                    }}
+                />
+                {isSharing && (
+                    <InvitationCreateDialog
+                        chatId={selectedId}
+                        onCancel={() => {
+                            setIsSharing(false);
+                        }}
+                    />
+                )}
+                {/* Mobile edit dialog */}
+                <Dialog
+                    open={isEditingMobile}
+                    onOpenChange={(_, data) => {
+                        if (!data.open) setIsEditingMobile(false);
+                    }}
+                >
+                    <DialogSurface>
+                        <DialogBody>
+                            <DialogTitle>Rediger samtalenamn</DialogTitle>
+                            <DialogContent>
+                                <EditChatName
+                                    name={chatName}
+                                    chatId={selectedId}
+                                    exitEdits={() => {
+                                        setIsEditingMobile(false);
+                                    }}
+                                    textButtons
+                                />
+                            </DialogContent>
+                        </DialogBody>
+                    </DialogSurface>
+                </Dialog>
             </div>
             {selectedTab === 'chat' && <ChatRoom />}
             {selectedTab === 'documents' && <DocumentsTab />}

@@ -23,11 +23,15 @@ const useClasses = makeStyles({
     },
 });
 
-interface IEditChatNameProps {
+interface IDeleteChatDialogProps {
     chatId: string;
+    /** If provided, controls the dialog externally (no trigger button shown) */
+    open?: boolean;
+    /** Called when dialog should close (only used with external control) */
+    onClose?: () => void;
 }
 
-export const DeleteChatDialog: React.FC<IEditChatNameProps> = ({ chatId }) => {
+export const DeleteChatDialog: React.FC<IDeleteChatDialogProps> = ({ chatId, open, onClose }) => {
     const classes = useClasses();
     const chat = useChat();
 
@@ -36,8 +40,45 @@ export const DeleteChatDialog: React.FC<IEditChatNameProps> = ({ chatId }) => {
 
     const onDeleteChat = () => {
         void chat.deleteChat(chatId);
+        onClose?.();
     };
 
+    const handleClose = () => {
+        onClose?.();
+    };
+
+    // External control mode (no trigger button)
+    if (open !== undefined) {
+        return (
+            <Dialog
+                modalType="alert"
+                open={open}
+                onOpenChange={(_, data) => {
+                    if (!data.open) handleClose();
+                }}
+            >
+                <DialogSurface className={classes.root}>
+                    <DialogBody>
+                        <DialogTitle>Er du sikker på at du vil slette samtalen: {chatName}?</DialogTitle>
+                        <DialogContent>
+                            Denne handlinga vil permanent slette samtalen, og alle tilknytta ressursar og minner, for
+                            alle deltakarar, inkludert Mimir.
+                        </DialogContent>
+                        <DialogActions className={classes.actions}>
+                            <Button appearance="secondary" onClick={handleClose}>
+                                Avbryt
+                            </Button>
+                            <Button appearance="primary" onClick={onDeleteChat}>
+                                Slett
+                            </Button>
+                        </DialogActions>
+                    </DialogBody>
+                </DialogSurface>
+            </Dialog>
+        );
+    }
+
+    // Original mode with trigger button
     return (
         <Dialog modalType="alert">
             <DialogTrigger>
@@ -49,7 +90,7 @@ export const DeleteChatDialog: React.FC<IEditChatNameProps> = ({ chatId }) => {
                 <DialogBody>
                     <DialogTitle>Er du sikker på at du vil slette samtalen: {chatName}?</DialogTitle>
                     <DialogContent>
-                        Denne handlinga vil permanent slette samtalen, og alle tilknytta ressursar og minner, for alle
+                        Denna handlinga vil permanent slette samtalen, og alle tilknytta ressursar og minner, for alle
                         deltakarar, inkludert Mimir.
                     </DialogContent>
                     <DialogActions className={classes.actions}>
