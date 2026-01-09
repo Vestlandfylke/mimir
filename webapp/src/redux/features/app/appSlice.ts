@@ -47,13 +47,24 @@ export const appSlice = createSlice({
         // This sets the feature flag based on end user input
         toggleFeatureFlag: (state: AppState, action: PayloadAction<FeatureKeys>) => {
             const feature = state.features[action.payload];
+            const newEnabled = !feature.enabled;
+
             state.features = {
                 ...state.features,
                 [action.payload]: {
                     ...feature,
-                    enabled: !feature.enabled,
+                    enabled: newEnabled,
                 },
             };
+
+            // Persist dark mode preference to localStorage
+            if (action.payload === FeatureKeys.DarkMode) {
+                try {
+                    localStorage.setItem('mimir-dark-mode', String(newEnabled));
+                } catch {
+                    // localStorage might be unavailable in some contexts
+                }
+            }
         },
         // This controls feature availability based on the state of backend
         toggleFeatureState: (

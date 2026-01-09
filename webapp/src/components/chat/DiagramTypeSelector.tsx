@@ -176,7 +176,7 @@ export const DIAGRAM_TYPES: DiagramType[] = [
         label: 'Flytskjema',
         description: 'Vis prosessar, avgjersler og arbeidsflyt steg for steg',
         icon: <TbChartTreemap />,
-        prompt: `Lag eit Mermaid flytskjema. VIKTIG: Start med "flowchart TD" (topp-til-botn) eller "flowchart LR" (venstre-til-høgre). Syntaks-døme:
+        prompt: `Lag eit Mermaid flytskjema. VIKTIG: Skriv alltid på Nynorsk og start med "flowchart TD" (topp-til-botn) eller "flowchart LR" (venstre-til-høgre). Syntaks-døme:
 
 flowchart TD
     A[Start] --> B{Val}
@@ -192,7 +192,7 @@ VIKTIG: Bruk hermeteikn rundt tekst med spesialteikn: A["Tekst med (parentesar)"
         label: 'Klasse',
         description: 'Vis klassar, eigenskapar og relasjonar i objektorientert kode',
         icon: <TbHierarchy2 />,
-        prompt: `Lag eit Mermaid klassediagram. Start med "classDiagram". Syntaks-døme:
+        prompt: `Lag eit Mermaid klassediagram. VIKTIG: Skriv alltid på Nynorsk og start med "classDiagram". Syntaks-døme:
 
 classDiagram
     class Bil {
@@ -213,7 +213,7 @@ Relasjonar: <|-- (arv), *-- (komposisjon), o-- (aggregering), --> (assosiasjon).
         label: 'Sekvens',
         description: 'Vis kommunikasjon og interaksjonar mellom system over tid',
         icon: <TbArrowsExchange />,
-        prompt: `Lag eit Mermaid sekvensdiagram. Start med "sequenceDiagram". Syntaks-døme:
+        prompt: `Lag eit Mermaid sekvensdiagram. VIKTIG: Skriv alltid på Nynorsk og start med "sequenceDiagram". Syntaks-døme:
 
 sequenceDiagram
     participant A as Brukar
@@ -231,7 +231,7 @@ Piler: ->> (synkron), -->> (svar), -) (asynkron). Bruk norske (nynorsk) tekstar.
         label: 'Tilstand',
         description: 'Vis ulike tilstandar og overgangar i eit system',
         icon: <TbCircleDot />,
-        prompt: `Lag eit Mermaid tilstandsdiagram. VIKTIG: Start med "stateDiagram-v2" på første linje.
+        prompt: `Lag eit Mermaid tilstandsdiagram. VIKTIG: Skriv alltid på Nynorsk og start med "stateDiagram-v2" på første linje.
 
 Korrekt syntaks:
 
@@ -255,7 +255,7 @@ VIKTIG:
         label: 'Tankekart',
         description: 'Organiser idear og konsept hierarkisk rundt eit sentralt tema',
         icon: <TbBrain />,
-        prompt: `Lag eit Mermaid tankekart. Start med "mindmap". Bruk innrykk (4 mellomrom) for hierarki. Syntaks-døme:
+        prompt: `Lag eit Mermaid tankekart. VIKTIG: Skriv alltid på Nynorsk og start med "mindmap". Bruk innrykk (4 mellomrom) for hierarki. Syntaks-døme:
 
 mindmap
     root((Hovudtema))
@@ -301,7 +301,7 @@ architecture-beta
 VIKTIG:
 - ID-ar (db, disk1, server) MÅ vere enkle utan mellomrom
 - Titlar i [klammer] kan ha mellomrom
-- Bruk engelske ord for betre kompatibilitet
+- Skriv alltid labels på Nynorsk
 - Alle services MÅ ha "in gruppenamn"`,
     },
     {
@@ -309,7 +309,7 @@ VIKTIG:
         label: 'Blokk',
         description: 'Vis enkle blokkar og koplingane mellom dei',
         icon: <TbLayoutBoard />,
-        prompt: `Lag eit Mermaid blokkdiagram. Start med "block" (IKKJE "block-beta").
+        prompt: `Lag eit Mermaid blokkdiagram. VIKTIG: Skriv alltid på Nynorsk og start med "block" (IKKJE "block-beta").
 
 KORREKT SYNTAKS:
 
@@ -340,7 +340,7 @@ SYNTAKS:
         label: 'Kanban',
         description: 'Vis oppgåvetavle med kolonnar og status',
         icon: <TbLayoutKanban />,
-        prompt: `Lag eit Mermaid kanban-diagram. Start med "kanban". Syntaks-døme:
+        prompt: `Lag eit Mermaid kanban-diagram. VIKTIG: Skriv alltid på Nynorsk og start med "kanban". Syntaks-døme:
 
 kanban
     Å gjere
@@ -360,7 +360,7 @@ Kolonnenamn utan firkantparentesar, oppgåver med id[tekst].`,
         label: 'Sektor',
         description: 'Vis fordeling og prosentdel av ein heilskap',
         icon: <TbChartPie />,
-        prompt: `Lag eit Mermaid sektordiagram. Start med "pie". Syntaks-døme:
+        prompt: `Lag eit Mermaid sektordiagram. VIKTIG: Skriv alltid på Nynorsk og start med "pie". Syntaks-døme:
 
 pie showData
     title Budsjettfordeling
@@ -376,26 +376,28 @@ showData viser prosent. Verdiane treng ikkje summere til 100 - dei blir rekna om
         label: 'Kvadrant',
         description: 'Plasser element i fire kategoriar for analyse og prioritering',
         icon: <TbLayoutGrid />,
-        prompt: `Lag eit Mermaid kvadrantdiagram. VIKTIG: Start med "quadrantChart" på første linje. Syntaks-døme:
+        prompt: `Lag eit Mermaid kvadrantdiagram. VIKTIG: Skriv alltid på Nynorsk og start med "quadrantChart" på første linje. Syntaks-døme:
 
 quadrantChart
     title Prioriteringsmatrise
-    x-axis Lav innsats --> Høy innsats
-    y-axis Lav verdi --> Høy verdi
-    quadrant-1 Gjer først
+    x-axis Liten innsats --> Stor innsats
+    y-axis Liten verdi --> Stor verdi
+    quadrant-1 Gjer fyrst
     quadrant-2 Planlegg
     quadrant-3 Deleger
-    quadrant-4 Unngå
-    Prosjekt A: [0.3, 0.8]
-    Prosjekt B: [0.7, 0.9]
-    Prosjekt C: [0.2, 0.3]
-    Prosjekt D: [0.8, 0.2]
+    quadrant-4 Unnga
+    ProsjektA: [0.3, 0.8]
+    ProsjektB: [0.7, 0.9]
+    ProsjektC: [0.2, 0.3]
+    ProsjektD: [0.8, 0.2]
 
-KRITISK:
+KRITISK SYNTAKS:
 - Start med "quadrantChart" (med stor C)
-- Kvar linje på si eiga linje
+- IKKJE bruk spesialteikn som ø, å, æ i akseetiketter og kvadrantnamn (bruk o for ø, a for å, ae for æ)
+- Datapunkt-namn MÅ vere eitt ord UTAN mellomrom og kolon direkte etter (t.d. "ProsjektA:" ikkje "Prosjekt A:")
 - Koordinatar [x, y] mellom 0 og 1
-- quadrant-1 er oppe til hogre, quadrant-3 er nede til venstre`,
+- quadrant-1 er oppe til høgre, quadrant-3 er nede til venstre
+- Forklarande tekst med norske teikn kan brukast i beskrivinga utanfor diagrammet`,
     },
     // Row 4 - Advanced
     {
@@ -403,7 +405,7 @@ KRITISK:
         label: 'Radar',
         description: 'Vis fleire dimensjonar på ein radargraf (edderkoppnett)',
         icon: <TbChartRadar />,
-        prompt: `Lag eit Mermaid radar-diagram. VIKTIG: Start ALLTID med "radar-beta" på første linje. Syntaks-døme:
+        prompt: `Lag eit Mermaid radar-diagram. VIKTIG: Skriv alltid på Nynorsk og Start ALLTID med "radar-beta" på første linje. Syntaks-døme:
 
 radar-beta
   title Kompetanseoversikt
@@ -421,7 +423,7 @@ VIKTIG: Ikkje bruk mellomrom i talverdiane i curve (skriv {80,90,70} ikkje {80, 
         label: 'Tidslinje',
         description: 'Vis hendingar kronologisk langs ein tidslinje',
         icon: <TbTimeline />,
-        prompt: `Lag eit Mermaid tidslinjediagram. Start med "timeline". Syntaks-døme:
+        prompt: `Lag eit Mermaid tidslinjediagram. VIKTIG: Skriv alltid på Nynorsk og start med "timeline". Syntaks-døme:
 
 timeline
     title Prosjekthistorikk
@@ -440,7 +442,7 @@ Bruk section for grupperingar, kolon for hendingar. Bruk norske (nynorsk) teksta
         label: 'Trekart',
         description: 'Vis hierarkisk data som nestla rektangel',
         icon: <TbBinaryTree2 />,
-        prompt: `Lag eit Mermaid treemap-diagram. KOPIER STRUKTUREN NØYAKTIG:
+        prompt: `Lag eit Mermaid treemap-diagram. VIKTIG: Skriv alltid på Nynorsk og start med "treemap-beta". Syntaks-døme:
 
 treemap-beta
 "Organisasjon"
@@ -464,7 +466,7 @@ KRITISK SYNTAKS:
         label: 'Brukarreise',
         description: 'Vis brukaroppleving gjennom ulike fasar med tilfredsheitsscore',
         icon: <TbWalk />,
-        prompt: `Lag eit Mermaid brukarreise-diagram. Start med "journey". Syntaks-døme:
+        prompt: `Lag eit Mermaid brukarreise-diagram. VIKTIG: Skriv alltid på Nynorsk og start med "journey". Syntaks-døme:
 
 journey
     title Søknadsprosessen
@@ -485,7 +487,7 @@ Score 1-5 (1=dårleg, 5=bra). Fleire aktørar med komma.`,
         label: 'XY-graf',
         description: 'Vis data i eit koordinatsystem med X- og Y-akse',
         icon: <TbChartLine />,
-        prompt: `Lag eit Mermaid xychart-diagram. Start med "xychart-beta". Syntaks-døme:
+        prompt: `Lag eit Mermaid xychart-diagram. VIKTIG: Skriv alltid på Nynorsk og start med "xychart-beta". Syntaks-døme:
 
 xychart-beta
     title "Salsutvikling 2024"

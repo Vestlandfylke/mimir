@@ -239,17 +239,47 @@ const frontLoadChat = (state: ConversationsState, id: string) => {
     state.conversations = { [id]: conversation, ...rest };
 };
 
+/**
+ * Check if two messages are likely the same based on content matching.
+ * Used as fallback when IDs don't match (client vs server generated IDs).
+ * Timestamps within 5 minutes are considered close enough.
+ */
+const areMessagesSimilar = (existing: IChatMessage, incoming: IChatMessage): boolean => {
+    // Must have same user and content
+    if (existing.userId !== incoming.userId || existing.content !== incoming.content) {
+        return false;
+    }
+
+    // Timestamps should be within 5 minutes of each other
+    const timeDiff = Math.abs(existing.timestamp - incoming.timestamp);
+    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+    return timeDiff <= FIVE_MINUTES_MS;
+};
+
 const updateConversation = (state: ConversationsState, chatId: string, message: IChatMessage) => {
     const conversation = state.conversations[chatId];
 
     // Check for duplicate messages (prevent adding same message twice)
-    // Only check if message has an ID - messages without ID are always added
+    // Check by ID first (fast path)
     if (message.id) {
-        const existingMessage = conversation.messages.find((m) => m.id === message.id);
-        if (existingMessage) {
-            logger.debug(`ℹ️ Message ${message.id} already exists, skipping add`);
+        const existingById = conversation.messages.find((m) => m.id === message.id);
+        if (existingById) {
+            logger.debug(`ℹ️ Message ${message.id} already exists (ID match), skipping add`);
             return;
         }
+    }
+
+    // Also check by content similarity (handles client vs server ID mismatch)
+    // This is important because:
+    // - Client creates user message with ID like "user-123456-abc"
+    // - Server saves it with a new GUID like "e4ae7118-..."
+    // - When syncing, we need to detect these are the same message
+    const existingByContent = conversation.messages.find((m) => areMessagesSimilar(m, message));
+    if (existingByContent) {
+        logger.debug(
+            `ℹ️ Message already exists (content match): "${message.content.substring(0, 30)}...", skipping add`,
+        );
+        return;
     }
 
     const requestUserFeedback = message.userId === 'bot' && message.type === ChatMessageType.Message;

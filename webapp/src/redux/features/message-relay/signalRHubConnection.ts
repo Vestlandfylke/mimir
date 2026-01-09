@@ -73,10 +73,9 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
     // Re-establish the connection if connection dropped
     hubConnection.onclose((error) => {
         if (hubConnection.state === signalR.HubConnectionState.Disconnected) {
-            const userMessage = 'Tilkoblinga vart avbroten. Prøv å oppdatere sida for å kople til på nytt.';
             store.dispatch(
                 addAlert({
-                    message: userMessage,
+                    message: 'Tilkoplinga vart avbroten. Oppdater sida for å kople til på nytt.',
                     type: AlertType.Warning,
                     id: Constants.app.CONNECTION_ALERT_ID,
                 }),
@@ -87,33 +86,20 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
 
     hubConnection.onreconnecting((error) => {
         if (hubConnection.state === signalR.HubConnectionState.Reconnecting) {
-            const userMessage = 'Tilkoblinga vart mellombels avbroten. Koplar til på nytt...';
-            store.dispatch(
-                addAlert({
-                    message: userMessage,
-                    type: AlertType.Info,
-                    id: Constants.app.CONNECTION_ALERT_ID,
-                }),
-            );
             logger.log('Reconnecting', error);
         }
     });
 
     hubConnection.onreconnected((connectionId = '') => {
         if (hubConnection.state === signalR.HubConnectionState.Connected) {
-            logger.log(`🔄 Connection restored with connectionId ${connectionId}. Triggering message sync...`);
+            logger.log(`🔄 Connection restored with connectionId ${connectionId}. Rejoining groups and syncing...`);
 
-            // Show temporary info message while sync is in progress
-            store.dispatch(
-                addAlert({
-                    message: 'Tilkobling gjenoppretta. Synkroniserer meldingar...',
-                    type: AlertType.Info,
-                    id: Constants.app.CONNECTION_ALERT_ID,
-                }),
-            );
-
-            // Dispatch the reconnected flag to trigger the useConnectionSync hook
-            store.dispatch(setConnectionReconnected(true));
+            // CRITICAL: Rejoin all chat groups after reconnection
+            // Without this, the client won't receive messages because it's not in the groups
+            void rejoinAllChatGroups().then(() => {
+                // Dispatch the reconnected flag to trigger the useConnectionSync hook
+                store.dispatch(setConnectionReconnected(true));
+            });
         }
     });
 };
@@ -380,6 +366,53 @@ const KEEPALIVE_PING_INTERVAL_MS = 30000; // Ping every 30 seconds to detect dea
 let keepalivePingIntervalId: ReturnType<typeof setInterval> | undefined;
 
 /**
+ * Rejoin all chat groups after reconnection.
+ * This is critical because SignalR groups are tied to connection IDs,
+ * and a new connection ID means we're no longer in any groups.
+ */
+const rejoinAllChatGroups = async (): Promise<void> => {
+    const conn = hubConnection;
+    const store = storeRef;
+
+    if (!conn || !store) {
+        logger.warn('Cannot rejoin groups: hubConnection or storeRef not available');
+        return;
+    }
+
+    if (conn.state !== signalR.HubConnectionState.Connected) {
+        logger.warn('Cannot rejoin groups: connection not in Connected state');
+        return;
+    }
+
+    const conversations = store.getState().conversations.conversations;
+    const chatIds = Object.keys(conversations);
+
+    if (chatIds.length === 0) {
+        logger.debug('No chat groups to rejoin');
+        return;
+    }
+
+    logger.log(`🔄 Rejoining ${chatIds.length} chat group(s) after reconnection...`);
+
+    try {
+        // Rejoin all groups in parallel
+        await Promise.all(
+            chatIds.map(async (chatId) => {
+                try {
+                    await conn.invoke('AddClientToGroupAsync', chatId);
+                    logger.debug(`✓ Rejoined group: ${chatId}`);
+                } catch (err) {
+                    logger.error(`❌ Failed to rejoin group ${chatId}:`, err);
+                }
+            }),
+        );
+        logger.log('✅ Successfully rejoined all chat groups');
+    } catch (err) {
+        logger.error('❌ Error rejoining chat groups:', err);
+    }
+};
+
+/**
  * Check if the SignalR connection is healthy and connected.
  */
 export const isConnectionHealthy = (): boolean => {
@@ -485,6 +518,8 @@ export const ensureConnected = async (): Promise<void> => {
     try {
         await hubConnection.start();
         logger.log('✅ SignalR reconnection successful');
+        // Rejoin groups after reconnection
+        await rejoinAllChatGroups();
         if (storeRef) {
             storeRef.dispatch(setConnectionReconnected(true));
         }
@@ -527,18 +562,13 @@ const startKeepalivePing = (store: StoreMiddlewareAPI) => {
 
                 if (!isAlive) {
                     logger.warn('⚠️ Keepalive ping failed - connection is dead, attempting reconnect...');
-                    store.dispatch(
-                        addAlert({
-                            message: 'Tilkoplinga var avbroten. Koplar til på nytt...',
-                            type: AlertType.Info,
-                            id: Constants.app.CONNECTION_ALERT_ID,
-                        }),
-                    );
 
                     try {
                         await conn.stop();
                         await conn.start();
                         logger.log('✅ Reconnected after keepalive ping failure');
+                        // Rejoin groups after manual reconnection
+                        await rejoinAllChatGroups();
                         store.dispatch(setConnectionReconnected(true));
                     } catch (err) {
                         logger.error(
@@ -547,7 +577,7 @@ const startKeepalivePing = (store: StoreMiddlewareAPI) => {
                         );
                         store.dispatch(
                             addAlert({
-                                message: 'Kunne ikkje kople til på nytt. Prøv å oppdatere sida.',
+                                message: 'Tilkoplinga vart avbroten. Oppdater sida for å kople til på nytt.',
                                 type: AlertType.Warning,
                                 id: Constants.app.CONNECTION_ALERT_ID,
                             }),
@@ -585,13 +615,6 @@ const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
 
                     if (!isAlive) {
                         logger.warn('⚠️ Connection dead after returning to tab, reconnecting...');
-                        store.dispatch(
-                            addAlert({
-                                message: 'Koplar til på nytt etter inaktivitet...',
-                                type: AlertType.Info,
-                                id: Constants.app.CONNECTION_ALERT_ID,
-                            }),
-                        );
 
                         try {
                             if (hubConnection.state === signalR.HubConnectionState.Connected) {
@@ -601,12 +624,14 @@ const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
                                 await hubConnection.start();
                             }
                             logger.log('✅ Reconnected after visibility change');
+                            // Rejoin groups after manual reconnection
+                            await rejoinAllChatGroups();
                             store.dispatch(setConnectionReconnected(true));
                         } catch (err) {
                             logger.error('❌ Failed to reconnect after visibility change:', err);
                             store.dispatch(
                                 addAlert({
-                                    message: 'Kunne ikkje kople til på nytt. Prøv å oppdatere sida.',
+                                    message: 'Tilkoplinga vart avbroten. Oppdater sida for å kople til på nytt.',
                                     type: AlertType.Warning,
                                     id: Constants.app.CONNECTION_ALERT_ID,
                                 }),

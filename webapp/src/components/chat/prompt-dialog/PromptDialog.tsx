@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import {
-    Body1Strong,
+    Accordion,
+    AccordionHeader,
+    AccordionItem,
+    AccordionPanel,
     Button,
     Dialog,
     DialogActions,
@@ -175,6 +178,14 @@ const useClasses = makeStyles({
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
     },
+    accordionHeader: {
+        '& button': {
+            fontWeight: '700',
+        },
+    },
+    accordionPanel: {
+        ...shorthands.padding('8px', '0', '16px', '0'),
+    },
 });
 
 /**
@@ -283,61 +294,85 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
         prompt = message.prompt ?? '';
     }
 
-    let promptDetails;
+    // Build accordion items from prompt sections
+    let promptAccordionItems: React.ReactNode[] = [];
+    let isStringPrompt = false;
+
     if (typeof prompt === 'string') {
-        promptDetails = formatParagraphTextContent(prompt);
+        isStringPrompt = true;
+        promptAccordionItems = [
+            <AccordionItem value="raw-prompt" key="raw-prompt">
+                <AccordionHeader expandIconPosition="end" className={classes.accordionHeader}>
+                    Prompt
+                </AccordionHeader>
+                <AccordionPanel className={classes.accordionPanel}>{formatParagraphTextContent(prompt)}</AccordionPanel>
+            </AccordionItem>,
+        ];
     } else {
-        promptDetails = Object.entries(prompt).map(([key, value]) => {
-            let isStepwiseThoughtProcess = false;
-            if (key === 'externalInformation') {
-                const information = value as DependencyDetails;
-                if (information.context) {
-                    const details = information.context as PlanExecutionMetadata;
-                    isStepwiseThoughtProcess = details.plannerType === PlanType.Stepwise;
+        promptAccordionItems = Object.entries(prompt)
+            .map(([key, value]) => {
+                let isStepwiseThoughtProcess = false;
+                if (key === 'externalInformation') {
+                    const information = value as DependencyDetails;
+                    if (information.context) {
+                        const details = information.context as PlanExecutionMetadata;
+                        isStepwiseThoughtProcess = details.plannerType === PlanType.Stepwise;
+                    }
+
+                    if (!isStepwiseThoughtProcess) {
+                        value = information.result;
+                    }
                 }
 
-                if (!isStepwiseThoughtProcess) {
-                    value = information.result;
+                if (
+                    key === 'chatMemories' &&
+                    value &&
+                    !(value as string).includes('User has also shared some document snippets:')
+                ) {
+                    value = (value as string) + '\nIngen relevante dokumentminner.';
                 }
-            }
 
-            if (
-                key === 'chatMemories' &&
-                value &&
-                !(value as string).includes('User has also shared some document snippets:')
-            ) {
-                value = (value as string) + '\nIngen relevante dokumentminner.';
-            }
+                // Filter systemPersona to show only user-friendly parts
+                if (key === 'systemPersona' && value) {
+                    value = extractUserFriendlySystemPersona(value as string);
+                }
 
-            // Filter systemPersona to show only user-friendly parts
-            if (key === 'systemPersona' && value) {
-                value = extractUserFriendlySystemPersona(value as string);
-            }
+                // Clean up content (remove diagram request prefixes, etc.)
+                if (typeof value === 'string') {
+                    value = cleanupPromptContent(value, key);
+                }
 
-            // Clean up content (remove diagram request prefixes, etc.)
-            if (typeof value === 'string') {
-                value = cleanupPromptContent(value, key);
-            }
+                // Strip redundant English prefixes (already shown as Norwegian headers)
+                if (typeof value === 'string') {
+                    value = stripRedundantPrefixes(value, key);
+                }
 
-            // Strip redundant English prefixes (already shown as Norwegian headers)
-            if (typeof value === 'string') {
-                value = stripRedundantPrefixes(value, key);
-            }
+                if (!value || key === 'metaPromptTemplate') return null;
 
-            return value && key !== 'metaPromptTemplate' ? (
-                <div className={dialogClasses.paragraphs} key={`prompt-details-${key}`}>
-                    <Body1Strong>{PromptSectionsNameMap[key]}</Body1Strong>
-                    {isStepwiseThoughtProcess ? (
-                        <StepwiseThoughtProcessView thoughtProcess={value as DependencyDetails} />
-                    ) : key === 'chatHistory' ? (
-                        <ChatHistoryView content={value as string} classes={classes} />
-                    ) : (
-                        formatParagraphTextContent(value as string)
-                    )}
-                </div>
-            ) : null;
-        });
+                const sectionTitle = PromptSectionsNameMap[key] || key;
+
+                return (
+                    <AccordionItem value={key} key={`prompt-accordion-${key}`}>
+                        <AccordionHeader expandIconPosition="end" className={classes.accordionHeader}>
+                            {sectionTitle}
+                        </AccordionHeader>
+                        <AccordionPanel className={classes.accordionPanel}>
+                            {isStepwiseThoughtProcess ? (
+                                <StepwiseThoughtProcessView thoughtProcess={value as DependencyDetails} />
+                            ) : key === 'chatHistory' ? (
+                                <ChatHistoryView content={value as string} classes={classes} />
+                            ) : (
+                                formatParagraphTextContent(value as string)
+                            )}
+                        </AccordionPanel>
+                    </AccordionItem>
+                );
+            })
+            .filter(Boolean);
     }
+
+    // Get keys for default open items (first item open by default)
+    const defaultOpenItems = promptAccordionItems.length > 0 ? ['systemPersona'] : [];
 
     return (
         <Dialog>
@@ -355,12 +390,10 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                     <DialogTitle>Prompt</DialogTitle>
                     <DialogContent className={dialogClasses.content}>
                         <TokenUsageGraph promptView tokenUsage={message.tokenUsage ?? {}} />
-                        <div
-                            className={
-                                message.prompt && typeof prompt !== 'string' ? dialogClasses.innerContent : undefined
-                            }
-                        >
-                            {promptDetails}
+                        <div className={message.prompt && !isStringPrompt ? dialogClasses.innerContent : undefined}>
+                            <Accordion collapsible multiple defaultOpenItems={defaultOpenItems}>
+                                {promptAccordionItems}
+                            </Accordion>
                         </div>
                     </DialogContent>
                     <DialogActions position="start" className={dialogClasses.footer}>

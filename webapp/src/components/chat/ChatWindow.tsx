@@ -26,7 +26,7 @@ import {
     tokens,
     Tooltip,
 } from '@fluentui/react-components';
-import { Edit24Filled, EditRegular, Map16Regular, MoreVertical24Regular, Person16Regular } from '@fluentui/react-icons';
+import { Edit24Filled, EditRegular, MoreVertical24Regular } from '@fluentui/react-icons';
 import React, { useCallback, useState } from 'react';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
@@ -41,7 +41,6 @@ import { ShareBotMenu } from './controls/ShareBotMenu';
 import { EditChatName } from './shared/EditChatName';
 import { DocumentsTab } from './tabs/DocumentsTab';
 import { PersonaTab } from './tabs/PersonaTab';
-import { PlansTab } from './tabs/PlansTab';
 import { DeleteChatDialog } from './chat-list/dialogs/DeleteChatDialog';
 import { InvitationCreateDialog } from './invitation-dialog/InvitationCreateDialog';
 
@@ -235,30 +234,15 @@ export const ChatWindow: React.FC = () => {
                         >
                             Dokument
                         </Tab>
-                        {features[FeatureKeys.PluginsPlannersAndPersonas].enabled && (
-                            <>
-                                <Tab
-                                    data-testid="plansTab"
-                                    id="plans"
-                                    value="plans"
-                                    icon={<Map16Regular />}
-                                    aria-label="Planer-fane"
-                                    title="Planer-fane"
-                                >
-                                    Planar
-                                </Tab>
-                                <Tab
-                                    data-testid="personaTab"
-                                    id="persona"
-                                    value="persona"
-                                    icon={<Person16Regular />}
-                                    aria-label="Tilpassing-fane"
-                                    title="Tilpassing-fane"
-                                >
-                                    Tilpassing
-                                </Tab>
-                            </>
-                        )}
+                        <Tab
+                            data-testid="personaTab"
+                            id="persona"
+                            value="persona"
+                            aria-label="Tilpassing-fane"
+                            title="Tilpassing-fane"
+                        >
+                            Tilpassing
+                        </Tab>
                     </TabList>
                 </div>
                 <div className={classes.controls}>
@@ -361,13 +345,6 @@ export const ChatWindow: React.FC = () => {
             </div>
             {selectedTab === 'chat' && <ChatRoom />}
             {selectedTab === 'documents' && <DocumentsTab />}
-            {selectedTab === 'plans' && (
-                <PlansTab
-                    setChatTab={() => {
-                        setSelectedTab('chat');
-                    }}
-                />
-            )}
             {selectedTab === 'persona' && <PersonaTab />}
             {selectedTab !== 'chat' && (
                 <div className={classes.alerts}>

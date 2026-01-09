@@ -282,8 +282,8 @@ const adjustSvgForResponsive = (svgString: string): string => {
         return Number.isFinite(n) && n > 0 ? n : null;
     };
 
-    let width = parseNum(widthAttr);
-    let height = parseNum(heightAttr);
+    const width = parseNum(widthAttr);
+    const height = parseNum(heightAttr);
 
     // If no viewBox, create one from width/height
     if (!viewBox && width && height) {
@@ -366,18 +366,10 @@ const adjustSvgForResponsive = (svgString: string): string => {
 
     svgEl.setAttribute('viewBox', `${adjustedMinX} ${vbMinY} ${adjustedWidth} ${vbHeight}`);
 
-    // Store dimensions for export
-    if (!width) width = adjustedWidth;
-    if (!height) height = vbHeight;
-
-    // Make SVG responsive:
-    // - Remove fixed width/height attributes (let CSS control size)
-    // - Add preserveAspectRatio for proper scaling
-    // - Store original dimensions as data attributes for aspect ratio
-    if (width && height) {
-        svgEl.setAttribute('data-original-width', String(width));
-        svgEl.setAttribute('data-original-height', String(height));
-    }
+    // Store the ADJUSTED dimensions for export (must match the viewBox)
+    // These are used by downloadPng to create the correct canvas size
+    svgEl.setAttribute('data-original-width', String(adjustedWidth));
+    svgEl.setAttribute('data-original-height', String(vbHeight));
 
     // Remove fixed dimensions - CSS will handle responsive sizing
     svgEl.removeAttribute('width');
@@ -418,7 +410,7 @@ const useClasses = makeStyles({
     },
     actions: {
         position: 'absolute',
-        top: tokens.spacingVerticalXS,
+        bottom: tokens.spacingVerticalXS,
         right: tokens.spacingHorizontalS,
         zIndex: 10,
         backgroundColor: tokens.colorNeutralBackground2,
@@ -430,8 +422,8 @@ const useClasses = makeStyles({
         overflowX: 'auto',
         overflowY: 'hidden',
         WebkitOverflowScrolling: 'touch',
-        // Add padding at top for the download button
-        paddingTop: tokens.spacingVerticalXXL,
+        // Add padding at bottom for the download button
+        paddingBottom: tokens.spacingVerticalXXL,
         // Add padding on left/right for titles that overflow the SVG viewBox
         paddingLeft: tokens.spacingHorizontalXXL,
         paddingRight: tokens.spacingHorizontalXXL,
@@ -594,48 +586,60 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
         setDownloading(true);
 
         try {
-            // Parse SVG to get dimensions
+            // Parse SVG to get dimensions from viewBox (most reliable source)
             const parser = new DOMParser();
             const svgDoc = parser.parseFromString(svg, 'image/svg+xml');
             const svgEl = svgDoc.documentElement;
 
-            // Get dimensions from SVG (check data attributes first, then viewBox)
+            // Get dimensions from viewBox - this is the actual coordinate system
             let width = 0;
             let height = 0;
 
-            const parsePx = (v: string | null) => {
-                if (!v) return null;
-                const n = Number.parseFloat(v.replace('px', '').trim());
-                return Number.isFinite(n) && n > 0 ? n : null;
-            };
-
-            // Try data attributes first (set by adjustSvgForResponsive)
-            width = parsePx(svgEl.getAttribute('data-original-width')) ?? 0;
-            height = parsePx(svgEl.getAttribute('data-original-height')) ?? 0;
-
-            // Fall back to viewBox
-            if (!width || !height) {
-                const viewBox = svgEl.getAttribute('viewBox') ?? '';
-                if (viewBox) {
-                    const parts = viewBox.split(/\s+|,/).map((p) => Number.parseFloat(p));
-                    if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
-                        width = width || parts[2];
-                        height = height || parts[3];
-                    }
+            const viewBox = svgEl.getAttribute('viewBox') ?? '';
+            if (viewBox) {
+                const parts = viewBox.split(/\s+|,/).map((p) => Number.parseFloat(p));
+                if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+                    // viewBox format: minX minY width height
+                    width = parts[2];
+                    height = parts[3];
                 }
             }
 
-            // Fallback dimensions
-            width = width && width > 0 ? width : 800;
-            height = height && height > 0 ? height : 600;
+            // Fallback to data attributes if viewBox doesn't give us dimensions
+            if (!width || !height) {
+                const parsePx = (v: string | null): number => {
+                    if (!v) return 0;
+                    const n = Number.parseFloat(v.replace('px', '').trim());
+                    return Number.isFinite(n) && n > 0 ? n : 0;
+                };
+                if (!width) {
+                    width = parsePx(svgEl.getAttribute('data-original-width')) || 800;
+                }
+                if (!height) {
+                    height = parsePx(svgEl.getAttribute('data-original-height')) || 600;
+                }
+            }
 
-            // Set explicit dimensions on SVG for consistent rendering
-            svgEl.setAttribute('width', String(width * scale));
-            svgEl.setAttribute('height', String(height * scale));
+            // Ensure minimum dimensions and proper aspect ratio
+            width = Math.max(width, 100);
+            height = Math.max(height, 100);
+
+            // Calculate scaled dimensions
+            const scaledWidth = Math.round(width * scale);
+            const scaledHeight = Math.round(height * scale);
+
+            // Clone the SVG and set explicit dimensions for rendering
+            const svgClone = svgEl.cloneNode(true) as SVGSVGElement;
+            svgClone.setAttribute('width', String(scaledWidth));
+            svgClone.setAttribute('height', String(scaledHeight));
+            // Ensure the viewBox is preserved so content scales correctly
+            if (!svgClone.getAttribute('viewBox') && width && height) {
+                svgClone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            }
 
             // Serialize to string
             const serializer = new XMLSerializer();
-            const svgString = serializer.serializeToString(svgEl);
+            const svgString = serializer.serializeToString(svgClone);
 
             // Create data URL
             const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
@@ -655,10 +659,10 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
                 img.src = dataUrl;
             });
 
-            // Create canvas
+            // Create canvas with the same dimensions as the scaled image
             const canvas = document.createElement('canvas');
-            canvas.width = Math.round(width * scale);
-            canvas.height = Math.round(height * scale);
+            canvas.width = scaledWidth;
+            canvas.height = scaledHeight;
 
             const ctx = canvas.getContext('2d');
             if (!ctx) throw new Error('Klarte ikkje å lage canvas.');
@@ -667,8 +671,8 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw image
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // Draw image at full size
+            ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
 
             // Export as PNG
             const pngBlob: Blob | null = await new Promise((resolve) => {

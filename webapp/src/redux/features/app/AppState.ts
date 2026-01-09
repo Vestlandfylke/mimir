@@ -73,9 +73,16 @@ export enum FeatureKeys {
     RLHF, // Reinforcement Learning from Human Feedback
 }
 
+// Load dark mode preference from localStorage
+const getSavedDarkModePreference = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('mimir-dark-mode');
+    return saved === 'true';
+};
+
 export const Features = {
     [FeatureKeys.DarkMode]: {
-        enabled: false,
+        enabled: getSavedDarkModePreference(),
         label: 'Mørk modus',
     },
     [FeatureKeys.SimplifiedExperience]: {
@@ -119,7 +126,7 @@ export const Settings = [
     {
         // Grunnleggande innstillingar må stå først i indeksen. Legg alle nye innstillingar til slutten av arrayen.
         title: 'Grunnleggande',
-        features: [FeatureKeys.DarkMode, FeatureKeys.PluginsPlannersAndPersonas],
+        features: [FeatureKeys.DarkMode],
         stackVertically: true,
     },
     {

@@ -25,6 +25,7 @@
     "@playwright/test": "^1.55.1",
     "@reduxjs/toolkit": "^2.3.0",
     "debug": "^4.3.7",
+    "html-to-image": "^1.11.13",
     "katex": "^0.16.9",
     "mermaid": "11.12.2",
     "microsoft-cognitiveservices-speech-sdk": "^1.41.0",

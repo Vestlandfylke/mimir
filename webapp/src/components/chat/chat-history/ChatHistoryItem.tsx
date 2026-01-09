@@ -3,6 +3,11 @@
 import {
     AvatarProps,
     Button,
+    Menu,
+    MenuItem,
+    MenuList,
+    MenuPopover,
+    MenuTrigger,
     Persona,
     Text,
     ToggleButton,
@@ -16,10 +21,12 @@ import {
     ChevronUp20Regular,
     Clipboard20Regular,
     ClipboardTask20Regular,
+    Image20Regular,
     ThumbDislikeFilled,
     ThumbLikeFilled,
 } from '@fluentui/react-icons';
-import React, { useState } from 'react';
+import * as htmlToImage from 'html-to-image';
+import React, { useRef, useState } from 'react';
 import { useChat } from '../../../libs/hooks/useChat';
 import { AuthorRoles, ChatMessageType, IChatMessage, UserFeedback } from '../../../libs/models/ChatMessage';
 import { useAppSelector } from '../../../redux/app/hooks';
@@ -121,6 +128,7 @@ interface ChatHistoryItemProps {
 export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messageIndex }) => {
     const classes = useClasses();
     const chat = useChat();
+    const messageRef = useRef<HTMLDivElement>(null);
 
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
     const { activeUserInfo, features } = useAppSelector((state: RootState) => state.app);
@@ -135,14 +143,45 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
     const fullName = user?.fullName ?? message.userName;
 
     const [messagedCopied, setMessageCopied] = useState(false);
+    const [imageCopied, setImageCopied] = useState(false);
 
-    const copyOnClick = async () => {
+    const copyTextOnClick = async () => {
         await navigator.clipboard.writeText(message.content).then(() => {
             setMessageCopied(true);
             setTimeout(() => {
                 setMessageCopied(false);
             }, 2000);
         });
+    };
+
+    const copyImageOnClick = async () => {
+        if (!messageRef.current) return;
+
+        try {
+            // Capture the message element as a PNG blob
+            const dataUrl = await htmlToImage.toPng(messageRef.current, {
+                backgroundColor: features[FeatureKeys.DarkMode].enabled ? '#1f1f1f' : '#f5f5f5',
+                pixelRatio: 2, // Higher quality
+            });
+
+            // Convert data URL to blob
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+
+            // Copy to clipboard
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'image/png': blob,
+                }),
+            ]);
+
+            setImageCopied(true);
+            setTimeout(() => {
+                setImageCopied(false);
+            }, 2000);
+        } catch (error) {
+            console.error('Failed to copy image:', error);
+        }
     };
 
     const avatar: AvatarProps = isBot
@@ -193,6 +232,7 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                 />
             }
             <div
+                ref={messageRef}
                 className={isMe ? mergeClasses(classes.item, classes.me) : classes.item}
                 style={{
                     backgroundColor: isMe
@@ -209,15 +249,47 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                     <Text className={classes.time}>{timestampToDateString(message.timestamp, true)}</Text>
                     {isBot && <PromptDialog message={message} />}
                     {isBot && (
-                        <Tooltip content={messagedCopied ? 'Kopiert' : 'Kopier tekst'} relationship="label">
-                            <Button
-                                icon={messagedCopied ? <ClipboardTask20Regular /> : <Clipboard20Regular />}
-                                appearance="transparent"
-                                onClick={() => {
-                                    void copyOnClick();
-                                }}
-                            />
-                        </Tooltip>
+                        <Menu>
+                            <MenuTrigger disableButtonEnhancement>
+                                <Tooltip
+                                    content={
+                                        messagedCopied ? 'Tekst kopiert!' : imageCopied ? 'Bilete kopiert!' : 'Kopier'
+                                    }
+                                    relationship="label"
+                                >
+                                    <Button
+                                        icon={
+                                            messagedCopied || imageCopied ? (
+                                                <ClipboardTask20Regular />
+                                            ) : (
+                                                <Clipboard20Regular />
+                                            )
+                                        }
+                                        appearance="transparent"
+                                    />
+                                </Tooltip>
+                            </MenuTrigger>
+                            <MenuPopover>
+                                <MenuList>
+                                    <MenuItem
+                                        icon={<Clipboard20Regular />}
+                                        onClick={() => {
+                                            void copyTextOnClick();
+                                        }}
+                                    >
+                                        Kopier tekst
+                                    </MenuItem>
+                                    <MenuItem
+                                        icon={<Image20Regular />}
+                                        onClick={() => {
+                                            void copyImageOnClick();
+                                        }}
+                                    >
+                                        Kopier som bilete
+                                    </MenuItem>
+                                </MenuList>
+                            </MenuPopover>
+                        </Menu>
                     )}
                 </div>
                 {content}
