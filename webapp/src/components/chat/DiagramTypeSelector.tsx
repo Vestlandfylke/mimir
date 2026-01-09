@@ -376,16 +376,16 @@ showData viser prosent. Verdiane treng ikkje summere til 100 - dei blir rekna om
         label: 'Kvadrant',
         description: 'Plasser element i fire kategoriar for analyse og prioritering',
         icon: <TbLayoutGrid />,
-        prompt: `Lag eit Mermaid kvadrantdiagram. KOPIER DENNE STRUKTUREN NØYAKTIG:
+        prompt: `Lag eit Mermaid kvadrantdiagram. VIKTIG: Start med "quadrantChart" på første linje. Syntaks-døme:
 
 quadrantChart
     title Prioriteringsmatrise
-    x-axis Lav innsats --> Hoy innsats
-    y-axis Lav verdi --> Hoy verdi
-    quadrant-1 Gjer forst
+    x-axis Lav innsats --> Høy innsats
+    y-axis Lav verdi --> Høy verdi
+    quadrant-1 Gjer først
     quadrant-2 Planlegg
     quadrant-3 Deleger
-    quadrant-4 Unnga
+    quadrant-4 Unngå
     Prosjekt A: [0.3, 0.8]
     Prosjekt B: [0.7, 0.9]
     Prosjekt C: [0.2, 0.3]

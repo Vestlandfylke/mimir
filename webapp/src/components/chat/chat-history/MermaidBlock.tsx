@@ -259,9 +259,10 @@ const getMermaid = async (): Promise<MermaidAPI> => {
 let diagramIdCounter = 0;
 
 /**
- * Adjust SVG for responsive display and add padding for overflowing titles.
+ * Adjust SVG for responsive display and auto-fit titles.
  * Mermaid generates SVGs with fixed dimensions that don't scale on mobile.
- * This function makes them responsive while preserving aspect ratio.
+ * This function makes them responsive while preserving aspect ratio,
+ * and scales down titles that would overflow.
  */
 const adjustSvgForResponsive = (svgString: string): string => {
     // Parse the SVG
@@ -290,24 +291,84 @@ const adjustSvgForResponsive = (svgString: string): string => {
         svgEl.setAttribute('viewBox', viewBox);
     }
 
-    // Parse viewBox if available
+    // Parse viewBox dimensions
+    let vbMinX = 0;
+    let vbMinY = 0;
+    let vbWidth = width ?? 800;
+    let vbHeight = height ?? 600;
+
     if (viewBox) {
         const parts = viewBox.split(/\s+|,/).map(Number);
         if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
-            const [origMinX, minY, origVbWidth, vbHeight] = parts;
-
-            // Add left padding for titles that overflow
-            const leftPadding = 20;
-            const minX = origMinX - leftPadding;
-            const vbWidth = origVbWidth + leftPadding;
-
-            svgEl.setAttribute('viewBox', `${minX} ${minY} ${vbWidth} ${vbHeight}`);
-
-            // Use viewBox dimensions if no explicit width/height
-            if (!width) width = vbWidth;
-            if (!height) height = vbHeight;
+            [vbMinX, vbMinY, vbWidth, vbHeight] = parts;
         }
     }
+
+    // Find and adjust title text elements that might overflow
+    // Mermaid uses various classes for titles: titleText, pieTitleText, etc.
+    const titleSelectors = [
+        'text.titleText',
+        'text.pieTitleText',
+        'text[class*="title"]',
+        'g.pieTitleText text',
+        'text[dominant-baseline="middle"]', // Common for centered titles
+    ];
+
+    for (const selector of titleSelectors) {
+        try {
+            const titleElements = svgEl.querySelectorAll(selector);
+            titleElements.forEach((titleEl) => {
+                const textEl = titleEl as SVGTextElement;
+                const textContent = textEl.textContent ?? '';
+
+                // Skip short titles
+                if (textContent.length < 20) return;
+
+                // Get current font size
+                const currentStyle = textEl.getAttribute('style') ?? '';
+                const fontSizeMatch = currentStyle.match(/font-size:\s*([\d.]+)(px|em|rem)?/);
+                const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 24;
+                const fontUnit = fontSizeMatch ? fontSizeMatch[2] || 'px' : 'px';
+
+                // Estimate text width (rough approximation: ~0.6 * fontSize * character count)
+                const estimatedWidth = textContent.length * fontSize * 0.55;
+                const maxWidth = vbWidth * 0.9; // Allow 90% of viewBox width
+
+                // If text is too wide, scale down the font
+                if (estimatedWidth > maxWidth && maxWidth > 0) {
+                    const scaleFactor = maxWidth / estimatedWidth;
+                    const newFontSize = Math.max(fontSize * scaleFactor, 10); // Minimum 10px
+
+                    // Update font-size in style
+                    const newStyle = currentStyle.replace(
+                        /font-size:\s*[\d.]+(px|em|rem)?/,
+                        `font-size: ${newFontSize}${fontUnit}`,
+                    );
+
+                    if (newStyle !== currentStyle) {
+                        textEl.setAttribute('style', newStyle);
+                    } else {
+                        // Add font-size if not present
+                        textEl.setAttribute('style', `${currentStyle}; font-size: ${newFontSize}${fontUnit}`);
+                    }
+                }
+            });
+        } catch {
+            // Selector might not be valid for all SVGs, ignore
+        }
+    }
+
+    // Add padding to viewBox for any remaining overflow
+    const leftPadding = 30;
+    const rightPadding = 30;
+    const adjustedMinX = vbMinX - leftPadding;
+    const adjustedWidth = vbWidth + leftPadding + rightPadding;
+
+    svgEl.setAttribute('viewBox', `${adjustedMinX} ${vbMinY} ${adjustedWidth} ${vbHeight}`);
+
+    // Store dimensions for export
+    if (!width) width = adjustedWidth;
+    if (!height) height = vbHeight;
 
     // Make SVG responsive:
     // - Remove fixed width/height attributes (let CSS control size)

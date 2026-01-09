@@ -10,16 +10,10 @@ import {
     DialogSurface,
     DialogTitle,
     DialogTrigger,
-    Divider,
     Label,
     Link,
-    SelectTabEventHandler,
-    Tab,
-    TabList,
-    TabValue,
     Tooltip,
     makeStyles,
-    mergeClasses,
     shorthands,
 } from '@fluentui/react-components';
 import { Info16Regular } from '@fluentui/react-icons';
@@ -141,13 +135,7 @@ const cleanupPromptContent = (content: string, key: string): string => {
     // Pattern to match diagram request format: [Diagram request: ...]\n\nUser request: <actual message>
     // Replace with just the user's actual message and a note about diagram selection
     const diagramRequestPattern = /\[Diagram request: [^\]]+\]\s*\n\s*User request:\s*/g;
-    result = result.replace(diagramRequestPattern, key === 'chatHistory' ? '🎨 [Brukte diagramveljar] ' : '');
-
-    // For chat history, also clean up "User said:" and "Bot said:" prefixes
-    if (key === 'chatHistory') {
-        result = result.replace(/User said:\s*/g, '');
-        result = result.replace(/Bot said:\s*/g, '');
-    }
+    result = result.replace(diagramRequestPattern, key === 'chatHistory' ? '[Diagramførespurnad] ' : '');
 
     // Clean up any remaining "User request:" prefixes
     result = result.replace(/User request:\s*/g, '');
@@ -166,7 +154,119 @@ const useClasses = makeStyles({
         width: '100%',
         overflowWrap: 'break-word',
     },
+    chatHistoryContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        ...shorthands.gap('8px'),
+        marginTop: '8px',
+    },
+    chatMessage: {
+        ...shorthands.padding('4px', '0'),
+        ...shorthands.borderBottom('1px', 'solid', 'var(--colorNeutralStroke2)'),
+        paddingBottom: '8px',
+    },
+    messageRole: {
+        fontWeight: '600',
+        marginBottom: '2px',
+        color: 'var(--colorNeutralForeground2)',
+        fontSize: '0.9em',
+    },
+    messageContent: {
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+    },
 });
+
+/**
+ * Parses chat history string into structured messages.
+ * Backend format: "[timestamp] Username said: content"
+ */
+const parseChatHistory = (
+    content: string,
+): Array<{ role: 'user' | 'bot'; content: string; timestamp?: string; username?: string }> => {
+    if (!content) return [];
+
+    const messages: Array<{ role: 'user' | 'bot'; content: string; timestamp?: string; username?: string }> = [];
+
+    // Split by lines first, then look for message patterns
+    const lines = content.split('\n');
+
+    let currentMessage: { role: 'user' | 'bot'; content: string; timestamp?: string; username?: string } | null = null;
+
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        // Match pattern: [timestamp] Username said: content
+        // The username can be "bot" for bot messages, or actual user names
+        const messageMatch = trimmedLine.match(/^\[([^\]]+)\]\s*(.+?)\s+said:\s*(.*)$/i);
+
+        if (messageMatch) {
+            // Save previous message if exists
+            if (currentMessage?.content.trim()) {
+                messages.push(currentMessage);
+            }
+
+            const [, timestamp, username, messageContent] = messageMatch;
+            const isBot = username.toLowerCase() === 'bot' || username.toLowerCase() === 'mimir';
+
+            currentMessage = {
+                role: isBot ? 'bot' : 'user',
+                content: messageContent,
+                timestamp,
+                username: isBot ? 'Mimir' : username,
+            };
+        } else if (currentMessage) {
+            // Continuation of previous message
+            currentMessage.content += '\n' + trimmedLine;
+        } else {
+            // No pattern match and no current message - treat as standalone
+            currentMessage = {
+                role: 'bot',
+                content: trimmedLine,
+            };
+        }
+    }
+
+    // Don't forget the last message
+    if (currentMessage?.content.trim()) {
+        messages.push(currentMessage);
+    }
+
+    // If no structured messages found, return the whole content as a single message
+    if (messages.length === 0 && content.trim()) {
+        messages.push({ role: 'bot', content: content.trim() });
+    }
+
+    return messages;
+};
+
+interface ChatHistoryViewProps {
+    content: string;
+    classes: ReturnType<typeof useClasses>;
+}
+
+const ChatHistoryView: React.FC<ChatHistoryViewProps> = ({ content, classes }) => {
+    const messages = parseChatHistory(content);
+
+    if (messages.length === 0) {
+        return <p>Ingen meldingar i historikken.</p>;
+    }
+
+    return (
+        <div className={classes.chatHistoryContainer}>
+            {messages.map((msg, index) => (
+                <div key={`chat-msg-${index}`} className={classes.chatMessage}>
+                    <div className={classes.messageRole}>
+                        {msg.username ?? (msg.role === 'user' ? 'Brukar' : 'Mimir')}
+                        {msg.timestamp && ` [${msg.timestamp}]`}
+                    </div>
+                    <div className={classes.messageContent}>{msg.content}</div>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 interface IPromptDialogProps {
     message: IChatMessage;
@@ -175,11 +275,6 @@ interface IPromptDialogProps {
 export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
     const classes = useClasses();
     const dialogClasses = useDialogClasses();
-
-    const [selectedTab, setSelectedTab] = React.useState<TabValue>('formatted');
-    const onTabSelect: SelectTabEventHandler = (_event, data) => {
-        setSelectedTab(data.value);
-    };
 
     let prompt: string | BotResponsePrompt;
     try {
@@ -197,19 +292,8 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
             if (key === 'externalInformation') {
                 const information = value as DependencyDetails;
                 if (information.context) {
-                    // TODO: [Issue #150, sk#2106] Accommodate different planner contexts once core team finishes work to return prompt and token usage.
                     const details = information.context as PlanExecutionMetadata;
                     isStepwiseThoughtProcess = details.plannerType === PlanType.Stepwise;
-
-                    // Backend can be configured to return the raw response from Stepwise Planner. In this case, no meta prompt was generated or completed
-                    // and we should show the Stepwise thought process as the raw content view.
-                    if (prompt.metaPromptTemplate.length <= 0) {
-                        prompt.rawView = (
-                            <pre className={mergeClasses(dialogClasses.text, classes.text)}>
-                                {JSON.stringify(JSON.parse(details.stepsTaken), null, 2)}
-                            </pre>
-                        );
-                    }
                 }
 
                 if (!isStepwiseThoughtProcess) {
@@ -245,6 +329,8 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                     <Body1Strong>{PromptSectionsNameMap[key]}</Body1Strong>
                     {isStepwiseThoughtProcess ? (
                         <StepwiseThoughtProcessView thoughtProcess={value as DependencyDetails} />
+                    ) : key === 'chatHistory' ? (
+                        <ChatHistoryView content={value as string} classes={classes} />
                     ) : (
                         formatParagraphTextContent(value as string)
                     )}
@@ -269,34 +355,12 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                     <DialogTitle>Prompt</DialogTitle>
                     <DialogContent className={dialogClasses.content}>
                         <TokenUsageGraph promptView tokenUsage={message.tokenUsage ?? {}} />
-                        {message.prompt && typeof prompt !== 'string' && (
-                            <TabList selectedValue={selectedTab} onTabSelect={onTabSelect}>
-                                <Tab data-testid="formatted" id="formatted" value="formatted">
-                                    Formatert
-                                </Tab>
-                                <Tab data-testid="rawContent" id="rawContent" value="rawContent">
-                                    Råinnhald
-                                </Tab>
-                            </TabList>
-                        )}
                         <div
                             className={
                                 message.prompt && typeof prompt !== 'string' ? dialogClasses.innerContent : undefined
                             }
                         >
-                            {selectedTab === 'formatted' && promptDetails}
-                            {selectedTab === 'rawContent' &&
-                                ((prompt as BotResponsePrompt).metaPromptTemplate.length > 0
-                                    ? (prompt as BotResponsePrompt).metaPromptTemplate.map((contextMessage, index) => {
-                                          return (
-                                              <div key={`context-message-${index}`}>
-                                                  <p>{`Rolle: ${contextMessage.Role.Label}`}</p>
-                                                  {formatParagraphTextContent(`Innhald: ${contextMessage.Content}`)}
-                                                  <Divider />
-                                              </div>
-                                          );
-                                      })
-                                    : (prompt as BotResponsePrompt).rawView)}
+                            {promptDetails}
                         </div>
                     </DialogContent>
                     <DialogActions position="start" className={dialogClasses.footer}>

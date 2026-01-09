@@ -63,6 +63,8 @@ const useClasses = makeStyles({
         boxSizing: 'border-box',
         width: '100%',
         justifyContent: 'space-between',
+        alignItems: 'center',
+        ...shorthands.gap(tokens.spacingHorizontalS),
         // Add left padding on mobile for hamburger menu button
         '@media (max-width: 744px)': {
             paddingLeft: '48px', // Space for hamburger button
@@ -74,6 +76,10 @@ const useClasses = makeStyles({
         display: 'flex',
         flexDirection: 'row',
         flexWrap: 'wrap',
+        flexGrow: 1,
+        flexShrink: 1,
+        minWidth: 0, // Allow shrinking below content size
+        ...shorthands.overflow('hidden'),
         ...Breakpoints.small({
             ...shorthands.gap(tokens.spacingHorizontalS),
         }),
@@ -85,6 +91,16 @@ const useClasses = makeStyles({
         ...shorthands.gap(tokens.spacingHorizontalM),
         ...Breakpoints.small({
             display: 'none',
+        }),
+    },
+    // Compact tabs on mobile
+    tabList: {
+        ...Breakpoints.small({
+            '& .fui-Tab': {
+                fontSize: tokens.fontSizeBase200,
+                ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalS),
+                minWidth: 'auto',
+            },
         }),
     },
     controls: {
@@ -99,6 +115,8 @@ const useClasses = makeStyles({
         ...Breakpoints.small({
             display: 'flex',
             alignItems: 'center',
+            flexShrink: 0,
+            marginLeft: tokens.spacingHorizontalS,
         }),
     },
     popoverHeader: {
@@ -204,7 +222,7 @@ export const ChatWindow: React.FC = () => {
                             </Popover>
                         </div>
                     )}
-                    <TabList selectedValue={selectedTab} onTabSelect={onTabSelect}>
+                    <TabList selectedValue={selectedTab} onTabSelect={onTabSelect} className={classes.tabList}>
                         <Tab data-testid="chatTab" id="chat" value="chat" aria-label="Chat-fane" title="Chat-fane">
                             Chat
                         </Tab>

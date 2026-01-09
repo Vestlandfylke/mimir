@@ -43,10 +43,12 @@ public class ChatParticipantAuthorizationHandler : AuthorizationHandler<ChatPart
                 return;
             }
 
-            var session = await this._chatSessionRepository.FindByIdAsync(chatId);
-            if (session == null)
+            // Use TryFindByIdAsync to avoid exception when chat doesn't exist
+            // (common after backend restart with volatile storage)
+            bool chatExists = await this._chatSessionRepository.TryFindByIdAsync(chatId);
+            if (!chatExists)
             {
-                // delegate to downstream validation
+                // Chat doesn't exist - delegate to downstream validation which will return 404
                 context.Succeed(requirement);
                 return;
             }
@@ -62,6 +64,12 @@ public class ChatParticipantAuthorizationHandler : AuthorizationHandler<ChatPart
         catch (CredentialUnavailableException ex)
         {
             context.Fail(new AuthorizationFailureReason(this, ex.Message));
+        }
+        catch (KeyNotFoundException)
+        {
+            // Chat or participant not found - common after backend restart
+            // Delegate to downstream validation which will return appropriate error
+            context.Succeed(requirement);
         }
     }
 }

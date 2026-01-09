@@ -126,13 +126,8 @@ export const TokenUsageGraph: React.FC<ITokenUsageGraph> = ({ promptView, tokenU
                     </PopoverTrigger>
                     <PopoverSurface className={classes.popover}>
                         <Body1>
-                            Token-talet for kvar kategori er det totale summen av token brukt for førespurnadsmalen og
-                            chattefullføring for dei respektive fullføringsfunksjonane. For meir detaljar om tokenbruk,
-                            sjå{' '}
-                            <a href="https://learn.microsoft.com/en-us/dotnet/api/azure.ai.openai.completionsusage?view=azure-dotnet-preview">
-                                CompletionsUsage
-                            </a>{' '}
-                            dokumentasjonen.
+                            Token er måleeininga for kor mykje tekst KI-en les og skriv. Fleire token betyr lengre
+                            tekstar eller meir komplekse svar.
                         </Body1>
                     </PopoverSurface>
                 </Popover>
