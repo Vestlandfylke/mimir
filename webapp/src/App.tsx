@@ -80,16 +80,13 @@ const App = () => {
 
     // Check for existing Teams token on mount
     useEffect(() => {
-        const checkTeamsAuth = async () => {
-            if (EmbeddedAppHelper.isInTeams() && !isMsalAuthenticated) {
-                const teamsToken = sessionStorage.getItem('teamsToken');
-                if (teamsToken) {
-                    logger.debug('Found existing Teams token, setting authenticated');
-                    setIsTeamsAuthenticated(true);
-                }
+        if (EmbeddedAppHelper.isInTeams() && !isMsalAuthenticated) {
+            const teamsToken = sessionStorage.getItem('teamsToken');
+            if (teamsToken) {
+                logger.debug('Found existing Teams token, setting authenticated');
+                setIsTeamsAuthenticated(true);
             }
-        };
-        void checkTeamsAuth();
+        }
     }, [isMsalAuthenticated]);
 
     // Combined authentication status
@@ -100,25 +97,27 @@ const App = () => {
     }, []);
 
     // Callback for when Teams auth succeeds in Login component
-    const handleTeamsAuthSuccess = useCallback(async () => {
+    const handleTeamsAuthSuccess = useCallback(() => {
         logger.debug('Teams authentication successful callback');
         setIsTeamsAuthenticated(true);
 
         // Try to get user info from Teams context
-        try {
-            const context = await teamsAuthHelper.getContext();
-            if (context?.user) {
-                dispatch(
-                    setActiveUserInfo({
-                        id: context.user.id ?? 'teams-user',
-                        email: context.user.loginHint ?? context.user.userPrincipalName ?? '',
-                        username: context.user.displayName ?? context.user.loginHint ?? 'Teams User',
-                    }),
-                );
+        void (async () => {
+            try {
+                const context = await teamsAuthHelper.getContext();
+                if (context?.user) {
+                    dispatch(
+                        setActiveUserInfo({
+                            id: context.user.id || 'teams-user',
+                            email: context.user.loginHint ?? context.user.userPrincipalName ?? '',
+                            username: context.user.displayName ?? context.user.loginHint ?? 'Teams User',
+                        }),
+                    );
+                }
+            } catch (error) {
+                logger.error('Failed to get Teams context for user info:', error);
             }
-        } catch (error) {
-            logger.error('Failed to get Teams context for user info:', error);
-        }
+        })();
     }, [dispatch]);
 
     useEffect(() => {
@@ -163,7 +162,7 @@ const App = () => {
                         if (context?.user) {
                             dispatch(
                                 setActiveUserInfo({
-                                    id: context.user.id ?? `teams-${Date.now()}`,
+                                    id: context.user.id || `teams-${Date.now()}`,
                                     email: context.user.loginHint ?? context.user.userPrincipalName ?? '',
                                     username: context.user.displayName ?? context.user.loginHint ?? 'Teams User',
                                 }),
