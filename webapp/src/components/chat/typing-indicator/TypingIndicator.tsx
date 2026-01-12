@@ -1,10 +1,20 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { Image, makeStyles } from '@fluentui/react-components';
+import { Image, makeStyles, tokens } from '@fluentui/react-components';
 import React from 'react';
 import typingBalls from '../../../assets/typing-balls-light.svg';
 
 const useStyles = makeStyles({
+    container: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: tokens.spacingHorizontalS,
+    },
+    text: {
+        fontSize: tokens.fontSizeBase300,
+        color: tokens.colorNeutralForeground3,
+        fontStyle: 'italic',
+    },
     root: {
         contain: 'strict',
         height: '28px',
@@ -23,12 +33,19 @@ const useStyles = makeStyles({
     },
 });
 
-export const TypingIndicator: React.FC = () => {
+interface TypingIndicatorProps {
+    showText?: boolean;
+}
+
+export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ showText = false }) => {
     const classes = useStyles();
 
     return (
-        <div className={classes.root}>
-            <Image role="presentation" className={classes.image} src={typingBalls} />
+        <div className={classes.container}>
+            {showText && <span className={classes.text}>Mimir skriv ei melding</span>}
+            <div className={classes.root}>
+                <Image role="presentation" className={classes.image} src={typingBalls} />
+            </div>
         </div>
     );
 };

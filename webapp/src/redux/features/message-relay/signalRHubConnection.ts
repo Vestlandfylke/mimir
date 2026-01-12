@@ -12,7 +12,7 @@ import { BackendServiceUrl } from '../../../libs/services/BaseService';
 import { chatRequestQueue } from '../../../libs/services/ChatRequestQueue';
 import { logger } from '../../../libs/utils/Logger';
 import { StoreMiddlewareAPI } from '../../app/store';
-import { addAlert, setConnectionReconnected, setMaintenance } from '../app/appSlice';
+import { addAlert, removeAlertById, setConnectionReconnected, setMaintenance } from '../app/appSlice';
 import { ChatState } from '../conversations/ChatState';
 import { UpdatePluginStatePayload } from '../conversations/ConversationsState';
 
@@ -25,6 +25,7 @@ import { UpdatePluginStatePayload } from '../conversations/ConversationsState';
 const enum SignalRCallbackMethods {
     ReceiveMessage = 'ReceiveMessage',
     ReceiveMessageUpdate = 'ReceiveMessageUpdate',
+    ReceiveReasoningUpdate = 'ReceiveReasoningUpdate',
     UserJoined = 'UserJoined',
     ReceiveUserTypingState = 'ReceiveUserTypingState',
     ReceiveBotResponseStatus = 'ReceiveBotResponseStatus',
@@ -69,30 +70,81 @@ const setupSignalRConnectionToChatHub = () => {
     return hubConnection;
 };
 
+/**
+ * Remove the connection alert if it exists.
+ * Called when connection is successfully restored.
+ */
+const clearConnectionAlert = (store: StoreMiddlewareAPI) => {
+    const alerts = store.getState().app.alerts;
+    const hasConnectionAlert = alerts.some((alert) => alert.id === Constants.app.CONNECTION_ALERT_ID);
+    if (hasConnectionAlert) {
+        store.dispatch(removeAlertById(Constants.app.CONNECTION_ALERT_ID));
+        logger.debug('✓ Cleared connection alert');
+    }
+};
+
+/**
+ * Track when we last showed a connection alert to prevent spam.
+ * Only show alert again after a cooldown period.
+ */
+let lastConnectionAlertTime = 0;
+const CONNECTION_ALERT_COOLDOWN_MS = 30000; // 30 seconds cooldown between alerts
+
+/**
+ * Show connection alert only if we haven't shown one recently.
+ * Prevents alert spam when multiple disconnect detection mechanisms trigger.
+ */
+const showConnectionAlertIfNeeded = (store: StoreMiddlewareAPI) => {
+    const now = Date.now();
+
+    // Check if alert already exists
+    const alerts = store.getState().app.alerts;
+    const existingAlert = alerts.find((alert) => alert.id === Constants.app.CONNECTION_ALERT_ID);
+    if (existingAlert) {
+        logger.debug('Connection alert already visible, not showing another');
+        return;
+    }
+
+    // Check cooldown
+    if (now - lastConnectionAlertTime < CONNECTION_ALERT_COOLDOWN_MS) {
+        logger.debug('Connection alert on cooldown, not showing');
+        return;
+    }
+
+    lastConnectionAlertTime = now;
+    store.dispatch(
+        addAlert({
+            message: 'Tilkoplinga vart avbroten.',
+            type: AlertType.Warning,
+            id: Constants.app.CONNECTION_ALERT_ID,
+            showRefresh: true,
+        }),
+    );
+};
+
 const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnection, store: StoreMiddlewareAPI) => {
-    // Re-establish the connection if connection dropped
+    // onclose is called ONLY after all automatic reconnect attempts have failed
+    // This is the definitive "connection is dead" event
     hubConnection.onclose((error) => {
         if (hubConnection.state === signalR.HubConnectionState.Disconnected) {
-            store.dispatch(
-                addAlert({
-                    message: 'Tilkoplinga vart avbroten. Oppdater sida for å kople til på nytt.',
-                    type: AlertType.Warning,
-                    id: Constants.app.CONNECTION_ALERT_ID,
-                }),
-            );
-            logger.log('Connection closed', error);
+            logger.log('❌ Connection closed (all reconnect attempts failed)', error);
+            showConnectionAlertIfNeeded(store);
         }
     });
 
     hubConnection.onreconnecting((error) => {
         if (hubConnection.state === signalR.HubConnectionState.Reconnecting) {
-            logger.log('Reconnecting', error);
+            logger.log('🔄 Reconnecting...', error);
+            // Don't show alert during reconnection - wait for success or failure
         }
     });
 
     hubConnection.onreconnected((connectionId = '') => {
         if (hubConnection.state === signalR.HubConnectionState.Connected) {
-            logger.log(`🔄 Connection restored with connectionId ${connectionId}. Rejoining groups and syncing...`);
+            logger.log(`✅ Connection restored with connectionId ${connectionId}. Rejoining groups and syncing...`);
+
+            // Clear any connection alert since we're back online
+            clearConnectionAlert(store);
 
             // CRITICAL: Rejoin all chat groups after reconnection
             // Without this, the client won't receive messages because it's not in the groups
@@ -222,27 +274,49 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
             authorRole: message.authorRole,
         });
 
-        // If tokenUsage is defined, that means full message content has already been streamed and updated from server. No need to update content again.
-        const property = message.tokenUsage ? 'tokenUsage' : 'content';
-        const value = message.tokenUsage ?? content;
+        // Always update content if present
+        if (content) {
+            store.dispatch({
+                type: 'conversations/updateMessageProperty',
+                payload: {
+                    chatId,
+                    messageIdOrIndex: messageId,
+                    property: 'content',
+                    value: content,
+                    frontLoad: false, // Don't frontLoad on streaming updates - too expensive!
+                },
+            });
+        }
 
-        logger.debug(`📝 Updating message property: ${property}`, {
-            messageId,
-            valuePreview: typeof value === 'string' ? value.substring(0, 50) : value,
-        });
+        // Update tokenUsage if present (indicates final message)
+        if (message.tokenUsage) {
+            store.dispatch({
+                type: 'conversations/updateMessageProperty',
+                payload: {
+                    chatId,
+                    messageIdOrIndex: messageId,
+                    property: 'tokenUsage',
+                    value: message.tokenUsage,
+                    frontLoad: false, // Don't frontLoad again if content already did
+                },
+            });
+        }
 
-        store.dispatch({
-            type: 'conversations/updateMessageProperty',
-            payload: {
-                chatId,
-                messageIdOrIndex: messageId,
-                property,
-                value,
-                frontLoad: true,
-            },
-        });
+        // Update reasoning if present
+        if (message.reasoning) {
+            store.dispatch({
+                type: 'conversations/updateMessageProperty',
+                payload: {
+                    chatId,
+                    messageIdOrIndex: messageId,
+                    property: 'reasoning',
+                    value: message.reasoning,
+                    frontLoad: false,
+                },
+            });
+        }
 
-        // Also clear spinner on message updates from bot
+        // Clear spinner on message updates from bot
         if (message.authorRole === AuthorRoles.Bot) {
             store.dispatch({
                 type: 'conversations/updateBotResponseStatus',
@@ -293,6 +367,39 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
             logger.debug('✓ Bot response complete - spinner should clear');
         }
     });
+
+    hubConnection.on(
+        SignalRCallbackMethods.ReceiveReasoningUpdate,
+        (chatId: string, messageId: string, reasoning: string) => {
+            logger.debug('ReceiveReasoningUpdate', { chatId, messageId, reasoningLength: reasoning.length });
+
+            // Check if chat exists in store before updating
+            const conversations = store.getState().conversations.conversations;
+            if (!(chatId in conversations)) {
+                logger.warn('ReceiveReasoningUpdate: Chat not found', { chatId });
+                return;
+            }
+
+            const conversation = conversations[chatId];
+            const messageIndex = conversation.messages.findIndex((m) => m.id === messageId);
+            if (messageIndex === -1) {
+                logger.warn('ReceiveReasoningUpdate: Message not found', { messageId, chatId });
+                return;
+            }
+
+            // Update the message's reasoning property
+            store.dispatch({
+                type: 'conversations/updateMessageProperty',
+                payload: {
+                    chatId,
+                    messageIdOrIndex: messageId,
+                    property: 'reasoning',
+                    value: reasoning,
+                    frontLoad: true,
+                },
+            });
+        },
+    );
 
     hubConnection.on(SignalRCallbackMethods.GlobalDocumentUploaded, (fileNames: string, userName: string) => {
         store.dispatch(addAlert({ message: `${userName} uploaded ${fileNames} to all chats`, type: AlertType.Info }));
@@ -362,7 +469,7 @@ let storeRef: StoreMiddlewareAPI | undefined = undefined;
 // Track last activity time to detect stale connections after inactivity
 let lastActivityTime = Date.now();
 const INACTIVITY_THRESHOLD_MS = 60000; // 1 minute of inactivity triggers connection check
-const KEEPALIVE_PING_INTERVAL_MS = 30000; // Ping every 30 seconds to detect dead connections early
+const KEEPALIVE_PING_INTERVAL_MS = 45000; // Ping every 45 seconds (less aggressive to reduce false positives)
 let keepalivePingIntervalId: ReturnType<typeof setInterval> | undefined;
 
 /**
@@ -543,6 +650,7 @@ export const triggerMessageSync = () => {
 /**
  * Start a periodic keepalive ping to detect dead connections early.
  * Only pings when the page is visible to save resources.
+ * NOTE: This is a backup mechanism - SignalR's built-in keepalive should handle most cases.
  */
 const startKeepalivePing = (store: StoreMiddlewareAPI) => {
     if (keepalivePingIntervalId) {
@@ -561,12 +669,14 @@ const startKeepalivePing = (store: StoreMiddlewareAPI) => {
                 const isAlive = await pingConnection();
 
                 if (!isAlive) {
-                    logger.warn('⚠️ Keepalive ping failed - connection is dead, attempting reconnect...');
+                    logger.warn('⚠️ Keepalive ping failed - connection may be dead, attempting reconnect...');
 
                     try {
                         await conn.stop();
                         await conn.start();
                         logger.log('✅ Reconnected after keepalive ping failure');
+                        // Clear any existing connection alert
+                        clearConnectionAlert(store);
                         // Rejoin groups after manual reconnection
                         await rejoinAllChatGroups();
                         store.dispatch(setConnectionReconnected(true));
@@ -575,13 +685,8 @@ const startKeepalivePing = (store: StoreMiddlewareAPI) => {
                             '❌ Failed to reconnect after keepalive ping failure:',
                             err instanceof Error ? err.message : String(err),
                         );
-                        store.dispatch(
-                            addAlert({
-                                message: 'Tilkoplinga vart avbroten. Oppdater sida for å kople til på nytt.',
-                                type: AlertType.Warning,
-                                id: Constants.app.CONNECTION_ALERT_ID,
-                            }),
-                        );
+                        // Only show alert if reconnection failed - use the deduplication helper
+                        showConnectionAlertIfNeeded(store);
                     }
                 }
             })();
@@ -591,6 +696,7 @@ const startKeepalivePing = (store: StoreMiddlewareAPI) => {
 
 /**
  * Handle page visibility changes - check connection when user returns to tab.
+ * This is important for mobile devices where the browser may kill connections in background.
  */
 const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
     if (typeof document === 'undefined') return;
@@ -604,42 +710,44 @@ const setupVisibilityChangeHandler = (store: StoreMiddlewareAPI) => {
                 `👁️ Page became visible. Inactivity: ${Math.round(inactivityDuration / 1000)}s, Connection: ${getConnectionState()}`,
             );
 
-            // If we were inactive for a while or connection isn't healthy, verify connection with ping
-            if (wasInactiveForAWhile || !isConnectionHealthy()) {
-                logger.log('🔄 Checking connection after returning to tab...');
+            // If connection is clearly disconnected, let SignalR's automatic reconnection handle it
+            // Only manually intervene if we were inactive for a while and ping fails
+            if (
+                hubConnection.state === signalR.HubConnectionState.Disconnected ||
+                hubConnection.state === signalR.HubConnectionState.Reconnecting
+            ) {
+                logger.log('🔄 Connection is disconnected/reconnecting, letting SignalR handle it...');
+                lastActivityTime = Date.now();
+                return;
+            }
 
-                // Always do a ping check when returning after inactivity
+            // If we were inactive for a while and connection appears connected, verify with ping
+            if (wasInactiveForAWhile && hubConnection.state === signalR.HubConnectionState.Connected) {
+                logger.log('🔄 Verifying connection after extended inactivity...');
+
                 void (async () => {
-                    const isAlive =
-                        hubConnection.state === signalR.HubConnectionState.Connected && (await pingConnection());
+                    const isAlive = await pingConnection();
 
                     if (!isAlive) {
-                        logger.warn('⚠️ Connection dead after returning to tab, reconnecting...');
+                        logger.warn('⚠️ Connection dead after returning to tab, attempting reconnect...');
 
                         try {
-                            if (hubConnection.state === signalR.HubConnectionState.Connected) {
-                                await hubConnection.stop();
-                            }
-                            if (hubConnection.state === signalR.HubConnectionState.Disconnected) {
-                                await hubConnection.start();
-                            }
+                            await hubConnection.stop();
+                            await hubConnection.start();
                             logger.log('✅ Reconnected after visibility change');
+                            // Clear any existing connection alert
+                            clearConnectionAlert(store);
                             // Rejoin groups after manual reconnection
                             await rejoinAllChatGroups();
                             store.dispatch(setConnectionReconnected(true));
                         } catch (err) {
                             logger.error('❌ Failed to reconnect after visibility change:', err);
-                            store.dispatch(
-                                addAlert({
-                                    message: 'Tilkoplinga vart avbroten. Oppdater sida for å kople til på nytt.',
-                                    type: AlertType.Warning,
-                                    id: Constants.app.CONNECTION_ALERT_ID,
-                                }),
-                            );
+                            // Only show alert if reconnection failed - use the deduplication helper
+                            showConnectionAlertIfNeeded(store);
                         }
-                    } else if (wasInactiveForAWhile) {
-                        // Connection is alive but we were inactive - sync messages just in case
-                        logger.log('🔄 Triggering message sync after extended inactivity (connection verified alive)');
+                    } else {
+                        // Connection is alive - sync messages just in case we missed any
+                        logger.log('✓ Connection verified alive after inactivity, syncing messages...');
                         store.dispatch(setConnectionReconnected(true));
                     }
                 })();

@@ -41,6 +41,7 @@ import * as utils from './../../utils/TextUtils';
 import { ChatHistoryDocumentContent } from './ChatHistoryDocumentContent';
 import { ChatHistoryTextContent } from './ChatHistoryTextContent';
 import { CitationCards } from './CitationCards';
+import { ReasoningBlock } from './ReasoningBlock';
 import { UserFeedbackActions } from './UserFeedbackActions';
 
 const useClasses = makeStyles({
@@ -190,14 +191,39 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
           ? { idForColor: selectedId, color: 'colorful' }
           : { name: fullName, color: 'colorful' };
 
+    // Check if this is a bot message that is still streaming
+    // Content streaming: content is empty (waiting for response)
+    // Reasoning streaming: has reasoning but content hasn't started yet
+    const isContentStreaming = isBot && message.content.length === 0;
+    const isReasoningStreaming = isBot && !!message.reasoning && message.content.length === 0;
+
     let content: JSX.Element;
     if (isBot && message.type === ChatMessageType.Plan) {
         content = <PlanViewer message={message} messageIndex={messageIndex} />;
     } else if (message.type === ChatMessageType.Document) {
         content = <ChatHistoryDocumentContent isMe={isMe} message={message} />;
     } else {
-        content =
-            isBot && message.content.length === 0 ? <TypingIndicator /> : <ChatHistoryTextContent message={message} />;
+        // For bot messages, show reasoning block above content if available
+        const reasoningBlock =
+            isBot && message.reasoning ? (
+                <ReasoningBlock reasoning={message.reasoning} isStreaming={isReasoningStreaming} />
+            ) : null;
+
+        // Show typing indicator only when content hasn't started AND no reasoning yet
+        // When reasoning is streaming, show the reasoning block instead of typing indicator
+        const mainContent =
+            isContentStreaming && !message.reasoning ? (
+                <TypingIndicator showText />
+            ) : isContentStreaming && message.reasoning ? null : ( // Just show reasoning block, no typing indicator needed
+                <ChatHistoryTextContent message={message} />
+            );
+
+        content = (
+            <>
+                {reasoningBlock}
+                {mainContent}
+            </>
+        );
     }
 
     // TODO: [Issue #42] Persistent RLHF, hook up to model

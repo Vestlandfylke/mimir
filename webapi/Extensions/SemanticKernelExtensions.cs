@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Reflection;
 using CopilotChat.WebApi.Hubs;
@@ -39,7 +39,10 @@ internal static class SemanticKernelExtensions
     {
         builder.InitializeKernelProvider();
 
-        // Semantic Kernel (main kernel for chat responses)
+        // Model Kernel Factory - for dynamic model selection per chat
+        builder.Services.AddSingleton<ModelKernelFactory>();
+
+        // Semantic Kernel (main kernel for chat responses - uses default model)
         builder.Services.AddScoped<Kernel>(
             sp =>
             {
@@ -106,7 +109,8 @@ internal static class SemanticKernelExtensions
                 contentSafety: sp.GetService<AzureContentSafety>(),
                 logger: sp.GetRequiredService<ILogger<ChatPlugin>>(),
                 mcpPlanService: sp.GetService<McpPlanService>(),
-                telemetryService: sp.GetService<ITelemetryService>()),
+                telemetryService: sp.GetService<ITelemetryService>(),
+                modelKernelFactory: sp.GetService<ModelKernelFactory>()),
             nameof(ChatPlugin));
 
         return kernel;
@@ -121,7 +125,7 @@ internal static class SemanticKernelExtensions
     /// Register functions with the main kernel responsible for handling Chat Copilot requests.
     /// Note: MCP plugins are registered separately in ChatController after we know the chat template.
     /// </summary>
-    private static Task RegisterChatCopilotFunctionsAsync(IServiceProvider sp, Kernel kernel)
+    public static Task RegisterChatCopilotFunctionsAsync(IServiceProvider sp, Kernel kernel)
     {
         // Chat Copilot functions
         kernel.RegisterChatPlugin(sp);

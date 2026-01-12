@@ -8,6 +8,7 @@ import {
     Spinner,
     Tooltip,
     makeStyles,
+    mergeClasses,
     shorthands,
     tokens,
 } from '@fluentui/react-components';
@@ -36,6 +37,18 @@ interface MermaidConfig {
         boxMargin?: number;
         noteMargin?: number;
         messageMargin?: number;
+    };
+    xyChart?: {
+        titleColor?: string;
+        xAxisLabelColor?: string;
+        xAxisTitleColor?: string;
+        xAxisTickColor?: string;
+        xAxisLineColor?: string;
+        yAxisLabelColor?: string;
+        yAxisTitleColor?: string;
+        yAxisTickColor?: string;
+        yAxisLineColor?: string;
+        plotColorPalette?: string;
     };
 }
 interface MermaidAPI {
@@ -68,7 +81,11 @@ const DARK_TEXT = '#333333';
 const LIGHT_TEXT = '#ffffff';
 
 // Build theme variables for pie charts, flowcharts, etc.
-const buildVestlandThemeVariables = () => {
+// isDark parameter allows adapting colors for dark mode backgrounds
+const buildVestlandThemeVariables = (isDark = false) => {
+    // In dark mode, use light text for elements that appear on the container background
+    const containerTextColor = isDark ? LIGHT_TEXT : DARK_TEXT;
+    const containerBgColor = isDark ? '#1f1f1f' : '#ffffff';
     const themeVariables: Record<string, string> = {
         // Primary colors - Light cyan with dark text (for state diagrams, flowcharts)
         primaryColor: VESTLAND_COLORS[0], // Light cyan
@@ -82,39 +99,38 @@ const buildVestlandThemeVariables = () => {
         tertiaryColor: VESTLAND_COLORS[8], // Light pink
         tertiaryTextColor: DARK_TEXT,
         tertiaryBorderColor: '#d89aab',
-        // Background
-        background: '#ffffff',
-        mainBkg: '#ffffff',
-        // Line colors
-        lineColor: '#444444',
-        // Text colors - for general text elements
-        textColor: DARK_TEXT,
-        titleColor: DARK_TEXT,
+        // Background - adapts to dark mode
+        background: containerBgColor,
+        mainBkg: containerBgColor,
+        // Line colors - lighter in dark mode for visibility
+        lineColor: isDark ? '#888888' : '#444444',
+        // Text colors - for general text elements on the container background
+        textColor: containerTextColor,
+        titleColor: containerTextColor,
 
         // === PIE CHART ===
-        // Note: Mermaid doesn't support per-slice text colors, so we use dark text
-        // which works better with most of our light colors
-        pieTitleTextColor: DARK_TEXT,
-        pieLegendTextColor: DARK_TEXT,
-        pieSectionTextColor: DARK_TEXT, // Dark text works on most Vestland colors
-        pieStrokeColor: '#ffffff',
+        // Title and legend text must adapt to container background (dark mode)
+        pieTitleTextColor: containerTextColor,
+        pieLegendTextColor: containerTextColor,
+        pieSectionTextColor: DARK_TEXT, // Dark text works on most Vestland colors (on slices)
+        pieStrokeColor: isDark ? '#333333' : '#ffffff',
         pieStrokeWidth: '2px',
         pieOuterStrokeWidth: '2px',
 
         // === FLOWCHART ===
-        nodeBorder: '#666666',
+        nodeBorder: isDark ? '#888888' : '#666666',
         nodeTextColor: DARK_TEXT, // Dark text for readability on light node backgrounds
-        clusterBkg: '#f5f5f5',
-        clusterBorder: '#999999',
-        defaultLinkColor: '#666666',
-        edgeLabelBackground: '#ffffff',
+        clusterBkg: isDark ? '#2a2a2a' : '#f5f5f5',
+        clusterBorder: isDark ? '#666666' : '#999999',
+        defaultLinkColor: isDark ? '#888888' : '#666666',
+        edgeLabelBackground: containerBgColor,
 
         // === SEQUENCE DIAGRAM ===
         actorTextColor: LIGHT_TEXT, // Teal background (dark)
-        actorBorder: '#666666',
+        actorBorder: isDark ? '#888888' : '#666666',
         actorBkg: VESTLAND_COLORS[4], // Teal (dark)
-        signalTextColor: DARK_TEXT,
-        signalColor: '#666666',
+        signalTextColor: containerTextColor, // Signal labels on container
+        signalColor: isDark ? '#888888' : '#666666',
         activationBkgColor: VESTLAND_COLORS[0], // Light cyan
         activationBorderColor: '#7ac5d4',
 
@@ -122,13 +138,15 @@ const buildVestlandThemeVariables = () => {
         sectionBkgColor: VESTLAND_COLORS[0], // Light cyan
         sectionBkgColor2: VESTLAND_COLORS[1], // Light purple
         taskTextColor: LIGHT_TEXT, // Teal background (dark)
-        taskTextOutsideColor: DARK_TEXT,
+        taskTextOutsideColor: containerTextColor, // Text outside tasks on container
         taskTextDarkColor: LIGHT_TEXT,
         taskTextLightColor: DARK_TEXT,
         taskBkgColor: VESTLAND_COLORS[4], // Teal (dark)
         activeTaskBkgColor: VESTLAND_COLORS[7], // Orange/red (dark)
         doneTaskBkgColor: VESTLAND_COLORS[10], // Sage (dark)
         critBkgColor: VESTLAND_COLORS[2], // Pink (dark)
+        gridColor: isDark ? '#444444' : '#cccccc',
+        todayLineColor: isDark ? '#ff6666' : '#cc0000',
 
         // === QUADRANT CHART ===
         quadrant1Fill: VESTLAND_COLORS[4], // Teal (dark) - top right
@@ -141,9 +159,10 @@ const buildVestlandThemeVariables = () => {
         quadrant4TextFill: DARK_TEXT, // Dark on light purple
         quadrantPointFill: VESTLAND_COLORS[7], // Orange/red for points
         quadrantPointTextFill: LIGHT_TEXT,
-        quadrantTitleFill: DARK_TEXT,
-        quadrantXAxisTextFill: DARK_TEXT,
-        quadrantYAxisTextFill: DARK_TEXT,
+        // Axis and title text - on container background, must adapt to dark mode
+        quadrantTitleFill: containerTextColor,
+        quadrantXAxisTextFill: containerTextColor,
+        quadrantYAxisTextFill: containerTextColor,
 
         // === TIMELINE ===
         // Use darker colors for better text contrast
@@ -179,17 +198,17 @@ const buildVestlandThemeVariables = () => {
         // === STATE DIAGRAM ===
         // State diagrams use primary colors, so we override specifically for states
         stateBkg: VESTLAND_COLORS[0], // Light cyan background
-        stateLabelColor: DARK_TEXT, // Dark text for labels
-        compositeBackground: '#f5f5f5',
-        compositeBorder: '#666666',
+        stateLabelColor: DARK_TEXT, // Dark text for labels (on light node background)
+        compositeBackground: isDark ? '#2a2a2a' : '#f5f5f5',
+        compositeBorder: isDark ? '#888888' : '#666666',
         compositeTitleBackground: VESTLAND_COLORS[0],
-        stateBorder: '#666666',
+        stateBorder: isDark ? '#888888' : '#666666',
         innerEndBackground: VESTLAND_COLORS[4],
-        specialStateColor: DARK_TEXT,
-        labelColor: DARK_TEXT,
-        altBackground: '#f5f5f5',
-        transitionColor: '#666666',
-        transitionLabelColor: DARK_TEXT,
+        specialStateColor: containerTextColor,
+        labelColor: containerTextColor, // Labels on container background
+        altBackground: isDark ? '#2a2a2a' : '#f5f5f5',
+        transitionColor: isDark ? '#888888' : '#666666',
+        transitionLabelColor: containerTextColor, // Transition labels on container
 
         // === ER DIAGRAM ===
         attributeBackgroundColorOdd: '#f5f5f5',
@@ -203,12 +222,14 @@ const buildVestlandThemeVariables = () => {
         fillType3: VESTLAND_COLORS[10], // Sage
         fillType4: VESTLAND_COLORS[6], // Orange
 
-        // General labels
-        labelTextColor: DARK_TEXT,
-        loopTextColor: DARK_TEXT,
+        // General labels - must adapt to container background
+        labelTextColor: containerTextColor,
+        loopTextColor: containerTextColor,
         noteBkgColor: VESTLAND_COLORS[3], // Yellow
         noteTextColor: DARK_TEXT, // Dark text on yellow
         noteBorderColor: '#c8c040',
+
+        // Note: XY Chart colors are set in the xyChart config section, not themeVariables
     };
 
     // Add pie chart colors (pie1 through pie12)
@@ -219,18 +240,30 @@ const buildVestlandThemeVariables = () => {
     return themeVariables;
 };
 
-// Cached mermaid instance - import once, reuse forever
+// Cached mermaid instance - reinitialize when dark mode changes
 let mermaidPromise: Promise<MermaidAPI> | null = null;
-const getMermaid = async (): Promise<MermaidAPI> => {
+let currentDarkMode: boolean | null = null;
+
+const getMermaid = async (isDark = false): Promise<MermaidAPI> => {
+    // Reinitialize if dark mode changed
+    if (mermaidPromise && currentDarkMode !== isDark) {
+        mermaidPromise = null;
+    }
+
     if (!mermaidPromise) {
+        currentDarkMode = isDark;
         mermaidPromise = (async () => {
             const mermaidModule = (await import('mermaid')) as unknown as { default: MermaidAPI };
             const mermaid = mermaidModule.default;
+            // XY Chart colors - must be set in config, not themeVariables
+            const xyChartTextColor = isDark ? '#ffffff' : '#333333';
+            const xyChartLineColor = isDark ? '#666666' : '#cccccc';
+
             mermaid.initialize({
                 startOnLoad: false,
                 securityLevel: 'strict',
                 theme: 'base',
-                themeVariables: buildVestlandThemeVariables(),
+                themeVariables: buildVestlandThemeVariables(isDark),
                 // Layout configuration to reduce text overlap
                 flowchart: {
                     nodeSpacing: 50, // More horizontal space between nodes
@@ -247,6 +280,18 @@ const getMermaid = async (): Promise<MermaidAPI> => {
                     boxMargin: 10,
                     noteMargin: 10,
                     messageMargin: 35,
+                },
+                xyChart: {
+                    titleColor: xyChartTextColor,
+                    xAxisLabelColor: xyChartTextColor,
+                    xAxisTitleColor: xyChartTextColor,
+                    xAxisTickColor: xyChartTextColor,
+                    xAxisLineColor: xyChartLineColor,
+                    yAxisLabelColor: xyChartTextColor,
+                    yAxisTitleColor: xyChartTextColor,
+                    yAxisTickColor: xyChartTextColor,
+                    yAxisLineColor: xyChartLineColor,
+                    plotColorPalette: VESTLAND_COLORS.join(','),
                 },
             });
             return mermaid;
@@ -437,6 +482,30 @@ const useClasses = makeStyles({
             display: 'block',
         },
     },
+    // Dark mode overrides for SVG text - Mermaid doesn't always respect theme config
+    scrollDarkMode: {
+        // Force light text colors for all chart text elements in dark mode
+        '& svg text': {
+            fill: '#ffffff !important',
+        },
+        // Keep dark text for elements that are on light-colored backgrounds (nodes, slices, etc.)
+        '& svg .node text': {
+            fill: '#333333 !important',
+        },
+        '& svg .pieCircle + text': {
+            fill: '#333333 !important',
+        },
+        '& svg .slice text': {
+            fill: '#333333 !important',
+        },
+        '& svg .actor-man text': {
+            fill: '#ffffff !important',
+        },
+        // Task text inside colored bars
+        '& svg .task text': {
+            fill: '#ffffff !important',
+        },
+    },
     loading: {
         display: 'flex',
         alignItems: 'center',
@@ -454,6 +523,7 @@ const useClasses = makeStyles({
 
 export interface MermaidBlockProps {
     code: string;
+    isDark?: boolean;
 }
 
 // Debounce delay in ms - wait for streaming to settle before rendering
@@ -474,15 +544,16 @@ const JPG_RESOLUTION_OPTIONS: ResolutionOption[] = [
     { label: 'Maksimal (8x)', description: 'Høgaste kvalitet', scale: 8 },
 ];
 
-export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
+export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code, isDark = false }) => {
     const classes = useClasses();
     const [svg, setSvg] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [isRendering, setIsRendering] = useState(false);
     const [downloading, setDownloading] = useState(false);
 
-    // Track the last successfully rendered code to avoid re-rendering same content
+    // Track the last successfully rendered code and dark mode to avoid re-rendering same content
     const lastRenderedCodeRef = useRef<string>('');
+    const lastDarkModeRef = useRef<boolean>(isDark);
     // Stable diagram ID per component instance
     const diagramIdRef = useRef<string>(`mermaid-${++diagramIdCounter}`);
     // Debounce timer ref
@@ -499,8 +570,11 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
         }
         cancelledRef.current = false;
 
-        // Skip if code hasn't changed from last successful render
-        if (normalized === lastRenderedCodeRef.current) {
+        // Check if dark mode changed - force re-render if so
+        const darkModeChanged = lastDarkModeRef.current !== isDark;
+
+        // Skip if code hasn't changed from last successful render AND dark mode is the same
+        if (normalized === lastRenderedCodeRef.current && !darkModeChanged) {
             return;
         }
 
@@ -510,6 +584,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
             setError('');
             setIsRendering(false);
             lastRenderedCodeRef.current = '';
+            lastDarkModeRef.current = isDark;
             return;
         }
 
@@ -523,7 +598,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
                 setError('');
 
                 try {
-                    const mermaid = await getMermaid();
+                    const mermaid = await getMermaid(isDark);
                     // Use a unique ID for each render attempt to avoid Mermaid's ID collision warnings
                     const renderId = `${diagramIdRef.current}-${Date.now()}`;
                     const result = await mermaid.render(renderId, normalized);
@@ -534,6 +609,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
                         setSvg(adjustedSvg);
                         setError('');
                         lastRenderedCodeRef.current = normalized;
+                        lastDarkModeRef.current = isDark;
                     }
                 } catch (e) {
                     const message = e instanceof Error ? e.message : String(e);
@@ -558,7 +634,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
                 clearTimeout(debounceTimerRef.current);
             }
         };
-    }, [normalized]);
+    }, [normalized, isDark]);
 
     // Download as SVG (vector format - infinitely scalable)
     const downloadSvg = () => {
@@ -767,7 +843,10 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code }) => {
                     <span>Teiknar diagram...</span>
                 </div>
             ) : (
-                <div className={classes.scroll} dangerouslySetInnerHTML={{ __html: svg }} />
+                <div
+                    className={mergeClasses(classes.scroll, isDark && classes.scrollDarkMode)}
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                />
             )}
         </div>
     );

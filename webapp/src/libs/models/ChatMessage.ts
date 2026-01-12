@@ -67,4 +67,9 @@ export interface IChatMessage {
     // TODO: [Issue #42] Persistent RLHF
     userFeedback?: UserFeedback;
     tokenUsage?: TokenUsage;
+    /**
+     * Reasoning/thinking content for models that support it.
+     * Contains the model's step-by-step thought process.
+     */
+    reasoning?: string;
 }

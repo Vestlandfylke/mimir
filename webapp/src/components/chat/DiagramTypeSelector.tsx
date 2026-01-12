@@ -340,20 +340,24 @@ SYNTAKS:
         label: 'Kanban',
         description: 'Vis oppgåvetavle med kolonnar og status',
         icon: <TbLayoutKanban />,
-        prompt: `Lag eit Mermaid kanban-diagram. VIKTIG: Skriv alltid på Nynorsk og start med "kanban". Syntaks-døme:
+        prompt: `Lag eit Mermaid kanban-diagram. VIKTIG: Skriv alltid på Nynorsk og start med "kanban". KRITISK SYNTAKS:
+- Kolonnar MÅ ha id og firkantparentes: col1[Kolonnetittel]
+- Oppgåver MÅ ha ekstra innrykk under kolonnen: oppg1[Oppgåvetekst]
+
+Korrekt syntaks-døme:
 
 kanban
-    Å gjere
-        oppg1[Planlegg møte]
-        oppg2[Skriv rapport]
-    I arbeid
-        oppg3[Utvikle funksjon]
-    Til godkjenning
-        oppg4[Teste løysing]
-    Ferdig
-        oppg5[Dokumentasjon]
+  todo[Å gjere]
+    oppg1[Planlegg møte]
+    oppg2[Skriv rapport]
+  prog[I arbeid]
+    oppg3[Utvikle funksjon]
+  review[Til godkjenning]
+    oppg4[Teste løysing]
+  done[Ferdig]
+    oppg5[Dokumentasjon]
 
-Kolonnenamn utan firkantparentesar, oppgåver med id[tekst].`,
+FEIL: Kolonnenamn utan firkantparentes vil gi syntaksfeil!`,
     },
     {
         id: 'pie',

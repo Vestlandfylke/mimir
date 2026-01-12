@@ -1,8 +1,9 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CopilotChat.WebApi.Auth;
 using CopilotChat.WebApi.Hubs;
 using CopilotChat.WebApi.Models.Response;
@@ -86,6 +87,20 @@ public class ChatPlugin
     private readonly ITelemetryService? _telemetryService;
 
     /// <summary>
+    /// Factory for creating model-specific kernels and getting model configuration.
+    /// </summary>
+    private readonly ModelKernelFactory? _modelKernelFactory;
+
+    /// <summary>
+    /// Regex pattern to extract thinking/reasoning content from model responses.
+    /// Matches content within &lt;thinking&gt;...&lt;/thinking&gt; tags.
+    /// </summary>
+    private static readonly Regex s_thinkingTagRegex = new(@"<thinking>(.*?)</thinking>", RegexOptions.Singleline | RegexOptions.Compiled);
+
+
+
+
+    /// <summary>
     /// Create a new instance of <see cref="ChatPlugin"/>.
     /// </summary>
     public ChatPlugin(
@@ -100,7 +115,8 @@ public class ChatPlugin
         ILogger logger,
         AzureContentSafety? contentSafety = null,
         McpPlanService? mcpPlanService = null,
-        ITelemetryService? telemetryService = null)
+        ITelemetryService? telemetryService = null,
+        ModelKernelFactory? modelKernelFactory = null)
     {
         this._logger = logger;
         this._kernel = kernel;
@@ -116,6 +132,7 @@ public class ChatPlugin
         this._contentSafety = contentSafety;
         this._mcpPlanService = mcpPlanService;
         this._telemetryService = telemetryService;
+        this._modelKernelFactory = modelKernelFactory;
     }
 
     /// <summary>
@@ -350,6 +367,19 @@ public class ChatPlugin
         var promptTemplate = promptTemplateFactory.Create(new PromptTemplateConfig(this._promptOptions.SystemPersona));
         var systemPersona = await promptTemplate.RenderAsync(this._kernel, context, cancellationToken);
 
+        // 3. Add reasoning instruction if model supports it
+        // IMPORTANT: Place at the START of the prompt - models pay more attention to beginnings
+        ChatSession? chatSession = null;
+        await this._chatSessionRepository.TryFindByIdAsync(chatId, callback: v => chatSession = v);
+        if (chatSession != null && this.IsReasoningEnabled(chatSession.ModelId))
+        {
+            var effort = this.GetReasoningEffort(chatSession.ModelId);
+            this._logger.LogInformation("Reasoning mode enabled for chat {ChatId} with model {ModelId}, effort level: {Effort}",
+                chatId, chatSession.ModelId, effort);
+            // Prepend reasoning instruction at the very start for maximum visibility
+            systemPersona = this.GetReasoningInstruction(effort) + "\n\n" + systemPersona;
+        }
+
         // Combine: Static prefix first (for optimal caching), then session-specific content
         if (!string.IsNullOrWhiteSpace(cachePrefix))
         {
@@ -380,7 +410,7 @@ public class ChatPlugin
         string? userIntent = null)
     {
         // Get bot response and stream to client
-        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
+        // Note: Status message is set inside StreamResponseToClientAsync based on model type
         CopilotChatMessage chatMessage = await AsyncUtils.SafeInvokeAsync(
             () => this.StreamResponseToClientAsync(chatId, userId, promptView, cancellationToken, citations, userIntent), nameof(this.StreamResponseToClientAsync));
 
@@ -612,9 +642,10 @@ public class ChatPlugin
     /// </summary>
     /// <param name="requireApproval">If true, enables kernel functions without auto-invoke to allow plan approval.</param>
     /// <param name="chatId">Optional chat ID used as the User parameter to improve cache routing.</param>
-    private AzureOpenAIPromptExecutionSettings CreateChatRequestSettings(bool requireApproval = false, string? chatId = null)
+    /// <param name="modelId">Optional model ID to check for native reasoning support.</param>
+    private AzureOpenAIPromptExecutionSettings CreateChatRequestSettings(bool requireApproval = false, string? chatId = null, string? modelId = null)
     {
-        return new AzureOpenAIPromptExecutionSettings
+        var settings = new AzureOpenAIPromptExecutionSettings
         {
 #pragma warning disable SKEXP0010 // Experimental flag required for GPT-5.x max_completion_tokens support
             SetNewMaxCompletionTokensEnabled = true,
@@ -635,6 +666,26 @@ public class ChatPlugin
             // are more likely to hit the cache for the shared system prompt prefix.
             User = chatId
         };
+
+        // For native reasoning models, set the ReasoningEffort parameter
+        // This is used by o3-mini, o1, o3, and similar models that have built-in reasoning
+        // Note: Native reasoning models do NOT stream their thinking - they think internally first
+        if (!string.IsNullOrEmpty(modelId) && this._modelKernelFactory != null)
+        {
+            var modelConfig = this._modelKernelFactory.GetModelConfig(modelId);
+            if (modelConfig?.SupportsReasoning == true && !string.IsNullOrEmpty(modelConfig.ReasoningEffort))
+            {
+                // Map our config values to SK's expected format
+                // SK expects: "low", "medium", "high" (case may vary by version)
+#pragma warning disable SKEXP0010 // ReasoningEffort is experimental
+                settings.ReasoningEffort = modelConfig.ReasoningEffort.ToLowerInvariant();
+#pragma warning restore SKEXP0010
+                this._logger.LogDebug("Set native ReasoningEffort={Effort} for model {ModelId}",
+                    settings.ReasoningEffort, modelId);
+            }
+        }
+
+        return settings;
     }
 
     /// <summary>
@@ -724,21 +775,37 @@ public class ChatPlugin
     {
         var chatCompletion = this._kernel.GetRequiredService<IChatCompletionService>();
 
-        // Check if MCP plan approval is required
-        bool requireApproval = this._mcpPlanService?.AnyServerRequiresApproval() ?? false;
+        // Check if reasoning mode is enabled for the current model (check early, before any branching)
+        ChatSession? chatSession = null;
+        await this._chatSessionRepository.TryFindByIdAsync(chatId, callback: v => chatSession = v);
+        bool isReasoningMode = this.IsReasoningEnabled(chatSession?.ModelId);
 
-        if (requireApproval)
+        // For reasoning models, show "thinking" status since they take time before responding
+        if (isReasoningMode)
         {
-            // Use non-streaming to detect function calls for plan approval
-            return await this.GetResponseWithPlanApprovalAsync(
-                chatId, userId, prompt, chatCompletion, cancellationToken, citations, userIntent);
+            this._logger.LogWarning("🧠🧠🧠 REASONING MODE ENABLED - ModelId: {ModelId}", chatSession?.ModelId);
+            await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir tenkjer...", cancellationToken);
+        }
+        else
+        {
+            this._logger.LogDebug("📝 Standard mode (no reasoning) - ModelId: {ModelId}", chatSession?.ModelId);
         }
 
+        // MCP plan approval is disabled for now - all models use streaming
+        // TODO: Re-enable MCP plan approval when MCP tools are implemented
+        // bool requireApproval = this._mcpPlanService?.AnyServerRequiresApproval() ?? false;
+        // if (requireApproval)
+        // {
+        //     this._logger.LogDebug("MCP plan approval required - using non-streaming path");
+        //     return await this.GetResponseWithPlanApprovalAsync(
+        //         chatId, userId, prompt, chatCompletion, cancellationToken, citations, userIntent, isReasoningMode);
+        // }
+
         // Standard streaming response (auto-invoke functions)
-        // Pass chatId to improve prompt cache routing
+        // Pass chatId to improve prompt cache routing, and modelId for native reasoning support
         var stream = chatCompletion.GetStreamingChatMessageContentsAsync(
             prompt.MetaPromptTemplate,
-            this.CreateChatRequestSettings(requireApproval: false, chatId: chatId),
+            this.CreateChatRequestSettings(requireApproval: false, chatId: chatId, modelId: chatSession?.ModelId),
             this._kernel,
             cancellationToken);
 
@@ -752,12 +819,37 @@ public class ChatPlugin
             citations
         );
 
-        // Stream the message to the client
+        // Collect full response (no streaming to client)
+        var fullResponse = new System.Text.StringBuilder();
         await foreach (var contentPiece in stream)
         {
-            chatMessage.Content += contentPiece;
-            await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+            fullResponse.Append(contentPiece);
         }
+        
+        var responseContent = fullResponse.ToString();
+        
+        // Extract reasoning if present
+        if (isReasoningMode && responseContent.Contains("<thinking>", StringComparison.OrdinalIgnoreCase))
+        {
+            var (reasoning, cleanContent) = ParseReasoningFromResponse(responseContent);
+            if (reasoning != null)
+            {
+                chatMessage.Reasoning = reasoning;
+                chatMessage.Content = cleanContent;
+                await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
+            }
+            else
+            {
+                chatMessage.Content = responseContent;
+            }
+        }
+        else
+        {
+            chatMessage.Content = responseContent;
+        }
+        
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
+        await this.UpdateMessageOnClient(chatMessage, cancellationToken);
 
         return chatMessage;
     }
@@ -773,7 +865,8 @@ public class ChatPlugin
         IChatCompletionService chatCompletion,
         CancellationToken cancellationToken,
         IEnumerable<CitationSource>? citations = null,
-        string? userIntent = null)
+        string? userIntent = null,
+        bool isReasoningMode = false)
     {
         // Get response without auto-invoking functions
         // Pass chatId to improve prompt cache routing
@@ -831,6 +924,37 @@ public class ChatPlugin
 
         // No MCP tools requiring approval - return the response content directly
         var responseContent = result.Content ?? string.Empty;
+        string? reasoning = null;
+
+        // Log response for debugging
+        this._logger.LogDebug("Response from model (first 500 chars): {Content}",
+            responseContent.Length > 500 ? responseContent.Substring(0, 500) : responseContent);
+
+        // If reasoning mode, parse <thinking> tags from response
+        if (isReasoningMode)
+        {
+            // Check for thinking tags (case-insensitive)
+            bool hasThinkingTag = responseContent.Contains("<thinking>", StringComparison.OrdinalIgnoreCase);
+            this._logger.LogInformation("Reasoning mode: checking for <thinking> tags. Found: {Found}", hasThinkingTag);
+
+            if (hasThinkingTag)
+            {
+                var (extractedReasoning, cleanContent) = ParseReasoningFromResponse(responseContent);
+                if (extractedReasoning != null)
+                {
+                    reasoning = extractedReasoning;
+                    responseContent = cleanContent;
+                    this._logger.LogInformation("✅ Reasoning extracted from response: {Length} chars", reasoning.Length);
+                }
+            }
+            else
+            {
+                this._logger.LogWarning("⚠️ Reasoning mode enabled but no <thinking> tags found in response");
+            }
+        }
+
+        // Update status - now writing the response
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
 
         // Create message on client
         var normalMessage = await this.CreateBotMessageOnClient(
@@ -841,6 +965,13 @@ public class ChatPlugin
             cancellationToken,
             citations
         );
+
+        // Set reasoning if extracted
+        if (reasoning != null)
+        {
+            normalMessage.Reasoning = reasoning;
+            await this.UpdateReasoningOnClientAsync(chatId, normalMessage.Id, reasoning, cancellationToken);
+        }
 
         // If there are non-MCP function calls, we need to handle them with auto-invoke
         if (functionCalls.Count > 0)
@@ -925,12 +1056,7 @@ public class ChatPlugin
     /// <param name="cancellationToken">The cancellation token.</param>
     private async Task UpdateMessageOnClient(CopilotChatMessage message, CancellationToken cancellationToken)
     {
-        this._logger.LogWarning("🔵 SIGNALR: Sending ReceiveMessageUpdate for chatId: {ChatId}, messageId: {MessageId}, contentLength: {ContentLength}",
-            message.ChatId, message.Id, message.Content?.Length ?? 0);
-
         await this._messageRelayHubContext.Clients.Group(message.ChatId).SendAsync("ReceiveMessageUpdate", message, cancellationToken);
-
-        this._logger.LogWarning("✅ SIGNALR: Successfully sent ReceiveMessageUpdate for chatId: {ChatId}", message.ChatId);
     }
 
     /// <summary>
@@ -1054,6 +1180,326 @@ public class ChatPlugin
             throw new ArgumentException("Chat session does not exist.");
         }
 
-        this._promptOptions.SystemDescription = chatSession!.SafeSystemDescription;
+        var systemDescription = chatSession!.SafeSystemDescription;
+
+        // Note: Reasoning instructions are added in RenderSystemInstructionsAsync, not here
+        // This keeps the intent extraction prompt clean (without reasoning tags)
+        this._promptOptions.SystemDescription = systemDescription;
+    }
+
+    /// <summary>
+    /// Get the reasoning effort level for the given model.
+    /// </summary>
+    /// <param name="modelId">The model ID to check.</param>
+    /// <returns>The reasoning effort level (low, medium, high). Defaults to medium.</returns>
+    private string GetReasoningEffort(string? modelId)
+    {
+        if (string.IsNullOrEmpty(modelId) || this._modelKernelFactory == null)
+        {
+            return "medium";
+        }
+
+        var modelConfig = this._modelKernelFactory.GetModelConfig(modelId);
+        var effort = modelConfig?.ReasoningEffort?.ToLowerInvariant() ?? "medium";
+
+        // Validate effort level
+        return effort switch
+        {
+            "low" => "low",
+            "high" => "high",
+            _ => "medium"
+        };
+    }
+
+    /// <summary>
+    /// Get the appropriate reasoning instruction based on effort level.
+    /// Uses prompts configured in appsettings.json under Prompts section.
+    /// </summary>
+    /// <param name="effort">The effort level (low, medium, high).</param>
+    /// <returns>The reasoning instruction string.</returns>
+    private string GetReasoningInstruction(string effort)
+    {
+        return effort switch
+        {
+            "low" => this._promptOptions.ReasoningInstructionLow,
+            "high" => this._promptOptions.ReasoningInstructionHigh,
+            _ => this._promptOptions.ReasoningInstructionMedium
+        };
+    }
+
+    /// <summary>
+    /// Check if reasoning is enabled for the given model.
+    /// </summary>
+    /// <param name="modelId">The model ID to check.</param>
+    /// <returns>True if reasoning is enabled for this model.</returns>
+    private bool IsReasoningEnabled(string? modelId)
+    {
+        if (string.IsNullOrEmpty(modelId) || this._modelKernelFactory == null)
+        {
+            return false;
+        }
+
+        var modelConfig = this._modelKernelFactory.GetModelConfig(modelId);
+        return modelConfig?.SupportsReasoning == true;
+    }
+
+    /// <summary>
+    /// Parse reasoning/thinking content from the model response.
+    /// Extracts content within &lt;thinking&gt;...&lt;/thinking&gt; tags and returns
+    /// both the reasoning and the clean response.
+    /// </summary>
+    /// <param name="fullResponse">The full response from the model.</param>
+    /// <returns>A tuple of (reasoning, cleanContent) where reasoning is null if not found.</returns>
+    private static (string? Reasoning, string CleanContent) ParseReasoningFromResponse(string fullResponse)
+    {
+        var match = s_thinkingTagRegex.Match(fullResponse);
+        if (!match.Success)
+        {
+            return (null, fullResponse);
+        }
+
+        var reasoning = match.Groups[1].Value.Trim();
+        var cleanContent = s_thinkingTagRegex.Replace(fullResponse, string.Empty).Trim();
+
+        return (reasoning, cleanContent);
+    }
+
+    /// <summary>
+    /// Stream response with native reasoning content extraction.
+    /// GPT-5.2 and o-series models may return reasoning in their Items collection.
+    /// Falls back to &lt;thinking&gt; tag parsing if no native reasoning is found.
+    /// </summary>
+    private async Task StreamWithNativeReasoningAsync(
+        string chatId,
+        CopilotChatMessage chatMessage,
+        IAsyncEnumerable<StreamingChatMessageContent> stream,
+        CancellationToken cancellationToken)
+    {
+        var reasoningBuffer = new System.Text.StringBuilder();
+        var contentBuffer = new System.Text.StringBuilder();
+        var lastUpdateTime = DateTime.UtcNow;
+        var updateInterval = TimeSpan.FromMilliseconds(100);
+        bool foundNativeReasoning = false;
+        bool firstChunkReceived = false;
+        int lastReasoningLength = 0;
+
+        await foreach (var chunk in stream)
+        {
+            // When first chunk arrives, update status from "thinking" to "writing"
+            if (!firstChunkReceived)
+            {
+                firstChunkReceived = true;
+                await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
+            }
+
+            // Check for native reasoning content in Items (GPT-5.2, o-series)
+            if (chunk.Items != null)
+            {
+                foreach (var item in chunk.Items)
+                {
+                    var itemType = item.GetType().Name;
+
+                    // Check for reasoning content types (native reasoning from GPT-5.2/o-series)
+                    if (itemType.Contains("Reasoning", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foundNativeReasoning = true;
+                        var reasoningText = item.ToString() ?? string.Empty;
+                        reasoningBuffer.Append(reasoningText);
+
+                        // Send reasoning update (throttled)
+                        var now = DateTime.UtcNow;
+                        if (now - lastUpdateTime >= updateInterval && reasoningBuffer.Length > lastReasoningLength + 10)
+                        {
+                            chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
+                            await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
+                            lastReasoningLength = reasoningBuffer.Length;
+                            lastUpdateTime = now;
+                        }
+                    }
+                    else if (itemType.Contains("Text", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Text content item
+                        contentBuffer.Append(item.ToString());
+                    }
+                }
+            }
+
+            // Also append the chunk's text content directly
+            var chunkText = chunk.Content;
+            if (!string.IsNullOrEmpty(chunkText))
+            {
+                contentBuffer.Append(chunkText);
+
+                // Update message content (throttled)
+                var now = DateTime.UtcNow;
+                if (now - lastUpdateTime >= updateInterval)
+                {
+                    chatMessage.Content = contentBuffer.ToString().Trim();
+                    await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+                    lastUpdateTime = now;
+                }
+            }
+        }
+
+        // Send final reasoning if found
+        if (foundNativeReasoning && reasoningBuffer.Length > 0)
+        {
+            chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
+            await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
+            this._logger.LogInformation("Native reasoning extracted: {Length} chars", chatMessage.Reasoning.Length);
+        }
+
+        // Send final content
+        if (contentBuffer.Length > 0)
+        {
+            chatMessage.Content = contentBuffer.ToString().Trim();
+            await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+        }
+
+        // If no native reasoning found, the content might contain <thinking> tags - try parsing
+        if (!foundNativeReasoning && chatMessage.Content?.Contains("<thinking>") == true)
+        {
+            this._logger.LogDebug("No native reasoning found, checking for <thinking> tags");
+            var (reasoning, cleanContent) = ParseReasoningFromResponse(chatMessage.Content);
+            if (reasoning != null)
+            {
+                chatMessage.Reasoning = reasoning;
+                chatMessage.Content = cleanContent;
+                await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
+                await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stream response with real-time &lt;thinking&gt; tag extraction.
+    /// Tags are extracted as they arrive - never shown in main content.
+    /// Batched updates to reduce UI thrashing.
+    /// </summary>
+    private async Task StreamWithReasoningExtractionAsync(
+        string chatId,
+        CopilotChatMessage chatMessage,
+        IAsyncEnumerable<StreamingChatMessageContent> stream,
+        CancellationToken cancellationToken)
+    {
+        var rawBuffer = new System.Text.StringBuilder();
+        var reasoningBuffer = new System.Text.StringBuilder();
+        var contentBuffer = new System.Text.StringBuilder();
+        
+        bool insideThinking = false;
+        bool thinkingComplete = false;
+        int updateCounter = 0;
+        const int UpdateFrequency = 5; // Update every N chunks
+
+        await foreach (var contentPiece in stream)
+        {
+            rawBuffer.Append(contentPiece);
+            updateCounter++;
+            
+            var raw = rawBuffer.ToString();
+
+            // Look for opening tag
+            if (!insideThinking && !thinkingComplete)
+            {
+                int openIdx = raw.IndexOf("<thinking>", StringComparison.OrdinalIgnoreCase);
+                if (openIdx >= 0)
+                {
+                    insideThinking = true;
+                    contentBuffer.Append(raw.Substring(0, openIdx));
+                    rawBuffer.Clear();
+                    rawBuffer.Append(raw.Substring(openIdx + 10));
+                }
+                else
+                {
+                    // No tag found - stream content (batched)
+                    if (updateCounter % UpdateFrequency == 0)
+                    {
+                        chatMessage.Content = raw;
+                        await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+                    }
+                }
+            }
+            
+            // Inside thinking - accumulate reasoning
+            if (insideThinking && !thinkingComplete)
+            {
+                var current = rawBuffer.ToString();
+                int closeIdx = current.IndexOf("</thinking>", StringComparison.OrdinalIgnoreCase);
+                if (closeIdx >= 0)
+                {
+                    reasoningBuffer.Append(current.Substring(0, closeIdx));
+                    insideThinking = false;
+                    thinkingComplete = true;
+                    
+                    // Send reasoning once complete
+                    chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
+                    await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
+                    await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
+                    
+                    rawBuffer.Clear();
+                    rawBuffer.Append(current.Substring(closeIdx + 11));
+                    updateCounter = 0; // Reset for content streaming
+                }
+                else
+                {
+                    // Still thinking - accumulate but don't send updates (just show status)
+                    reasoningBuffer.Append(rawBuffer);
+                    rawBuffer.Clear();
+                }
+            }
+            
+            // After thinking - stream content (batched)
+            if (thinkingComplete && rawBuffer.Length > 0)
+            {
+                contentBuffer.Append(rawBuffer);
+                rawBuffer.Clear();
+                
+                if (updateCounter % UpdateFrequency == 0)
+                {
+                    chatMessage.Content = contentBuffer.ToString().Trim();
+                    await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+                }
+            }
+        }
+
+        // Final updates
+        if (insideThinking)
+        {
+            reasoningBuffer.Append(rawBuffer);
+            chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
+            await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
+        }
+        
+        if (!thinkingComplete && !insideThinking)
+        {
+            chatMessage.Content = rawBuffer.ToString().Trim();
+        }
+        else if (thinkingComplete)
+        {
+            contentBuffer.Append(rawBuffer);
+            chatMessage.Content = contentBuffer.ToString().Trim();
+        }
+        
+        await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+    }
+
+    /// <summary>
+    /// Send reasoning update to the client via SignalR.
+    /// </summary>
+    private async Task UpdateReasoningOnClientAsync(string chatId, string messageId, string reasoning, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await this._messageRelayHubContext.Clients.Group(chatId).SendAsync(
+                "ReceiveReasoningUpdate",
+                chatId,
+                messageId,
+                reasoning,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Failed to send reasoning update for chat {ChatId}", chatId);
+        }
     }
 }

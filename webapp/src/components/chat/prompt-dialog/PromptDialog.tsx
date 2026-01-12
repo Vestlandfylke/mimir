@@ -19,7 +19,7 @@ import {
     makeStyles,
     shorthands,
 } from '@fluentui/react-components';
-import { Info16Regular } from '@fluentui/react-icons';
+import { Brain24Regular, Info16Regular } from '@fluentui/react-icons';
 import React from 'react';
 import { BotResponsePrompt, DependencyDetails, PromptSectionsNameMap } from '../../../libs/models/BotResponsePrompt';
 import { ChatMessageType, IChatMessage } from '../../../libs/models/ChatMessage';
@@ -186,6 +186,21 @@ const useClasses = makeStyles({
     accordionPanel: {
         ...shorthands.padding('8px', '0', '16px', '0'),
     },
+    reasoningHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        ...shorthands.gap('8px'),
+    },
+    reasoningIcon: {
+        color: 'var(--colorBrandForeground1)',
+    },
+    reasoningContent: {
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        fontSize: '0.95em',
+        lineHeight: '1.6',
+        color: 'var(--colorNeutralForeground2)',
+    },
 });
 
 /**
@@ -298,9 +313,25 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
     let promptAccordionItems: React.ReactNode[] = [];
     let isStringPrompt = false;
 
+    // Add reasoning section at the top if available
+    const reasoningItem = message.reasoning ? (
+        <AccordionItem value="reasoning" key="reasoning">
+            <AccordionHeader expandIconPosition="end" className={classes.accordionHeader}>
+                <div className={classes.reasoningHeader}>
+                    <Brain24Regular className={classes.reasoningIcon} />
+                    <span>Tankeprosess</span>
+                </div>
+            </AccordionHeader>
+            <AccordionPanel className={classes.accordionPanel}>
+                <div className={classes.reasoningContent}>{formatParagraphTextContent(message.reasoning)}</div>
+            </AccordionPanel>
+        </AccordionItem>
+    ) : null;
+
     if (typeof prompt === 'string') {
         isStringPrompt = true;
         promptAccordionItems = [
+            ...(reasoningItem ? [reasoningItem] : []),
             <AccordionItem value="raw-prompt" key="raw-prompt">
                 <AccordionHeader expandIconPosition="end" className={classes.accordionHeader}>
                     Prompt
@@ -369,10 +400,20 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                 );
             })
             .filter(Boolean);
+
+        // Add reasoning at the beginning if available
+        if (reasoningItem) {
+            promptAccordionItems = [reasoningItem, ...promptAccordionItems];
+        }
     }
 
-    // Get keys for default open items (first item open by default)
-    const defaultOpenItems = promptAccordionItems.length > 0 ? ['systemPersona'] : [];
+    // Get keys for default open items
+    // If reasoning exists, expand it by default; otherwise expand system persona
+    const defaultOpenItems = message.reasoning
+        ? ['reasoning']
+        : promptAccordionItems.length > 0
+          ? ['systemPersona']
+          : [];
 
     return (
         <Dialog>

@@ -142,9 +142,9 @@ const addNewAlert = (alerts: Alert[], newAlert: Alert) => {
 
 const updateConnectionStatus = (state: AppState, statusUpdate: Alert) => {
     if (isServerConnectionError(statusUpdate.message)) {
-        statusUpdate.message =
-            // Constant message so alert UI doesn't feel glitchy on every connection error from SignalR
-            'Kunne ikkje sende data akkurat no. Prøv å oppdatere sida viss dette held fram.';
+        // Constant message so alert UI doesn't feel glitchy on every connection error from SignalR
+        statusUpdate.message = 'Tilkoplinga vart avbroten.';
+        statusUpdate.showRefresh = true;
     }
 
     // There should only ever be one connection alert at a time,

@@ -78,7 +78,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const clientId = urlParams.get('clientId');
         const authority = urlParams.get('authority');
-        const scope = urlParams.get('scope') || 'openid profile offline_access';
+        // For implicit flow, offline_access is not supported
+        // Make sure we request the API scope for the backend
+        let scope = urlParams.get('scope') || 'openid profile';
+        // Remove offline_access if present (not supported in implicit flow)
+        scope = scope.split(' ').filter(s => s !== 'offline_access').join(' ');
         const redirectUri = urlParams.get('redirectUri') || window.location.origin + '/auth-end.html';
 
         logger.log('Auth start page loaded');
@@ -87,13 +91,16 @@
         logger.log('Scope:', scope);
 
         // Build the authorization URL
+        // Use implicit flow (token) for Teams popup authentication
+        // This returns the access token directly without needing a backend token exchange
         const authUrl = `${authority}/oauth2/v2.0/authorize?` +
             `client_id=${encodeURIComponent(clientId)}` +
-            `&response_type=code` +
+            `&response_type=token` +
             `&redirect_uri=${encodeURIComponent(redirectUri)}` +
             `&scope=${encodeURIComponent(scope)}` +
             `&response_mode=fragment` +
-            `&prompt=select_account`;
+            `&prompt=select_account` +
+            `&nonce=${Date.now()}`;
 
         logger.log('Redirecting to auth URL:', authUrl);
 

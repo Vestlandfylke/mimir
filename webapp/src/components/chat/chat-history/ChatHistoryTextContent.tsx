@@ -1,22 +1,22 @@
 // Copyright (c) Microsoft. All rights reserved.
 
+import { useMsal } from '@azure/msal-react';
 import { makeStyles, tokens } from '@fluentui/react-components';
 import React, { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
-import { useMsal } from '@azure/msal-react';
-import { IChatMessage } from '../../../libs/models/ChatMessage';
-import * as utils from './../../utils/TextUtils';
 import { AuthHelper } from '../../../libs/auth/AuthHelper';
+import { AlertType } from '../../../libs/models/AlertType';
+import { IChatMessage } from '../../../libs/models/ChatMessage';
 import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { FeatureKeys } from '../../../redux/features/app/AppState';
 import { addAlert } from '../../../redux/features/app/appSlice';
-import { AlertType } from '../../../libs/models/AlertType';
-import { MermaidBlock } from './MermaidBlock';
+import * as utils from './../../utils/TextUtils';
 import { CodeBlock } from './CodeBlock';
+import { MermaidBlock } from './MermaidBlock';
 
 // Import KaTeX CSS
 import 'katex/dist/katex.min.css';
@@ -47,6 +47,22 @@ const useClasses = makeStyles({
         backgroundColor: tokens.colorNeutralBackground3,
         color: tokens.colorNeutralForeground1,
         overflowWrap: 'anywhere',
+    },
+    // Link styling - uses Fluent UI brand colors for better visibility in dark mode
+    link: {
+        color: tokens.colorBrandForeground1,
+        textDecoration: 'underline',
+        textUnderlineOffset: '2px',
+        '&:hover': {
+            color: tokens.colorBrandForeground2,
+            textDecoration: 'underline',
+        },
+        '&:active': {
+            color: tokens.colorBrandForeground1,
+        },
+        '&:visited': {
+            color: tokens.colorBrandForeground1,
+        },
     },
 });
 
@@ -193,7 +209,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
 
                         // Render Mermaid fenced blocks: ```mermaid ... ```
                         if (lang === 'mermaid') {
-                            return <MermaidBlock code={text} />;
+                            return <MermaidBlock code={text} isDark={isDarkMode} />;
                         }
 
                         // Inline vs block:
@@ -214,14 +230,19 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
                         const safeHref = href ?? '';
                         if (safeHref && isFilesEndpointLink(safeHref)) {
                             return (
-                                <a {...props} href={safeHref} onClick={(e) => void handleFilesLinkClick(e, safeHref)}>
+                                <a
+                                    {...props}
+                                    href={safeHref}
+                                    className={classes.link}
+                                    onClick={(e) => void handleFilesLinkClick(e, safeHref)}
+                                >
                                     {children}
                                 </a>
                             );
                         }
 
                         return (
-                            <a {...props} href={safeHref} target="_blank" rel="noreferrer">
+                            <a {...props} href={safeHref} className={classes.link} target="_blank" rel="noreferrer">
                                 {children}
                             </a>
                         );

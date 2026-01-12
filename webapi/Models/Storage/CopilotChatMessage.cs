@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Globalization;
 using System.Text.Json;
@@ -109,6 +109,12 @@ public class CopilotChatMessage : IStorageEntity
     public IDictionary<string, int>? TokenUsage { get; set; }
 
     /// <summary>
+    /// Reasoning/thinking content for models that support it.
+    /// Contains the model's step-by-step thought process.
+    /// </summary>
+    public string? Reasoning { get; set; }
+
+    /// <summary>
     /// The partition key for the source.
     /// </summary>
     [JsonIgnore]
@@ -125,6 +131,7 @@ public class CopilotChatMessage : IStorageEntity
     /// <param name="authorRole">Role of the author</param>
     /// <param name="type">Type of the message</param>
     /// <param name="tokenUsage">Total token usages used to generate bot response</param>
+    /// <param name="reasoning">Optional reasoning/thinking content</param>
     public CopilotChatMessage(
         string userId,
         string userName,
@@ -134,7 +141,8 @@ public class CopilotChatMessage : IStorageEntity
         IEnumerable<CitationSource>? citations = null,
         AuthorRoles authorRole = AuthorRoles.User,
         ChatMessageType type = ChatMessageType.Message,
-        IDictionary<string, int>? tokenUsage = null)
+        IDictionary<string, int>? tokenUsage = null,
+        string? reasoning = null)
     {
         this.Timestamp = DateTimeOffset.Now;
         this.UserId = userId;
@@ -147,6 +155,7 @@ public class CopilotChatMessage : IStorageEntity
         this.AuthorRole = authorRole;
         this.Type = type;
         this.TokenUsage = tokenUsage;
+        this.Reasoning = reasoning;
     }
 
     /// <summary>
@@ -158,15 +167,17 @@ public class CopilotChatMessage : IStorageEntity
     /// <param name="citations">Citations for the message</param>
     /// <param name="tokenUsage">Total token usage of response completion</param>
     /// <param name="messageType">Type of the message (default: Message)</param>
+    /// <param name="reasoning">Optional reasoning/thinking content</param>
     public static CopilotChatMessage CreateBotResponseMessage(
         string chatId,
         string content,
         string prompt,
         IEnumerable<CitationSource>? citations,
         IDictionary<string, int>? tokenUsage = null,
-        ChatMessageType messageType = ChatMessageType.Message)
+        ChatMessageType messageType = ChatMessageType.Message,
+        string? reasoning = null)
     {
-        return new CopilotChatMessage("Bot", "Bot", chatId, content, prompt, citations, AuthorRoles.Bot, messageType, tokenUsage);
+        return new CopilotChatMessage("Bot", "Bot", chatId, content, prompt, citations, AuthorRoles.Bot, messageType, tokenUsage, reasoning);
     }
 
     /// <summary>

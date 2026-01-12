@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 using CopilotChat.WebApi.Models.Request;
@@ -165,6 +165,22 @@ public class PromptsOptions
     internal double IntentTopP { get; } = 1;
     internal double IntentPresencePenalty { get; } = 0.5;
     internal double IntentFrequencyPenalty { get; } = 0.5;
+
+    // Reasoning prompts for models that support reasoning/thinking mode
+    /// <summary>
+    /// Reasoning instruction for LOW effort - brief thinking (Nynorsk).
+    /// </summary>
+    public string ReasoningInstructionLow { get; set; } = "[OBLIGATORISK] Du MÅ inkludere ein kort tankeprosess i <thinking></thinking>-taggar før svaret ditt.\n\nFORMAT:\n<thinking>\n[Kort oppsummering av vurderingane dine - 2-3 setningar]\n</thinking>\n\n[Svaret ditt her]";
+
+    /// <summary>
+    /// Reasoning instruction for MEDIUM effort - balanced thinking (Nynorsk, default).
+    /// </summary>
+    public string ReasoningInstructionMedium { get; set; } = "### OBLIGATORISK FORMAT ###\nDIN FØRSTE OUTPUT MÅ VERE: <thinking>\n\nDu MÅ starte KVART svar med <thinking>-taggar. Dette er ikkje valfritt.\n\nEKSAKT FORMAT:\n<thinking>\nHer skriv du tankeprosessen din på nynorsk.\nAnalyser spørsmålet, vurder ulike tilnærmingar, forklar resonnementet.\n</thinking>\n\nDeretter kjem svaret ditt til brukaren.\n\n### VIKTIG ###\n- Start ALLTID med <thinking>\n- Hopp ALDRI over thinking-seksjonen\n- Avslut thinking med </thinking> før svaret";
+
+    /// <summary>
+    /// Reasoning instruction for HIGH effort - detailed analysis (Nynorsk).
+    /// </summary>
+    public string ReasoningInstructionHigh { get; set; } = "[OBLIGATORISK INSTRUKS - DU MÅ FØLGJE DETTE]\nDu MÅ gje ei detaljert tankeprosess i <thinking></thinking>-taggar før svaret ditt.\n\nFORMATKRAV:\n<thinking>\n## Forståing av problemet\n- Kva blir spurt om?\n- Kva er dei viktige aspekta?\n\n## Analyse av tilnærmingar\n1. Første tilnærming: fordelar og ulemper\n2. Andre tilnærming: fordelar og ulemper\n\n## Vurdering\n- Samanlikning av tilnærmingar\n- Kvifor er ein betre\n\n## Konklusjon\n- Valt tilnærming og grunngjeving\n</thinking>\n\n[Det fullstendige, velformaterte svaret ditt til brukaren her]\n\nKRITISKE REGLAR:\n1. Start ALLTID med detaljerte <thinking>-taggar\n2. Ver grundig og systematisk i resonnementet ditt\n3. Det endelege svaret kjem ETTER den avsluttande </thinking>-taggen\n4. Hopp ALDRI over <thinking>-seksjonen - den er obligatorisk";
 
     /// <summary>
     /// Copy the options in case they need to be modified per chat.

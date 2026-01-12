@@ -40,3 +40,8 @@ export interface UpdatePluginStatePayload {
     pluginName: string;
     newState: boolean;
 }
+
+export interface ConversationModelChange {
+    id: string;
+    modelId: string;
+}

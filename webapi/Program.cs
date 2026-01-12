@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Diagnostics;
 using System.Text.Json;
@@ -77,7 +77,14 @@ public sealed class Program
         TelemetryDebugWriter.IsTracingDisabled = Debugger.IsAttached;
 
         // Add named HTTP clients for IHttpClientFactory
-        builder.Services.AddHttpClient();
+        // Configure longer timeout for AI services (reasoning models can take 3+ minutes to start responding)
+        builder.Services.AddHttpClient().ConfigureHttpClientDefaults(clientBuilder =>
+        {
+            clientBuilder.ConfigureHttpClient(client =>
+            {
+                client.Timeout = TimeSpan.FromMinutes(5); // 5 minute timeout for AI model calls
+            });
+        });
 
         // Add in the rest of the services.
         builder.Services
@@ -106,6 +113,12 @@ public sealed class Program
 
         // Add Chat Copilot hub for real time communication
         app.MapHub<MessageRelayHub>("/messageRelayHub");
+
+        // Add root endpoint for health probes and CORS preflight requests
+        app.MapGet("/", () => Results.Ok("Mimir API is running"))
+            .AllowAnonymous();
+        app.MapMethods("/", new[] { "OPTIONS" }, () => Results.Ok())
+            .AllowAnonymous();
 
         // Enable Swagger for development environments.
         if (app.Environment.IsDevelopment())

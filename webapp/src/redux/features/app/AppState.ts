@@ -33,6 +33,8 @@ export interface Alert {
     type: AlertType;
     id?: string;
     onRetry?: () => void;
+    /** Show a "Oppdater sida" button that refreshes the page */
+    showRefresh?: boolean;
 }
 
 interface Feature {

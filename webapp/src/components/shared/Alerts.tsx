@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { makeStyles, shorthands, tokens } from '@fluentui/react-components';
+import { Button, makeStyles, shorthands, tokens } from '@fluentui/react-components';
 import { Alert } from '@fluentui/react-components/unstable';
+import { ArrowSync16Regular } from '@fluentui/react-icons';
 import React from 'react';
+import { COPY, refreshPage } from '../../assets/strings';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { removeAlert } from '../../redux/features/app/appSlice';
@@ -19,10 +21,23 @@ const useClasses = makeStyles({
     actionItems: {
         display: 'flex',
         flexDirection: 'row',
-        ...shorthands.gap(tokens.spacingHorizontalMNudge),
+        alignItems: 'center',
+        ...shorthands.gap(tokens.spacingHorizontalS),
     },
-    button: {
+    refreshButton: {
+        minWidth: 'auto',
+        padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
+        fontSize: tokens.fontSizeBase200,
+    },
+    retryButton: {
+        cursor: 'pointer',
+        '&:hover': {
+            textDecoration: 'underline',
+        },
+    },
+    dismissButton: {
         alignSelf: 'center',
+        cursor: 'pointer',
     },
 });
 
@@ -33,21 +48,36 @@ export const Alerts: React.FC = () => {
 
     return (
         <div>
-            {alerts.map(({ type, message, onRetry }, index) => {
+            {alerts.map(({ type, message, onRetry, showRefresh }, index) => {
                 return (
                     <Alert
                         intent={type}
                         action={{
                             children: (
                                 <div className={classes.actionItems}>
-                                    {onRetry && <div onClick={onRetry}>Prøv igjen</div>}
+                                    {onRetry && (
+                                        <div className={classes.retryButton} onClick={onRetry}>
+                                            Prøv igjen
+                                        </div>
+                                    )}
+                                    {showRefresh && (
+                                        <Button
+                                            appearance="primary"
+                                            size="small"
+                                            icon={<ArrowSync16Regular />}
+                                            className={classes.refreshButton}
+                                            onClick={refreshPage}
+                                        >
+                                            {COPY.REFRESH_BUTTON_TEXT}
+                                        </Button>
+                                    )}
                                     <Dismiss16
                                         aria-label="avvis melding"
                                         onClick={() => {
                                             dispatch(removeAlert(index));
                                         }}
                                         color="black"
-                                        className={classes.button}
+                                        className={classes.dismissButton}
                                     />
                                 </div>
                             ),

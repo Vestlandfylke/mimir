@@ -86,6 +86,14 @@
                 logger.log('Access Token:', accessToken ? 'Present' : 'Not found');
                 logger.log('ID Token:', idToken ? 'Present' : 'Not found');
 
+                // Determine the best token to return
+                // Priority: access_token > id_token > code
+                const tokenResult = accessToken || idToken || code;
+                
+                if (!tokenResult) {
+                    throw new Error('No token received from authentication');
+                }
+
                 // Initialize Teams SDK if in Teams context
                 if (window.parent !== window.self) {
                     logger.log('Running in iframe, attempting Teams SDK initialization...');
@@ -95,10 +103,9 @@
                         await microsoftTeams.app.initialize();
                         logger.log('Teams SDK initialized');
                         
-                        // Notify Teams of successful authentication
-                        const result = accessToken || idToken || code || window.location.hash;
-                        logger.log('Notifying Teams of success with result');
-                        microsoftTeams.authentication.notifySuccess(result);
+                        // Notify Teams of successful authentication with the token
+                        logger.log('Notifying Teams of success with token');
+                        microsoftTeams.authentication.notifySuccess(tokenResult);
                     } else {
                         logger.log('Teams SDK not available, likely in browser popup');
                         // For browser popup, pass the result to opener

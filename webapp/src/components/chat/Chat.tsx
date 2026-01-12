@@ -68,11 +68,9 @@ const Chat = ({
             {/* Backend probe and errors */}
             {appState === AppState.ProbeForBackend && <BackendProbe onBackendFound={onBackendFound} />}
             {appState === AppState.ErrorLoadingUserInfo && (
-                <Error text={'Klarte ikkje å laste brukarinfo. Vennligst prøv å logge ut og inn igjen.'} />
+                <Error text={'Klarte ikkje å laste brukarinfo. Prøv å logge ut og inn igjen, eller oppdater sida.'} />
             )}
-            {appState === AppState.ErrorLoadingChats && (
-                <Error text={'Klarte ikkje å laste samtalar. Vennligst prøv å oppdatere sida.'} />
-            )}
+            {appState === AppState.ErrorLoadingChats && <Error text={'Klarte ikkje å laste samtalar.'} />}
         </div>
     );
 };

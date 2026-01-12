@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Reflection;
 using CopilotChat.Shared;
@@ -56,6 +56,9 @@ public static class CopilotChatServiceExtensions
 
         // MCP configuration
         AddOptions<McpServerOptions>(McpServerOptions.PropertyName);
+
+        // AI Models configuration
+        AddOptions<ModelsOptions>(ModelsOptions.PropertyName);
 
         return services;
 

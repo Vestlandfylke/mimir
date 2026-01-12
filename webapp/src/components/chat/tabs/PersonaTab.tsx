@@ -9,15 +9,24 @@ import {
     Dropdown,
     Label,
     Option,
+    Spinner,
     Textarea,
+    Tooltip,
     makeStyles,
     shorthands,
     tokens,
 } from '@fluentui/react-components';
-import { CheckmarkCircle16Filled, ChevronDown16Regular } from '@fluentui/react-icons';
+import {
+    Bot24Regular,
+    Brain24Regular,
+    CheckmarkCircle16Filled,
+    ChevronDown16Regular,
+    Sparkle24Regular,
+} from '@fluentui/react-icons';
 import * as React from 'react';
-import { useChat } from '../../../libs/hooks/useChat';
+import { useChat, useModels } from '../../../libs/hooks';
 import { AlertType } from '../../../libs/models/AlertType';
+import { IModelInfo } from '../../../libs/models/Model';
 import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { addAlert } from '../../../redux/features/app/appSlice';
@@ -43,6 +52,41 @@ const useClasses = makeStyles({
         fontSize: tokens.fontSizeBase200,
         color: tokens.colorNeutralForeground3,
         marginBottom: tokens.spacingVerticalS,
+    },
+    modelSelector: {
+        display: 'flex',
+        flexDirection: 'column',
+        ...shorthands.gap(tokens.spacingVerticalS),
+    },
+    modelOption: {
+        display: 'flex',
+        alignItems: 'center',
+        ...shorthands.gap(tokens.spacingHorizontalS),
+    },
+    modelIcon: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '24px',
+        height: '24px',
+        ...shorthands.borderRadius('4px'),
+        backgroundColor: tokens.colorNeutralBackground3,
+    },
+    modelInfo: {
+        display: 'flex',
+        flexDirection: 'column',
+        ...shorthands.gap('2px'),
+    },
+    modelName: {
+        fontWeight: tokens.fontWeightSemibold,
+        fontSize: tokens.fontSizeBase300,
+    },
+    modelDescription: {
+        fontSize: tokens.fontSizeBase100,
+        color: tokens.colorNeutralForeground3,
+    },
+    modelDropdown: {
+        minWidth: '250px',
     },
     quickSettings: {
         display: 'flex',
@@ -223,6 +267,14 @@ const buildFullSystemDescription = (
 export const PersonaTab: React.FC = () => {
     const classes = useClasses();
     const chat = useChat();
+    const {
+        availableModels,
+        defaultModelId,
+        isLoading: modelsLoading,
+        fetchAvailableModels,
+        setChatModel,
+        getModelInfo,
+    } = useModels();
     const dispatch = useAppDispatch();
 
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
@@ -237,10 +289,22 @@ export const PersonaTab: React.FC = () => {
     const [isSaved, setIsSaved] = React.useState(false);
     const [hasChanges, setHasChanges] = React.useState(false);
 
+    // Model selector state
+    const [selectedModelId, setSelectedModelId] = React.useState<string>('');
+    const [isSavingModel, setIsSavingModel] = React.useState(false);
+    const [modelSaved, setModelSaved] = React.useState(false);
+
     // Track initial values for change detection
     const [initialTone, setInitialTone] = React.useState<string>('standard');
     const [initialLength, setInitialLength] = React.useState<string>('standard');
     const [initialInstructions, setInitialInstructions] = React.useState<string>('');
+
+    // Load available models on mount
+    React.useEffect(() => {
+        if (availableModels.length === 0) {
+            void fetchAvailableModels();
+        }
+    }, [availableModels.length, fetchAvailableModels]);
 
     // Load memories and extract custom instructions
     React.useEffect(() => {
@@ -267,11 +331,55 @@ export const PersonaTab: React.FC = () => {
         setSelectedLength(extractedLength);
         setInitialLength(extractedLength);
 
+        // Set current model
+        setSelectedModelId(chatState.modelId ?? defaultModelId);
+        setModelSaved(false);
+
         // Reset state when changing chat
         setIsSaved(false);
         setHasChanges(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedId]);
+    }, [selectedId, defaultModelId]);
+
+    // Handle model change
+    const handleModelChange = async (modelId: string) => {
+        if (modelId === selectedModelId) return;
+
+        setIsSavingModel(true);
+        setModelSaved(false);
+        try {
+            const success = await setChatModel(selectedId, modelId);
+            if (success) {
+                setSelectedModelId(modelId);
+                setModelSaved(true);
+                // Auto-hide saved indicator after 3 seconds
+                setTimeout(() => {
+                    setModelSaved(false);
+                }, 3000);
+            }
+        } catch (error) {
+            dispatch(
+                addAlert({
+                    type: AlertType.Error,
+                    message: `Feil ved endring av modell: ${(error as Error).message}`,
+                }),
+            );
+        } finally {
+            setIsSavingModel(false);
+        }
+    };
+
+    // Get icon for model provider
+    const getModelIcon = (model: IModelInfo) => {
+        // Show brain icon for reasoning models
+        if (model.supportsReasoning) {
+            return <Brain24Regular />;
+        }
+        if (model.provider === 'AzureAnthropic') {
+            return <Sparkle24Regular />;
+        }
+        return <Bot24Regular />;
+    };
 
     // Check for changes whenever values change
     React.useEffect(() => {
@@ -343,6 +451,62 @@ export const PersonaTab: React.FC = () => {
 
     return (
         <TabView title="Tilpassing">
+            {/* Model Selector Section */}
+            <div className={classes.section}>
+                <h3 className={classes.sectionTitle}>KI-modell</h3>
+                <p className={classes.description}>
+                    Vel kva KI-modell du vil bruke for denne samtalen. Ulike modellar har ulike styrkar.
+                </p>
+                <div className={classes.modelSelector}>
+                    {modelsLoading ? (
+                        <Spinner size="small" label="Lastar modellar..." />
+                    ) : (
+                        <div className={classes.settingRow}>
+                            <Label className={classes.settingLabel}>Modell:</Label>
+                            <Dropdown
+                                className={classes.modelDropdown}
+                                value={getModelInfo(selectedModelId)?.displayName ?? selectedModelId}
+                                selectedOptions={[selectedModelId]}
+                                onOptionSelect={(_, data) => {
+                                    void handleModelChange(data.optionValue ?? defaultModelId);
+                                }}
+                                disabled={chatState.disabled || isSavingModel}
+                            >
+                                {availableModels.map((model) => (
+                                    <Option key={model.id} value={model.id} text={model.displayName}>
+                                        <div className={classes.modelOption}>
+                                            <div className={classes.modelIcon}>{getModelIcon(model)}</div>
+                                            <div className={classes.modelInfo}>
+                                                <span className={classes.modelName}>
+                                                    {model.displayName}
+                                                    {model.supportsReasoning && ' 🧠'}
+                                                </span>
+                                                <span className={classes.modelDescription}>{model.description}</span>
+                                            </div>
+                                        </div>
+                                    </Option>
+                                ))}
+                            </Dropdown>
+                            {isSavingModel && <Spinner size="tiny" />}
+                            {modelSaved && (
+                                <span className={classes.savedIndicator}>
+                                    <CheckmarkCircle16Filled />
+                                    Lagra
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {selectedModelId && getModelInfo(selectedModelId) && (
+                        <Tooltip content={getModelInfo(selectedModelId)?.description ?? ''} relationship="description">
+                            <p className={classes.description} style={{ marginTop: tokens.spacingVerticalXS }}>
+                                <strong>Aktiv modell:</strong> {getModelInfo(selectedModelId)?.displayName} (
+                                {getModelInfo(selectedModelId)?.provider})
+                            </p>
+                        </Tooltip>
+                    )}
+                </div>
+            </div>
+
             {/* Quick Settings Section */}
             <div className={classes.section}>
                 <h3 className={classes.sectionTitle}>Svarstil</h3>

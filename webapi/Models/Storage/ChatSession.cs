@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Text.Json.Serialization;
 using CopilotChat.WebApi.Storage;
@@ -59,6 +59,12 @@ public class ChatSession : IStorageEntity
     /// Null or empty for default chats.
     /// </summary>
     public string? Template { get; set; }
+
+    /// <summary>
+    /// The AI model ID to use for this chat session.
+    /// Null or empty uses the default model.
+    /// </summary>
+    public string? ModelId { get; set; }
 
     /// <summary>
     /// The partition key for the session.

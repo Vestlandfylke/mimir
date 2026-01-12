@@ -137,26 +137,11 @@ const loginAsync = async (instance: IPublicClientApplication) => {
             log('Using Teams SDK interactive authentication...');
             try {
                 const teamsAuthResult = await teamsAuthHelper.authenticateInteractive(instance, scopes);
-                if (teamsAuthResult.success) {
+                if (teamsAuthResult.success && teamsAuthResult.token) {
                     log('Teams interactive authentication successful');
-                    // After Teams auth, try to acquire token silently again
-                    // The popup should have established the session
-                    try {
-                        const context = await teamsAuthHelper.getContext();
-                        if (context?.user?.loginHint) {
-                            const response = await instance.ssoSilent({
-                                scopes,
-                                loginHint: context.user.loginHint,
-                            });
-                            instance.setActiveAccount(response.account);
-                            log('MSAL token acquired after Teams auth');
-                            return;
-                        }
-                    } catch (postAuthError) {
-                        log('Post-Teams-auth MSAL acquisition failed:', postAuthError);
-                        // Continue anyway - the Teams token might be usable directly
-                        return;
-                    }
+                    // Store the token for API calls
+                    sessionStorage.setItem('teamsToken', teamsAuthResult.token);
+                    log('Stored Teams token from interactive auth');
                     return;
                 } else {
                     log('Teams interactive auth failed:', teamsAuthResult.error);

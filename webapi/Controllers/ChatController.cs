@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -74,7 +74,8 @@ public class ChatController : ControllerBase, IDisposable
     /// <summary>
     /// Invokes the chat function to get a response from the bot.
     /// </summary>
-    /// <param name="kernel">Semantic kernel obtained through dependency injection.</param>
+    /// <param name="defaultKernel">Default semantic kernel obtained through dependency injection.</param>
+    /// <param name="modelKernelFactory">Factory for creating model-specific kernels.</param>
     /// <param name="messageRelayHubContext">Message Hub that performs the real time relay service.</param>
     /// <param name="chatSessionRepository">Repository of chat sessions.</param>
     /// <param name="chatParticipantRepository">Repository of chat participants.</param>
@@ -90,7 +91,8 @@ public class ChatController : ControllerBase, IDisposable
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status504GatewayTimeout)]
     public async Task<IActionResult> ChatAsync(
-        [FromServices] Kernel kernel,
+        [FromServices] Kernel defaultKernel,
+        [FromServices] ModelKernelFactory modelKernelFactory,
         [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
         [FromServices] ChatSessionRepository chatSessionRepository,
         [FromServices] ChatParticipantRepository chatParticipantRepository,
@@ -117,6 +119,21 @@ public class ChatController : ControllerBase, IDisposable
             return this.Forbid("User does not have access to the chatId specified in variables.");
         }
 
+        // Create kernel for the selected model (or default if not specified)
+        Kernel kernel;
+        if (!string.IsNullOrEmpty(chat!.ModelId))
+        {
+            this._logger.LogInformation("Using model {ModelId} for chat {ChatId}", chat.ModelId, chatIdString);
+            kernel = modelKernelFactory.CreateKernel(chat.ModelId);
+            // Register plugins with the model-specific kernel
+            await SemanticKernelExtensions.RegisterChatCopilotFunctionsAsync(this.HttpContext.RequestServices, kernel);
+        }
+        else
+        {
+            // Use the default kernel
+            kernel = defaultKernel;
+        }
+
         // Register MCP plugins based on chat template
         // This allows filtering MCP servers by chat type (e.g., klarsprak-specific servers only for klarsprak chats)
         await kernel.RegisterMcpPluginsAsync(this.HttpContext.RequestServices, chat!.Template);
@@ -134,7 +151,7 @@ public class ChatController : ControllerBase, IDisposable
         // Register cancellation token for this chat request
         // This allows the request to be cancelled via the cancel endpoint
         var cancellationToken = this._cancellationService.RegisterRequest(
-            chatIdString, 
+            chatIdString,
             this._serviceOptions.TimeoutLimitInS.HasValue ? (int)this._serviceOptions.TimeoutLimitInS.Value : null);
 
         // Run the function.

@@ -36,13 +36,13 @@ import botIcon4 from '../../assets/bot-icons/bot-icon-4.png';
 import botIcon5 from '../../assets/bot-icons/bot-icon-5.png';
 import { getErrorDetails } from '../../components/utils/TextUtils';
 import { FeatureKeys } from '../../redux/features/app/AppState';
-import { PlanState } from '../models/Plan';
-import { ContextVariable } from '../semantic-kernel/model/AskResult';
 import {
     ensureConnected,
     getConnectionState,
     triggerMessageSync,
 } from '../../redux/features/message-relay/signalRHubConnection';
+import { PlanState } from '../models/Plan';
+import { ContextVariable } from '../semantic-kernel/model/AskResult';
 import { logger } from '../utils/Logger';
 
 // Timeout for bot response - if no response after this time, check connection and sync
@@ -182,8 +182,9 @@ export const useChat = () => {
                 logger.error('❌ Failed to verify/reconnect SignalR before sending:', reconnectError);
                 dispatch(
                     addAlert({
-                        message: 'Tilkoblinga er nede. Prøv å oppdatere sida.',
+                        message: 'Tilkoplinga vart avbroten.',
                         type: AlertType.Warning,
+                        showRefresh: true,
                     }),
                 );
                 dispatch(updateBotResponseStatus({ chatId, status: undefined }));

@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import { useMsal } from '@azure/msal-react';
-import { Body1, makeStyles, Spinner, tokens } from '@fluentui/react-components';
+import { Body1, Button, makeStyles, Spinner, tokens } from '@fluentui/react-components';
+import { ArrowSync20Regular } from '@fluentui/react-icons';
 import { FC, useEffect, useMemo, useState } from 'react';
+import { COPY, refreshPage } from '../../assets/strings';
 import { renderApp } from '../../index';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { NetworkErrorMessage } from '../../libs/services/BaseService';
@@ -46,6 +48,9 @@ const useClasses = makeStyles({
         fontSize: '13px',
         color: tokens.colorNeutralForeground2,
         fontWeight: '500',
+    },
+    refreshButton: {
+        marginTop: tokens.spacingVerticalM,
     },
 });
 
@@ -115,8 +120,16 @@ export const BackendProbe: FC<IData> = ({ onBackendFound }) => {
                                 'Planlagt vedlikehald av nettstaden pågår. Vi beklagar for ulempene dette medfører.'}
                         </Body1>
                         <span className={classes.note}>
-                            {model?.note ?? 'Om denne meldinga ikkje forsvinn, prøv å oppdatere sida.'}
+                            {model?.note ?? 'Om denne meldinga ikkje forsvinn, prøv knappen under.'}
                         </span>
+                        <Button
+                            appearance="primary"
+                            icon={<ArrowSync20Regular />}
+                            className={classes.refreshButton}
+                            onClick={refreshPage}
+                        >
+                            {COPY.REFRESH_BUTTON_TEXT}
+                        </Button>
                     </>
                 ) : (
                     <>

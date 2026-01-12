@@ -28,21 +28,22 @@ import {
 } from '@fluentui/react-components';
 import { Edit24Filled, EditRegular, MoreVertical24Regular } from '@fluentui/react-icons';
 import React, { useCallback, useState } from 'react';
+import { useChat, useFile } from '../../libs/hooks';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
-import { useChat, useFile } from '../../libs/hooks';
 import { Breakpoints } from '../../styles';
 import { Alerts } from '../shared/Alerts';
 import { ArrowDownload16, Delete16, Edit, Share20 } from '../shared/BundledIcons';
+import { DeleteChatDialog } from './chat-list/dialogs/DeleteChatDialog';
 import { ChatRoom } from './ChatRoom';
 import { ParticipantsList } from './controls/ParticipantsList';
 import { ShareBotMenu } from './controls/ShareBotMenu';
+import { InvitationCreateDialog } from './invitation-dialog/InvitationCreateDialog';
+import { ModelIndicator } from './ModelIndicator';
 import { EditChatName } from './shared/EditChatName';
 import { DocumentsTab } from './tabs/DocumentsTab';
 import { PersonaTab } from './tabs/PersonaTab';
-import { DeleteChatDialog } from './chat-list/dialogs/DeleteChatDialog';
-import { InvitationCreateDialog } from './invitation-dialog/InvitationCreateDialog';
 
 const useClasses = makeStyles({
     root: {
@@ -219,6 +220,7 @@ export const ChatWindow: React.FC = () => {
                                     />
                                 </PopoverSurface>
                             </Popover>
+                            <ModelIndicator />
                         </div>
                     )}
                     <TabList selectedValue={selectedTab} onTabSelect={onTabSelect} className={classes.tabList}>

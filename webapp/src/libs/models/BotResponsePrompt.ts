@@ -29,6 +29,7 @@ export interface BotResponsePrompt {
 }
 
 export const PromptSectionsNameMap: Record<string, string> = {
+    reasoning: 'Tankeprosess',
     systemPersona: 'Systempersonlighet',
     audience: 'Målgruppe',
     userIntent: 'Brukarintensjon',

@@ -7,6 +7,7 @@ import { logger } from '../../../libs/utils/Logger';
 import { ChatState } from './ChatState';
 import {
     ConversationInputChange,
+    ConversationModelChange,
     Conversations,
     ConversationsState,
     ConversationSystemDescriptionChange,
@@ -48,6 +49,11 @@ export const conversationsSlice = createSlice({
             const id = action.payload.id;
             const newMemoryBalance = action.payload.memoryBalance;
             state.conversations[id].memoryBalance = newMemoryBalance;
+        },
+        editConversationModel: (state: ConversationsState, action: PayloadAction<ConversationModelChange>) => {
+            const id = action.payload.id;
+            const newModelId = action.payload.modelId;
+            state.conversations[id].modelId = newModelId;
         },
         setSelectedConversation: (state: ConversationsState, action: PayloadAction<string>) => {
             state.selectedId = action.payload;
@@ -174,8 +180,9 @@ export const conversationsSlice = createSlice({
                 conversationMessage.content = updatedContent;
             }
 
-            // Force a new array reference to ensure React detects the change
-            conversation.messages = [...conversation.messages];
+            // Note: Immer handles immutability - no need to copy the array manually
+            // The [...conversation.messages] copy was causing severe performance issues during streaming
+            // React will detect changes because Immer creates new references for modified objects
 
             if (frontLoad) {
                 frontLoadChat(state, chatId);
@@ -242,22 +249,39 @@ const frontLoadChat = (state: ConversationsState, id: string) => {
 /**
  * Check if two messages are likely the same based on content matching.
  * Used as fallback when IDs don't match (client vs server generated IDs).
- * Timestamps within 5 minutes are considered close enough.
+ * More lenient to catch duplicates across different scenarios.
  */
 const areMessagesSimilar = (existing: IChatMessage, incoming: IChatMessage): boolean => {
-    // Must have same user and content
-    if (existing.userId !== incoming.userId || existing.content !== incoming.content) {
+    // Must have same user
+    if (existing.userId !== incoming.userId) {
         return false;
     }
 
-    // Timestamps should be within 5 minutes of each other
+    // Compare content (trimmed to handle whitespace differences)
+    const existingContent = existing.content.trim();
+    const incomingContent = incoming.content.trim();
+    if (existingContent !== incomingContent) {
+        return false;
+    }
+
+    // Timestamps should be within 10 minutes of each other (more lenient)
+    // This handles cases where:
+    // - Server and client clocks are slightly different
+    // - Message was sent, connection dropped, and synced later
     const timeDiff = Math.abs(existing.timestamp - incoming.timestamp);
-    const FIVE_MINUTES_MS = 5 * 60 * 1000;
-    return timeDiff <= FIVE_MINUTES_MS;
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    return timeDiff <= TEN_MINUTES_MS;
 };
 
 const updateConversation = (state: ConversationsState, chatId: string, message: IChatMessage) => {
-    const conversation = state.conversations[chatId];
+    // Safety check - conversation should exist but guard against edge cases
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    const conversation = state.conversations[chatId] as ChatState | undefined;
+
+    if (!conversation) {
+        logger.warn(`⚠️ Cannot add message: chat ${chatId} not found`);
+        return;
+    }
 
     // Check for duplicate messages (prevent adding same message twice)
     // Check by ID first (fast path)
@@ -277,7 +301,9 @@ const updateConversation = (state: ConversationsState, chatId: string, message: 
     const existingByContent = conversation.messages.find((m) => areMessagesSimilar(m, message));
     if (existingByContent) {
         logger.debug(
-            `ℹ️ Message already exists (content match): "${message.content.substring(0, 30)}...", skipping add`,
+            `ℹ️ Message already exists (content match): "${message.content.substring(0, 30)}..."` +
+                ` | existing ID: ${existingByContent.id}, incoming ID: ${message.id}` +
+                ` | existing timestamp: ${existingByContent.timestamp}, incoming: ${message.timestamp}`,
         );
         return;
     }
@@ -310,6 +336,7 @@ export const {
     editConversationInput,
     editConversationSystemDescription,
     editConversationMemoryBalance,
+    editConversationModel,
     setSelectedConversation,
     toggleMultiUserConversations,
     addConversation,
