@@ -114,11 +114,33 @@ public sealed class Program
         // Add Chat Copilot hub for real time communication
         app.MapHub<MessageRelayHub>("/messageRelayHub");
 
-        // Add root endpoint for health probes and CORS preflight requests
-        app.MapGet("/", () => Results.Ok("Mimir API is running"))
-            .AllowAnonymous();
+        // Handle CORS preflight requests for root
         app.MapMethods("/", new[] { "OPTIONS" }, () => Results.Ok())
             .AllowAnonymous();
+
+        // Fallback: If no static files (index.html) exist, show API status
+        // This allows the frontend to be served when deployed, but shows status when running backend-only
+        app.MapFallback(context =>
+        {
+            // If the request is for an API endpoint or has an extension, return 404
+            if (context.Request.Path.StartsWithSegments("/api") ||
+                Path.HasExtension(context.Request.Path.Value))
+            {
+                context.Response.StatusCode = 404;
+                return Task.CompletedTask;
+            }
+
+            // For SPA routing - serve index.html if it exists
+            var indexPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
+            if (File.Exists(indexPath))
+            {
+                context.Request.Path = "/index.html";
+                return context.Response.SendFileAsync(indexPath);
+            }
+
+            // No frontend deployed - show API status
+            return context.Response.WriteAsync("Mimir API is running. Frontend not deployed.");
+        });
 
         // Enable Swagger for development environments.
         if (app.Environment.IsDevelopment())
