@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { makeStyles } from '@fluentui/react-components';
+import { makeStyles, tokens } from '@fluentui/react-components';
 import React, { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
@@ -10,7 +10,9 @@ import { useMsal } from '@azure/msal-react';
 import { IChatMessage } from '../../../libs/models/ChatMessage';
 import * as utils from './../../utils/TextUtils';
 import { AuthHelper } from '../../../libs/auth/AuthHelper';
-import { useAppDispatch } from '../../../redux/app/hooks';
+import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
+import { RootState } from '../../../redux/app/store';
+import { FeatureKeys } from '../../../redux/features/app/AppState';
 import { addAlert } from '../../../redux/features/app/appSlice';
 import { AlertType } from '../../../libs/models/AlertType';
 import { MermaidBlock } from './MermaidBlock';
@@ -42,7 +44,8 @@ const useClasses = makeStyles({
     codeInline: {
         padding: '0 6px',
         borderRadius: '6px',
-        backgroundColor: '#F3F4F6', // gray-100
+        backgroundColor: tokens.colorNeutralBackground3,
+        color: tokens.colorNeutralForeground1,
         overflowWrap: 'anywhere',
     },
 });
@@ -127,6 +130,8 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
     const classes = useClasses();
     const dispatch = useAppDispatch();
     const { instance, inProgress } = useMsal();
+    const { features } = useAppSelector((state: RootState) => state.app);
+    const isDarkMode = features[FeatureKeys.DarkMode].enabled;
     // Strip diagram request prefix from user messages (if present) before processing
     const rawContent = stripDiagramRequestPrefix(message.content);
     const content = utils.replaceCitationLinksWithIndices(utils.formatChatTextContent(rawContent), message);
@@ -203,7 +208,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
                             );
                         }
 
-                        return <CodeBlock code={text} language={lang} />;
+                        return <CodeBlock code={text} language={lang} isDark={isDarkMode} />;
                     },
                     a: ({ href, children, ...props }) => {
                         const safeHref = href ?? '';

@@ -143,7 +143,9 @@ const App = () => {
                     <UnauthenticatedTemplate>
                         <div className={classes.container} style={{ position: 'relative' }}>
                             <Login />
-                            {appState === AppState.SigningOut && <LoadingOverlay text="Logger ut..." />}
+                            {appState === AppState.SigningOut && (
+                                <LoadingOverlay text="Logger ut..." isDark={features[FeatureKeys.DarkMode].enabled} />
+                            )}
                         </div>
                     </UnauthenticatedTemplate>
                     <AuthenticatedTemplate>

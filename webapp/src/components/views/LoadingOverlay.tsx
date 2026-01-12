@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { makeStyles, Spinner, tokens } from '@fluentui/react-components';
+import { makeStyles, mergeClasses, Spinner, tokens } from '@fluentui/react-components';
 import { FC } from 'react';
 
 const useClasses = makeStyles({
-    overlay: {
+    overlayBase: {
         position: 'absolute',
         top: 0,
         left: 0,
@@ -14,10 +14,12 @@ const useClasses = makeStyles({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.85)',
         backdropFilter: 'blur(4px)',
         zIndex: 1000,
         gap: tokens.spacingVerticalM,
+    },
+    overlayLight: {
+        backgroundColor: 'rgba(255, 255, 255, 0.85)',
     },
     overlayDark: {
         backgroundColor: 'rgba(30, 30, 30, 0.85)',
@@ -37,8 +39,10 @@ interface ILoadingOverlayProps {
 export const LoadingOverlay: FC<ILoadingOverlayProps> = ({ text, isDark = false }) => {
     const classes = useClasses();
 
+    const overlayClassName = mergeClasses(classes.overlayBase, isDark ? classes.overlayDark : classes.overlayLight);
+
     return (
-        <div className={`${classes.overlay} ${isDark ? classes.overlayDark : ''}`}>
+        <div className={overlayClassName}>
             <Spinner size="large" />
             {text && <span className={classes.text}>{text}</span>}
         </div>

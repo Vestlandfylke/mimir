@@ -5,6 +5,7 @@ import { app, authentication } from '@microsoft/teams-js';
 import { IPublicClientApplication } from '@azure/msal-browser';
 import debug from 'debug';
 import { Constants } from '../../Constants';
+import { store } from '../../redux/app/store';
 
 const log = debug(Constants.debug.root).extend('teamsAuth');
 
@@ -102,10 +103,7 @@ class TeamsAuthHelper {
      * Interactive authentication for Teams (fallback when SSO fails)
      * Opens authentication popup within Teams
      */
-    async authenticateInteractive(
-        _msalInstance: IPublicClientApplication,
-        _scopes: string[],
-    ): Promise<TeamsAuthResult> {
+    async authenticateInteractive(_msalInstance: IPublicClientApplication, scopes: string[]): Promise<TeamsAuthResult> {
         if (!this.initialized) {
             const initSuccess = await this.initialize();
             if (!initSuccess) {
@@ -120,9 +118,28 @@ class TeamsAuthHelper {
         try {
             log('Starting interactive Teams authentication...');
 
+            // Get auth config from store
+            const authConfig = store.getState().app.authConfig;
+            if (!authConfig) {
+                return {
+                    success: false,
+                    error: 'Auth configuration not available',
+                    isSilent: false,
+                };
+            }
+
+            // Build URL with OAuth parameters for auth-start.html
+            const authStartUrl = new URL(`${window.location.origin}/auth-start.html`);
+            authStartUrl.searchParams.set('clientId', authConfig.aadClientId);
+            authStartUrl.searchParams.set('authority', authConfig.aadAuthority);
+            authStartUrl.searchParams.set('scope', scopes.join(' '));
+            authStartUrl.searchParams.set('redirectUri', `${window.location.origin}/auth-end.html`);
+
+            log('Auth start URL:', authStartUrl.toString());
+
             // Use Teams authentication API to open popup
             const result = await authentication.authenticate({
-                url: `${window.location.origin}/auth-start.html`,
+                url: authStartUrl.toString(),
                 width: 600,
                 height: 535,
             });

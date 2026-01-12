@@ -100,19 +100,55 @@ const loginAsync = async (instance: IPublicClientApplication) => {
 
     log('Silent authentication failed, proceeding with interactive login');
 
-    // Step 2: If in Teams, use Teams-specific authentication
+    // Step 2: If in Teams, first try Teams SSO, then MSAL popup
     if (EmbeddedAppHelper.isInTeams()) {
-        log('Using Teams authentication flow');
-        const result = await teamsAuthHelper.authenticate(instance, scopes);
+        log('In Teams context, attempting Teams SSO first...');
 
-        if (!result.success) {
-            throw new Error(result.error ?? 'Teams authentication failed');
+        // Initialize Teams SDK
+        await teamsAuthHelper.initialize();
+
+        // Try Teams SSO (silent)
+        const ssoResult = await teamsAuthHelper.attemptSilentSso(scopes);
+        if (ssoResult.success && ssoResult.token) {
+            log('Teams SSO successful, storing token for API calls');
+            // Store the Teams SSO token for use in API calls
+            // The backend should accept this token via the Authorization header
+            sessionStorage.setItem('teamsToken', ssoResult.token);
+
+            // Try to get MSAL account using the SSO hint
+            try {
+                const context = await teamsAuthHelper.getContext();
+                if (context?.user?.loginHint) {
+                    log('Attempting MSAL silent with Teams login hint:', context.user.loginHint);
+                    const response = await instance.ssoSilent({
+                        scopes,
+                        loginHint: context.user.loginHint,
+                    });
+                    instance.setActiveAccount(response.account);
+                    log('MSAL SSO with Teams hint successful');
+                    return;
+                }
+            } catch (msalError) {
+                log('MSAL SSO with Teams hint failed, falling back to popup:', msalError);
+            }
         }
 
-        // Exchange Teams token for MSAL token if needed
-        // The Teams token can be used directly or exchanged
-        log('Teams authentication successful');
-        return;
+        // Fallback: Use MSAL popup in Teams (redirect doesn't work in iframes)
+        log('Using MSAL popup for Teams authentication');
+        try {
+            const response = await instance.loginPopup({
+                scopes,
+                extraScopesToConsent: Constants.msal.msGraphAppScopes,
+            });
+            instance.setActiveAccount(response.account);
+            log('MSAL popup authentication successful in Teams');
+            return;
+        } catch (popupError) {
+            log('MSAL popup failed in Teams:', popupError);
+            throw new Error(
+                `Teams authentication failed: ${popupError instanceof Error ? popupError.message : 'Unknown error'}`,
+            );
+        }
     }
 
     // Step 3: Standard browser authentication

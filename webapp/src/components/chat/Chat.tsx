@@ -2,6 +2,9 @@ import { Subtitle1 } from '@fluentui/react-components';
 import React from 'react';
 import { AuthHelper } from '../..//libs/auth/AuthHelper';
 import { AppState, useClasses } from '../../App';
+import { useAppSelector } from '../../redux/app/hooks';
+import { RootState } from '../../redux/app/store';
+import { FeatureKeys } from '../../redux/features/app/AppState';
 import { UserSettingsMenu } from '../header/UserSettingsMenu';
 import { PluginGallery } from '../open-api-plugins/PluginGallery';
 import { BackendProbe, ChatView, Error, LoadingOverlay } from '../views';
@@ -15,6 +18,8 @@ const Chat = ({
     appState: AppState;
     setAppState: (state: AppState) => void;
 }) => {
+    const { features } = useAppSelector((state: RootState) => state.app);
+    const isDarkMode = features[FeatureKeys.DarkMode].enabled;
     const onBackendFound = React.useCallback(() => {
         setAppState(
             AuthHelper.isAuthAAD()
@@ -58,7 +63,7 @@ const Chat = ({
                 appState !== AppState.ErrorLoadingChats && <ChatView />}
 
             {/* Show loading overlay on top of ChatView */}
-            {isLoading && <LoadingOverlay text={loadingText} />}
+            {isLoading && <LoadingOverlay text={loadingText} isDark={isDarkMode} />}
 
             {/* Backend probe and errors */}
             {appState === AppState.ProbeForBackend && <BackendProbe onBackendFound={onBackendFound} />}

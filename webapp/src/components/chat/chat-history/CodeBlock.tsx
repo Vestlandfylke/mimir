@@ -74,6 +74,7 @@ const useClasses = makeStyles({
 export interface CodeBlockProps {
     code: string;
     language?: string;
+    isDark?: boolean;
 }
 
 const toPrismLanguage = (language?: string): Language => {
@@ -117,11 +118,12 @@ const toPrismLanguage = (language?: string): Language => {
     }
 };
 
-export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
+export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, isDark = false }) => {
     const classes = useClasses();
     const [copied, setCopied] = useState(false);
     const trimmed = useMemo(() => code.replace(/\n$/, ''), [code]);
     const prismLang = useMemo(() => toPrismLanguage(language), [language]);
+    const theme = isDark ? themes.vsDark : themes.github;
 
     const onCopy = async () => {
         await navigator.clipboard.writeText(trimmed);
@@ -149,19 +151,21 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
             {/* Use a div instead of <pre> because <pre> only allows phrasing content (no nested divs). */}
             <div className={classes.pre}>
                 <div className={classes.scroll}>
-                    <Highlight theme={themes.github} code={trimmed} language={prismLang}>
+                    <Highlight theme={theme} code={trimmed} language={prismLang}>
                         {({ className, style, tokens, getLineProps, getTokenProps }) => (
                             <div className={className} style={style}>
                                 <div className={classes.table}>
                                     {tokens.map((line, i) => {
-                                        const lineProps = getLineProps({ line, key: i });
+                                        const { key: _lineKey, ...lineProps } = getLineProps({ line });
                                         return (
                                             <React.Fragment key={i}>
                                                 <div className={classes.lineNo}>{i + 1}</div>
                                                 <div {...lineProps} className={classes.line}>
-                                                    {line.map((token, key) => {
-                                                        const tokenProps = getTokenProps({ token, key });
-                                                        return <span key={key} {...tokenProps} />;
+                                                    {line.map((token, tokenIndex) => {
+                                                        const { key: _tokenKey, ...tokenProps } = getTokenProps({
+                                                            token,
+                                                        });
+                                                        return <span key={tokenIndex} {...tokenProps} />;
                                                     })}
                                                 </div>
                                             </React.Fragment>
