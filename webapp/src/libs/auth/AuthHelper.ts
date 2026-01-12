@@ -286,7 +286,37 @@ const isAuthAAD = () => getAuthConfig()?.authType === AuthType.AAD;
 // SKaaS = Semantic Kernel as a Service
 // Gets token with scopes to authorize SKaaS specifically
 const getSKaaSAccessToken = async (instance: IPublicClientApplication, inProgress: InteractionStatus) => {
-    return isAuthAAD() ? await TokenHelper.getAccessTokenUsingMsal(inProgress, instance, getMsalScopes()) : '';
+    if (!isAuthAAD()) {
+        return '';
+    }
+
+    // In Teams context, try to use Teams SSO token first
+    if (EmbeddedAppHelper.isInTeams()) {
+        // Check if we have a stored Teams token
+        const teamsToken = sessionStorage.getItem('teamsToken');
+        if (teamsToken) {
+            log('Using stored Teams SSO token for API call');
+            return teamsToken;
+        }
+
+        // Try to get a fresh Teams SSO token
+        try {
+            const initialized = await teamsAuthHelper.initialize();
+            if (initialized) {
+                const result = await teamsAuthHelper.attemptSilentSso(getMsalScopes());
+                if (result.success && result.token) {
+                    log('Got fresh Teams SSO token for API call');
+                    sessionStorage.setItem('teamsToken', result.token);
+                    return result.token;
+                }
+            }
+        } catch (teamsError) {
+            log('Failed to get Teams SSO token, falling back to MSAL:', teamsError);
+        }
+    }
+
+    // Fall back to MSAL token
+    return await TokenHelper.getAccessTokenUsingMsal(inProgress, instance, getMsalScopes());
 };
 
 export const AuthHelper = {

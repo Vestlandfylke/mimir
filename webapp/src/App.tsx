@@ -2,12 +2,14 @@ import { AuthenticatedTemplate, UnauthenticatedTemplate, useIsAuthenticated, use
 import { FluentProvider, makeStyles, shorthands, tokens } from '@fluentui/react-components';
 
 import * as React from 'react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Chat from './components/chat/Chat';
 import { LoadingOverlay, Login } from './components/views';
 import { AuthHelper } from './libs/auth/AuthHelper';
+import { teamsAuthHelper } from './libs/auth/TeamsAuthHelper';
 import { useChat, useFile } from './libs/hooks';
 import { AlertType } from './libs/models/AlertType';
+import { EmbeddedAppHelper } from './libs/utils/EmbeddedAppHelper';
 import { logger } from './libs/utils/Logger';
 import { useAppDispatch, useAppSelector } from './redux/app/hooks';
 import { RootState } from './redux/app/store';
@@ -67,17 +69,57 @@ export enum AppState {
 const App = () => {
     const classes = useClasses();
     const [appState, setAppState] = React.useState(AppState.ProbeForBackend);
+    const [isTeamsAuthenticated, setIsTeamsAuthenticated] = useState(false);
     const dispatch = useAppDispatch();
     const { instance } = useMsal();
-    const isAuthenticated = useIsAuthenticated();
+    const isMsalAuthenticated = useIsAuthenticated();
     const { features, isMaintenance } = useAppSelector((state: RootState) => state.app);
 
     const chat = useChat();
     const file = useFile();
 
+    // Check for existing Teams token on mount
+    useEffect(() => {
+        const checkTeamsAuth = async () => {
+            if (EmbeddedAppHelper.isInTeams() && !isMsalAuthenticated) {
+                const teamsToken = sessionStorage.getItem('teamsToken');
+                if (teamsToken) {
+                    logger.debug('Found existing Teams token, setting authenticated');
+                    setIsTeamsAuthenticated(true);
+                }
+            }
+        };
+        void checkTeamsAuth();
+    }, [isMsalAuthenticated]);
+
+    // Combined authentication status
+    const isAuthenticated = isMsalAuthenticated || isTeamsAuthenticated;
+
     const handleAppStateChange = useCallback((newState: AppState) => {
         setAppState(newState);
     }, []);
+
+    // Callback for when Teams auth succeeds in Login component
+    const handleTeamsAuthSuccess = useCallback(async () => {
+        logger.debug('Teams authentication successful callback');
+        setIsTeamsAuthenticated(true);
+
+        // Try to get user info from Teams context
+        try {
+            const context = await teamsAuthHelper.getContext();
+            if (context?.user) {
+                dispatch(
+                    setActiveUserInfo({
+                        id: context.user.id ?? 'teams-user',
+                        email: context.user.loginHint ?? context.user.userPrincipalName ?? '',
+                        username: context.user.displayName ?? context.user.loginHint ?? 'Teams User',
+                    }),
+                );
+            }
+        } catch (error) {
+            logger.error('Failed to get Teams context for user info:', error);
+        }
+    }, [dispatch]);
 
     useEffect(() => {
         if (isMaintenance && appState !== AppState.ProbeForBackend) {
@@ -86,29 +128,63 @@ const App = () => {
         }
 
         if (isAuthenticated && appState === AppState.SettingUserInfo) {
-            const account = instance.getActiveAccount();
-            if (!account) {
-                handleAppStateChange(AppState.ErrorLoadingUserInfo);
-            } else {
-                dispatch(
-                    setActiveUserInfo({
-                        id: `${account.localAccountId}.${account.tenantId}`,
-                        email: account.username,
-                        username: account.name ?? account.username,
-                    }),
-                );
-
-                if (account.username.split('@')[1] === 'microsoft.com') {
+            // For MSAL authentication, get user info from the account
+            if (isMsalAuthenticated) {
+                const account = instance.getActiveAccount();
+                if (!account) {
+                    handleAppStateChange(AppState.ErrorLoadingUserInfo);
+                } else {
                     dispatch(
-                        addAlert({
-                            message:
-                                'By using Chat Copilot, you agree to protect sensitive data, not store it in chat, and allow chat history collection for service improvements. This tool is for internal use only.',
-                            type: AlertType.Info,
+                        setActiveUserInfo({
+                            id: `${account.localAccountId}.${account.tenantId}`,
+                            email: account.username,
+                            username: account.name ?? account.username,
                         }),
                     );
-                }
 
-                handleAppStateChange(AppState.LoadChats);
+                    if (account.username.split('@')[1] === 'microsoft.com') {
+                        dispatch(
+                            addAlert({
+                                message:
+                                    'By using Chat Copilot, you agree to protect sensitive data, not store it in chat, and allow chat history collection for service improvements. This tool is for internal use only.',
+                                type: AlertType.Info,
+                            }),
+                        );
+                    }
+
+                    handleAppStateChange(AppState.LoadChats);
+                }
+            } else if (isTeamsAuthenticated) {
+                // For Teams authentication, user info was already set in handleTeamsAuthSuccess
+                // or we'll get it from Teams context
+                void (async () => {
+                    try {
+                        const context = await teamsAuthHelper.getContext();
+                        if (context?.user) {
+                            dispatch(
+                                setActiveUserInfo({
+                                    id: context.user.id ?? `teams-${Date.now()}`,
+                                    email: context.user.loginHint ?? context.user.userPrincipalName ?? '',
+                                    username: context.user.displayName ?? context.user.loginHint ?? 'Teams User',
+                                }),
+                            );
+                        } else {
+                            // Fallback: create a basic user info
+                            dispatch(
+                                setActiveUserInfo({
+                                    id: `teams-${Date.now()}`,
+                                    email: 'teams@user',
+                                    username: 'Teams User',
+                                }),
+                            );
+                        }
+                        handleAppStateChange(AppState.LoadChats);
+                    } catch (error) {
+                        logger.error('Failed to get Teams user info:', error);
+                        // Still proceed even if we can't get user info
+                        handleAppStateChange(AppState.LoadChats);
+                    }
+                })();
             }
         }
 
@@ -132,29 +208,43 @@ const App = () => {
                 }),
             ]);
         } // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [instance, isAuthenticated, appState, isMaintenance]);
+    }, [instance, isAuthenticated, isMsalAuthenticated, isTeamsAuthenticated, appState, isMaintenance]);
 
     const theme = features[FeatureKeys.DarkMode].enabled ? semanticKernelDarkTheme : semanticKernelLightTheme;
 
+    // Render logic that handles both MSAL and Teams authentication
+    const renderContent = () => {
+        if (!AuthHelper.isAuthAAD()) {
+            // No auth required
+            return <Chat classes={classes} appState={appState} setAppState={handleAppStateChange} />;
+        }
+
+        // If authenticated via Teams (but not MSAL), render Chat directly
+        if (isTeamsAuthenticated && !isMsalAuthenticated) {
+            return <Chat classes={classes} appState={appState} setAppState={handleAppStateChange} />;
+        }
+
+        // Standard MSAL flow
+        return (
+            <>
+                <UnauthenticatedTemplate>
+                    <div className={classes.container} style={{ position: 'relative' }}>
+                        <Login onTeamsAuthSuccess={handleTeamsAuthSuccess} />
+                        {appState === AppState.SigningOut && (
+                            <LoadingOverlay text="Logger ut..." isDark={features[FeatureKeys.DarkMode].enabled} />
+                        )}
+                    </div>
+                </UnauthenticatedTemplate>
+                <AuthenticatedTemplate>
+                    <Chat classes={classes} appState={appState} setAppState={handleAppStateChange} />
+                </AuthenticatedTemplate>
+            </>
+        );
+    };
+
     return (
         <FluentProvider className="app-container" theme={theme}>
-            {AuthHelper.isAuthAAD() ? (
-                <>
-                    <UnauthenticatedTemplate>
-                        <div className={classes.container} style={{ position: 'relative' }}>
-                            <Login />
-                            {appState === AppState.SigningOut && (
-                                <LoadingOverlay text="Logger ut..." isDark={features[FeatureKeys.DarkMode].enabled} />
-                            )}
-                        </div>
-                    </UnauthenticatedTemplate>
-                    <AuthenticatedTemplate>
-                        <Chat classes={classes} appState={appState} setAppState={handleAppStateChange} />
-                    </AuthenticatedTemplate>
-                </>
-            ) : (
-                <Chat classes={classes} appState={appState} setAppState={handleAppStateChange} />
-            )}
+            {renderContent()}
         </FluentProvider>
     );
 };

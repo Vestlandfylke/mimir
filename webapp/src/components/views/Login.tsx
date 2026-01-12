@@ -4,10 +4,15 @@ import { useMsal } from '@azure/msal-react';
 import { Body1, Button, makeStyles, Spinner, tokens } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
+import { teamsAuthHelper } from '../../libs/auth/TeamsAuthHelper';
 import { EmbeddedAppHelper } from '../../libs/utils/EmbeddedAppHelper';
 import { logger } from '../../libs/utils/Logger';
 import { getErrorDetails } from '../utils/TextUtils';
 import logo from '../../assets/sidestilt-logo-vlfk.svg';
+
+interface LoginProps {
+    onTeamsAuthSuccess?: () => void;
+}
 
 const useClasses = makeStyles({
     container: {
@@ -87,7 +92,7 @@ const useClasses = makeStyles({
     },
 });
 
-export const Login: React.FC = () => {
+export const Login: React.FC<LoginProps> = ({ onTeamsAuthSuccess }) => {
     const { instance } = useMsal();
     const classes = useClasses();
     const [silentAuthInProgress, setSilentAuthInProgress] = useState(true);
@@ -109,18 +114,52 @@ export const Login: React.FC = () => {
                     // The app will automatically redirect once authentication is detected
                 } else {
                     logger.debug('Login component: Silent authentication not available');
-                    setSilentAuthInProgress(false);
 
-                    // If we are in Teams (desktop/web) and silent SSO failed, kick off Teams auth immediately.
+                    // If we are in Teams, try Teams SSO
                     if (EmbeddedAppHelper.isInTeams()) {
-                        logger.debug('Login component: In Teams and silent SSO failed, starting Teams auth');
-                        setSilentAuthInProgress(true);
+                        logger.debug('Login component: In Teams, attempting Teams SSO...');
                         setSilentAuthMessage('Logger inn via Teams...');
-                        void AuthHelper.loginAsync(instance).catch((e: unknown) => {
-                            const context = EmbeddedAppHelper.getAppContext();
+
+                        try {
+                            // Initialize Teams SDK
+                            const initialized = await teamsAuthHelper.initialize();
+                            if (initialized) {
+                                // Try Teams SSO
+                                const ssoResult = await teamsAuthHelper.attemptSilentSso([]);
+                                if (ssoResult.success && ssoResult.token) {
+                                    logger.debug('Login component: Teams SSO successful!');
+                                    sessionStorage.setItem('teamsToken', ssoResult.token);
+                                    setSilentAuthMessage('Velkommen tilbake!');
+
+                                    // Notify parent that Teams auth succeeded
+                                    if (onTeamsAuthSuccess) {
+                                        onTeamsAuthSuccess();
+                                    }
+                                    return;
+                                }
+                            }
+
+                            // If Teams SSO failed, try the full Teams auth flow
+                            logger.debug('Login component: Teams SSO failed, trying full auth flow...');
+                            void AuthHelper.loginAsync(instance)
+                                .then(() => {
+                                    // Check if we got a Teams token
+                                    const teamsToken = sessionStorage.getItem('teamsToken');
+                                    if (teamsToken && onTeamsAuthSuccess) {
+                                        onTeamsAuthSuccess();
+                                    }
+                                })
+                                .catch((e: unknown) => {
+                                    const context = EmbeddedAppHelper.getAppContext();
+                                    setSilentAuthInProgress(false);
+                                    alert(`Feil ved innlogging (${context}): ${getErrorDetails(e)}`);
+                                });
+                        } catch (teamsError) {
+                            logger.error('Login component: Teams auth error:', teamsError);
                             setSilentAuthInProgress(false);
-                            alert(`Feil ved innlogging (${context}): ${getErrorDetails(e)}`);
-                        });
+                        }
+                    } else {
+                        setSilentAuthInProgress(false);
                     }
                 }
             } catch (error) {
@@ -137,7 +176,7 @@ export const Login: React.FC = () => {
         return () => {
             clearTimeout(timer);
         };
-    }, [instance]);
+    }, [instance, onTeamsAuthSuccess]);
 
     const handleLogin = () => {
         setSilentAuthInProgress(true);
