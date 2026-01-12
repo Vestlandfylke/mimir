@@ -46,6 +46,14 @@ Under **Dokument**-fana kan du:
 
 Under **Tilpassing**-fana kan du justere korleis Mimir svarar:
 
+### Modelval
+Vel kva AI-modell du vil bruke:
+- **GPT-4o** - Standard modell, god balanse mellom kvalitet og fart
+- **GPT-4o-mini** - Raskare svar, litt enklare oppgåver
+- **GPT-5.2 Reasoning** - Avansert modell som viser tankeprosessen sin
+
+> **Tips:** Reasoning-modellen er best for komplekse spørsmål der du vil sjå korleis AI-en tenkjer.
+
 ### Svarstil
 - **Tone:** Standard, Formell, Uformell eller Pedagogisk
 - **Svarlengde:** Standard, Kort og konsis, eller Detaljert
@@ -63,13 +71,32 @@ Juster balansen mellom fokus på nyleg kontekst (siste meldingar) og heilskap (h
 
 ---
 
-## 6. Diagram og visualisering
+## 6. Tankeprosess (Reasoning)
 
-Mimir kan lage ulike diagram. Klikk på diagram-ikonet ved tekstfeltet og vel type, eller beskriv diagrammet du ønskjer direkte i meldinga.
+Når du brukar **GPT-5.2 Reasoning**-modellen, kan du sjå korleis AI-en tenkjer:
+
+- **Under svar:** Klikk på "Vis tankeprosessen" for å sjå AI-ens resonering
+- **I Prompt-dialogen:** Klikk på ℹ️-ikonet på eit svar for å sjå full tankeprosess under "Tankeprosess"-fana
+
+> **Når bruke reasoning?** For komplekse spørsmål, problemløysing, eller når du vil forstå korleis AI-en kom fram til svaret.
 
 ---
 
-## 7. Tips for gode spørsmål
+## 7. Diagram og visualisering
+
+Mimir kan lage ulike diagram. Klikk på diagram-ikonet ved tekstfeltet og vel type, eller beskriv diagrammet du ønskjer direkte i meldinga.
+
+Støtta diagramtypar:
+- Flytskjema
+- Sekvensdiagram
+- Kanban-tavler
+- Søylediagram og linjediagram
+- Organisasjonskart
+- Og fleire...
+
+---
+
+## 8. Tips for gode spørsmål
 
 ### Gi kontekst
 - Kva er føremålet?
@@ -89,7 +116,7 @@ Mimir kan lage ulike diagram. Klikk på diagram-ikonet ved tekstfeltet og vel ty
 
 ---
 
-## 8. Verktøylinja for samtalar
+## 9. Verktøylinja for samtalar
 
 Bak samtalenamnet finn du:
 
@@ -102,7 +129,7 @@ Bak samtalenamnet finn du:
 
 ---
 
-## 9. Dele ein samtale
+## 10. Dele ein samtale
 
 > **Merk:** Krev at "Flerbrukar-samtalar" er aktivert i innstillingane.
 
@@ -118,7 +145,7 @@ Bak samtalenamnet finn du:
 
 ---
 
-## 10. Feilsøking
+## 11. Feilsøking
 
 | Problem | Løysing |
 |---------|---------|
@@ -128,7 +155,7 @@ Bak samtalenamnet finn du:
 
 ---
 
-## 11. Kontakt
+## 12. Kontakt
 
 Har du spørsmål eller tilbakemeldingar?
 

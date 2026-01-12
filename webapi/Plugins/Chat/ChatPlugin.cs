@@ -825,9 +825,9 @@ public class ChatPlugin
         {
             fullResponse.Append(contentPiece);
         }
-        
+
         var responseContent = fullResponse.ToString();
-        
+
         // Extract reasoning if present
         if (isReasoningMode && responseContent.Contains("<thinking>", StringComparison.OrdinalIgnoreCase))
         {
@@ -847,7 +847,7 @@ public class ChatPlugin
         {
             chatMessage.Content = responseContent;
         }
-        
+
         await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
         await this.UpdateMessageOnClient(chatMessage, cancellationToken);
 
@@ -1385,7 +1385,7 @@ public class ChatPlugin
         var rawBuffer = new System.Text.StringBuilder();
         var reasoningBuffer = new System.Text.StringBuilder();
         var contentBuffer = new System.Text.StringBuilder();
-        
+
         bool insideThinking = false;
         bool thinkingComplete = false;
         int updateCounter = 0;
@@ -1395,7 +1395,7 @@ public class ChatPlugin
         {
             rawBuffer.Append(contentPiece);
             updateCounter++;
-            
+
             var raw = rawBuffer.ToString();
 
             // Look for opening tag
@@ -1419,7 +1419,7 @@ public class ChatPlugin
                     }
                 }
             }
-            
+
             // Inside thinking - accumulate reasoning
             if (insideThinking && !thinkingComplete)
             {
@@ -1430,12 +1430,12 @@ public class ChatPlugin
                     reasoningBuffer.Append(current.Substring(0, closeIdx));
                     insideThinking = false;
                     thinkingComplete = true;
-                    
+
                     // Send reasoning once complete
                     chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
                     await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
                     await this.UpdateBotResponseStatusOnClientAsync(chatId, "Mimir skriv ei melding", cancellationToken);
-                    
+
                     rawBuffer.Clear();
                     rawBuffer.Append(current.Substring(closeIdx + 11));
                     updateCounter = 0; // Reset for content streaming
@@ -1447,13 +1447,13 @@ public class ChatPlugin
                     rawBuffer.Clear();
                 }
             }
-            
+
             // After thinking - stream content (batched)
             if (thinkingComplete && rawBuffer.Length > 0)
             {
                 contentBuffer.Append(rawBuffer);
                 rawBuffer.Clear();
-                
+
                 if (updateCounter % UpdateFrequency == 0)
                 {
                     chatMessage.Content = contentBuffer.ToString().Trim();
@@ -1469,7 +1469,7 @@ public class ChatPlugin
             chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
             await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
         }
-        
+
         if (!thinkingComplete && !insideThinking)
         {
             chatMessage.Content = rawBuffer.ToString().Trim();
@@ -1479,7 +1479,7 @@ public class ChatPlugin
             contentBuffer.Append(rawBuffer);
             chatMessage.Content = contentBuffer.ToString().Trim();
         }
-        
+
         await this.UpdateMessageOnClient(chatMessage, cancellationToken);
     }
 

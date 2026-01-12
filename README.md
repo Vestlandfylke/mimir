@@ -23,8 +23,11 @@ Mimir er ein avansert chatbot bygd på Microsoft Semantic Kernel og Azure OpenAI
   - Dokumentformatering
   - Skriveråd og prinsippforklaringar
 
-### Nye Funksjonar (2025)
+### Nye Funksjonar (2025/2026)
 
+- ✅ **Modelval per chat** - Vel mellom GPT-4o, GPT-4o-mini og GPT-5.2 Reasoning for kvar samtale
+- ✅ **Reasoning/tankeprosess** - Vis AI-ens tankeprosess for modellar som støttar det
+- ✅ **Mørk modus** - Full støtte for mørk modus, inkludert diagram
 - ✅ **GitHub Actions deployment** - Automatisk deployment til Azure
 - ✅ **MCP Bridge** - Container App for MCP-verktøy
 - ✅ **Fast model** - gpt-4o-mini for rask intent-ekstraksjon
