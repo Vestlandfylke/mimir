@@ -192,21 +192,35 @@ VIKTIG: Bruk hermeteikn rundt tekst med spesialteikn: A["Tekst med (parentesar)"
         label: 'Klasse',
         description: 'Vis klassar, eigenskapar og relasjonar i objektorientert kode',
         icon: <TbHierarchy2 />,
-        prompt: `Lag eit Mermaid klassediagram. VIKTIG: Skriv alltid på Nynorsk og start med "classDiagram". Syntaks-døme:
+        prompt: `Lag eit Mermaid klassediagram. VIKTIG: Skriv alltid på Nynorsk og start med "classDiagram".
+
+KRITISK SYNTAKS - Klassenamn UTAN hermeteikn:
 
 classDiagram
-    class Bil {
-        +String merke
-        +String modell
-        +start()
-        +stopp()
+    class Person {
+        +String namn
+        +int alder
+        +String epost
+        +loggInn()
     }
-    class Koyretoy {
-        +int hjul
+    class Student {
+        +String studentnummer
+        +String studieprogram
     }
-    Koyretoy <|-- Bil
+    class Laerar {
+        +String ansattnummer
+        +setKarakter()
+    }
+    Person <|-- Student
+    Person <|-- Laerar
+    Student "1" --> "*" Kurs : melder seg på
 
-Relasjonar: <|-- (arv), *-- (komposisjon), o-- (aggregering), --> (assosiasjon). Bruk norske tekstar.`,
+VIKTIGE REGLAR:
+- Klassenamn UTAN hermeteikn: class Person { (IKKJE class "Person" {)
+- Unngå spesialteikn som æ, ø, å i klassenamn (bruk Laerar ikkje Lærar)
+- Hermeteikn KUN i kardinalitet ("1", "*") og relasjonstekst
+- Relasjonar: <|-- (arv), *-- (komposisjon), o-- (aggregering), --> (assosiasjon)
+- Synlegheit: + public, - private, # protected`,
     },
     {
         id: 'sequence',
@@ -273,36 +287,23 @@ Former: ((sirkel)), (avrunda), [firkant], ))sky((. Bruk norske (nynorsk) tekstar
         label: 'Arkitektur',
         description: 'Vis systemkomponentar, tenester og infrastruktur',
         icon: <TbBuildingSkyscraper />,
-        prompt: `Lag eit Mermaid arkitektur-diagram.
-
-OFFISIELL SYNTAKS:
-- group id(ikon)[Tittel]
-- group id(ikon)[Tittel] in foreldregruppe
-- service id(ikon)[Tittel] in gruppe
-- junction id in gruppe
-- Kantar: id:RETNING -- RETNING:id  eller  id:RETNING --> RETNING:id
-- Retningar: L (venstre), R (hogre), T (topp), B (botn)
-- Ikon: cloud, database, disk, internet, server
-
-KORREKT EKSEMPEL:
+        prompt: `Lag eit Mermaid arkitektur-diagram. Følg NØYAKTIG dette formatet:
 
 architecture-beta
     group api(cloud)[API]
-
     service db(database)[Database] in api
     service disk1(disk)[Storage] in api
-    service disk2(disk)[Storage] in api
     service server(server)[Server] in api
-
     db:L -- R:server
     disk1:T -- B:server
-    disk2:T -- B:db
 
-VIKTIG:
-- ID-ar (db, disk1, server) MÅ vere enkle utan mellomrom
-- Titlar i [klammer] kan ha mellomrom
-- Skriv alltid labels på Nynorsk
-- Alle services MÅ ha "in gruppenamn"`,
+KRITISK:
+- 4 mellomrom innrykk på ALLE linjer etter architecture-beta
+- Etiketter i [klammer] UTAN hermeteikn og UTAN bindestrekar
+- Bruk enkle norske ord: [Lagring] ikkje [Fil-lagring]
+- ID-ar: berre små bokstavar og tal (db, server1)
+- Ikon: cloud, database, disk, internet, server
+- Sider: L, R, T, B`,
     },
     {
         id: 'block',

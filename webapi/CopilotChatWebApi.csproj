@@ -39,6 +39,7 @@
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="SharpToken" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
   </ItemGroup>
 
   <ItemGroup>

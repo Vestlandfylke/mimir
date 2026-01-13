@@ -26,6 +26,7 @@ import { chatRequestQueue } from '../../libs/services/ChatRequestQueue';
 import { ChatService } from '../../libs/services/ChatService';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
+import { FeatureKeys } from '../../redux/features/app/AppState';
 import { addAlert } from '../../redux/features/app/appSlice';
 import { editConversationInput, updateBotResponseStatus } from '../../redux/features/conversations/conversationsSlice';
 import { Alerts } from '../shared/Alerts';
@@ -33,7 +34,8 @@ import { getErrorDetails } from '../utils/TextUtils';
 import { SpeechService } from './../../libs/services/SpeechService';
 import { updateUserIsTyping } from './../../redux/features/conversations/conversationsSlice';
 import { ChatStatus } from './ChatStatus';
-import { DiagramType, DiagramTypeSelector } from './DiagramTypeSelector';
+import { DiagramType } from './DiagramTypeSelector';
+import { ToolsMenu } from './ToolsMenu';
 
 const log = debug(Constants.debug.root).extend('chat-input');
 
@@ -199,7 +201,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
     const { instance, inProgress } = useMsal();
     const dispatch = useAppDispatch();
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
-    const { activeUserInfo } = useAppSelector((state: RootState) => state.app);
+    const { activeUserInfo, features } = useAppSelector((state: RootState) => state.app);
+    const isDarkMode = features[FeatureKeys.DarkMode].enabled;
     const fileHandler = useFile();
 
     const [value, setValue] = useState('');
@@ -577,10 +580,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                                 title="Vedlegg fil"
                                 aria-label="Vedlegg fil-knapp"
                             />
-                            <DiagramTypeSelector
-                                selectedType={selectedDiagramType}
-                                onSelectType={setSelectedDiagramType}
+                            <ToolsMenu
+                                selectedDiagramType={selectedDiagramType}
+                                onSelectDiagramType={setSelectedDiagramType}
                                 disabled={conversations[selectedId].disabled || dragging}
+                                isDark={isDarkMode}
                             />
                             {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
                         </div>

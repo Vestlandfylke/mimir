@@ -86,6 +86,9 @@ public sealed class Program
             });
         });
 
+        // Add rate limiting for spam/abuse protection
+        builder.Services.AddRateLimitingServices(builder.Configuration);
+
         // Add in the rest of the services.
         builder.Services
             .AddMaintenanceServices()
@@ -106,6 +109,7 @@ public sealed class Program
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseRateLimiter(); // Rate limiting after auth so we can identify users
         app.UseMiddleware<MaintenanceMiddleware>();
         app.MapControllers()
             .RequireAuthorization();

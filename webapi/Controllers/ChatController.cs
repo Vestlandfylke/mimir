@@ -16,6 +16,7 @@ using CopilotChat.WebApi.Plugins.Chat;
 using CopilotChat.WebApi.Services;
 using CopilotChat.WebApi.Storage;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
@@ -85,10 +86,12 @@ public class ChatController : ControllerBase, IDisposable
     /// <returns>Results containing the response from the model.</returns>
     [Route("chats/{chatId:guid}/messages")]
     [HttpPost]
+    [EnableRateLimiting(Extensions.RateLimitingExtensions.ChatPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(StatusCodes.Status504GatewayTimeout)]
     public async Task<IActionResult> ChatAsync(
         [FromServices] Kernel defaultKernel,
@@ -518,10 +521,12 @@ public class ChatController : ControllerBase, IDisposable
     /// <returns>Results containing the response from the executed plan.</returns>
     [Route("chats/{chatId:guid}/plan")]
     [HttpPost]
+    [EnableRateLimiting(Extensions.RateLimitingExtensions.ChatPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(StatusCodes.Status504GatewayTimeout)]
     public async Task<IActionResult> ExecutePlanAsync(
         [FromServices] Kernel kernel,

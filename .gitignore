@@ -6,6 +6,7 @@ COMMIT_MESSAGE.txt
 # Test logs and stress test reports
 Logs_from_test_1/
 Logs_from_test*/
+docs/
 
 # Teams manifest (contains deployment-specific configuration)
 teams-manifest/
