@@ -12,9 +12,10 @@ import {
     Tooltip,
 } from '@fluentui/react-components';
 import { ArrowDownload20Regular, ChevronDown16Regular } from '@fluentui/react-icons';
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MermaidEditorModal } from './MermaidEditorModal';
 import { buildVestlandThemeVariables, diagramBaseStyles, getXYChartConfig, LIGHT_BACKGROUND } from './MermaidStyles';
+import { MermaidViewerModal } from './MermaidViewerModal';
 
 type MermaidSecurityLevel = 'strict' | 'loose' | 'antiscript';
 type MermaidTheme = 'default' | 'forest' | 'dark' | 'neutral' | 'base';
@@ -293,8 +294,8 @@ const useClasses = makeStyles({
         minHeight: '60px',
         ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalS),
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
-        // Medium light gray - works well with light-mode diagrams
-        backgroundColor: '#e8e8e8',
+        // Light gray - works well with light-mode diagrams
+        backgroundColor: '#f5f5f5',
     },
     actions: {
         position: 'absolute',
@@ -303,7 +304,7 @@ const useClasses = makeStyles({
         zIndex: 10,
         display: 'flex',
         gap: tokens.spacingHorizontalXS,
-        backgroundColor: '#e8e8e8',
+        backgroundColor: '#f5f5f5',
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
         ...shorthands.padding('2px'),
         boxShadow: tokens.shadow4,
@@ -319,6 +320,12 @@ const useClasses = makeStyles({
         // Add padding on left/right for titles that overflow the SVG viewBox
         paddingLeft: tokens.spacingHorizontalXXL,
         paddingRight: tokens.spacingHorizontalXXL,
+        // Make diagram clickable for fullscreen view
+        cursor: 'pointer',
+        transition: 'opacity 0.15s ease',
+        ':hover': {
+            opacity: 0.9,
+        },
         '& svg': {
             // Make SVG responsive - scale to fit container
             width: '100%',
@@ -375,6 +382,8 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code, isDark = 
     const [error, setError] = useState<string>('');
     const [isRendering, setIsRendering] = useState(false);
     const [downloading, setDownloading] = useState(false);
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
 
     // Track the last successfully rendered code to avoid re-rendering same content
     const lastRenderedCodeRef = useRef<string>('');
@@ -623,8 +632,66 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code, isDark = 
     // Show loading state only when we have no SVG yet
     const showLoading = isRendering && !svg;
 
+    // Store scroll position to restore after modal closes
+    const scrollPositionRef = useRef<{ element: Element | null; top: number; left: number } | null>(null);
+
+    // Handle click on diagram to open viewer
+    const handleDiagramClick = useCallback(() => {
+        if (svg && !error) {
+            // Save scroll position of the chat container before opening modal
+            const chatContainer =
+                document.querySelector('[data-is-scrollable="true"]') ??
+                document.querySelector('.fui-ChatMyMessage__body')?.closest('[style*="overflow"]') ??
+                document.documentElement;
+            scrollPositionRef.current = {
+                element: chatContainer,
+                top: chatContainer.scrollTop,
+                left: chatContainer.scrollLeft,
+            };
+            setIsViewerOpen(true);
+        }
+    }, [svg, error]);
+
+    // Handle viewer close - restore scroll position
+    const handleViewerClose = useCallback((open: boolean) => {
+        setIsViewerOpen(open);
+        if (!open && scrollPositionRef.current) {
+            // Restore scroll position after modal closes
+            requestAnimationFrame(() => {
+                if (scrollPositionRef.current?.element) {
+                    scrollPositionRef.current.element.scrollTop = scrollPositionRef.current.top;
+                    scrollPositionRef.current.element.scrollLeft = scrollPositionRef.current.left;
+                }
+                scrollPositionRef.current = null;
+            });
+        }
+    }, []);
+
+    // Handle opening editor from viewer
+    const handleOpenEditorFromViewer = useCallback(() => {
+        setIsEditorOpen(true);
+    }, []);
+
     return (
         <div className={classes.root}>
+            {/* Viewer modal - opens when clicking on diagram */}
+            <MermaidViewerModal
+                svg={svg}
+                code={normalized}
+                isDark={isDark}
+                isOpen={isViewerOpen}
+                onOpenChange={handleViewerClose}
+                onOpenEditor={handleOpenEditorFromViewer}
+            />
+
+            {/* Editor modal - controlled state for opening from viewer */}
+            <MermaidEditorModal
+                code={normalized}
+                isDark={isDark}
+                isOpen={isEditorOpen}
+                onOpenChange={setIsEditorOpen}
+            />
+
             {!error && svg && (
                 <div className={classes.actions}>
                     <MermaidEditorModal code={normalized} isDark={isDark} />
@@ -685,7 +752,20 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code, isDark = 
                     <span>Teiknar diagram...</span>
                 </div>
             ) : (
-                <div className={classes.scroll} dangerouslySetInnerHTML={{ __html: svg }} />
+                <div
+                    className={classes.scroll}
+                    onClick={handleDiagramClick}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleDiagramClick();
+                        }
+                    }}
+                    aria-label="Klikk for å opne diagram i fullskjerm"
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                />
             )}
         </div>
     );

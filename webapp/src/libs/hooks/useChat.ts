@@ -4,7 +4,12 @@ import { useMsal } from '@azure/msal-react';
 import { Constants } from '../../Constants';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
-import { addAlert, toggleFeatureState, updateTokenUsage } from '../../redux/features/app/appSlice';
+import {
+    addAlert,
+    setAvailableTemplates,
+    toggleFeatureState,
+    updateTokenUsage,
+} from '../../redux/features/app/appSlice';
 import { ChatState } from '../../redux/features/conversations/ChatState';
 import { Conversations } from '../../redux/features/conversations/ConversationsState';
 import {
@@ -89,11 +94,18 @@ export const useChat = () => {
         return users.find((user) => user.id === id);
     };
 
-    const createChat = async (template?: string) => {
-        const chatTitle =
-            template === 'klarsprak'
-                ? `Klarspråk-assistent @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`
-                : `Mimir @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`;
+    const createChat = async (template?: string, templateDisplayName?: string) => {
+        // Generate chat title based on template
+        let chatTitle: string;
+        if (template && templateDisplayName) {
+            chatTitle = `${templateDisplayName} @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`;
+        } else if (template === 'klarsprak') {
+            chatTitle = `Klarspråk-assistent @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`;
+        } else if (template === 'leader') {
+            chatTitle = `Leiar-assistent @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`;
+        } else {
+            chatTitle = `Mimir @ ${new Date().toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short', hour12: false })}`;
+        }
         try {
             await chatService
                 .createChatAsync(chatTitle, await AuthHelper.getSKaaSAccessToken(instance, inProgress), template)
@@ -575,6 +587,20 @@ export const useChat = () => {
         }
     };
 
+    const loadAvailableTemplates = async () => {
+        try {
+            const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+            const templates = await chatService.getAvailableTemplatesAsync(accessToken);
+            dispatch(setAvailableTemplates(templates));
+            return templates;
+        } catch (e: any) {
+            // Templates are optional, so we don't show an error alert
+            // Just log the error and return empty array
+            console.warn('Unable to load available templates:', getErrorDetails(e));
+            return [];
+        }
+    };
+
     return {
         getChatUserById,
         createChat,
@@ -591,6 +617,7 @@ export const useChat = () => {
         deleteChat,
         processPlan,
         updateMessage,
+        loadAvailableTemplates,
     };
 };
 

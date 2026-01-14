@@ -2,6 +2,7 @@
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Constants } from '../../../Constants';
+import { IAvailableTemplate } from '../../../libs/models/ChatTemplate';
 import { ServiceInfo } from '../../../libs/models/ServiceInfo';
 import { TokenUsage, TokenUsageFunctionNameMap } from '../../../libs/models/TokenUsage';
 import { ActiveUserInfo, Alert, AppState, FeatureKeys, initialState } from './AppState';
@@ -94,6 +95,9 @@ export const appSlice = createSlice({
         setConnectionReconnected: (state: AppState, action: PayloadAction<boolean>) => {
             state.connectionReconnected = action.payload;
         },
+        setAvailableTemplates: (state: AppState, action: PayloadAction<IAvailableTemplate[]>) => {
+            state.availableTemplates = action.payload;
+        },
     },
 });
 
@@ -110,6 +114,7 @@ export const {
     setMaintenance,
     setAuthConfig,
     setConnectionReconnected,
+    setAvailableTemplates,
 } = appSlice.actions;
 
 export default appSlice.reducer;

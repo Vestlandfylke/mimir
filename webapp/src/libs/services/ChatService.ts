@@ -5,6 +5,7 @@ import { ChatMemorySource } from '../models/ChatMemorySource';
 import { IChatMessage } from '../models/ChatMessage';
 import { IChatParticipant } from '../models/ChatParticipant';
 import { IChatSession, ICreateChatSessionResponse } from '../models/ChatSession';
+import { IAvailableTemplate } from '../models/ChatTemplate';
 import { IChatUser } from '../models/ChatUser';
 import { ServiceInfo } from '../models/ServiceInfo';
 import { IAsk, IAskVariables } from '../semantic-kernel/model/Ask';
@@ -323,6 +324,22 @@ export class ChatService extends BaseService {
             {
                 commandPath: `chats/${chatId}/cancel`,
                 method: 'POST',
+            },
+            accessToken,
+        );
+
+        return result;
+    };
+
+    /**
+     * Get available chat templates for the current user.
+     * Templates may be restricted by Azure AD group membership.
+     */
+    public getAvailableTemplatesAsync = async (accessToken: string): Promise<IAvailableTemplate[]> => {
+        const result = await this.getResponseAsync<IAvailableTemplate[]>(
+            {
+                commandPath: 'templates',
+                method: 'GET',
             },
             accessToken,
         );

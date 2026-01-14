@@ -2,8 +2,25 @@
 
 import { FC, useState } from 'react';
 
-import { Button, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Tooltip } from '@fluentui/react-components';
-import { ArrowUploadRegular, BotAdd20Regular, PeopleTeamAddRegular } from '@fluentui/react-icons';
+import {
+    Badge,
+    Button,
+    Divider,
+    Menu,
+    MenuItem,
+    MenuList,
+    MenuPopover,
+    MenuTrigger,
+    tokens,
+    Tooltip,
+} from '@fluentui/react-components';
+import {
+    ArrowUploadRegular,
+    BotRegular,
+    PeopleTeamAddRegular,
+    PersonRegular,
+    SparkleRegular,
+} from '@fluentui/react-icons';
 import { useChat } from '../../../../libs/hooks';
 import { useAppSelector } from '../../../../redux/app/hooks';
 import { RootState } from '../../../../redux/app/store';
@@ -15,9 +32,23 @@ interface NewBotMenuProps {
     onFileUpload: () => void;
 }
 
+/**
+ * Get an icon for a template based on its icon identifier.
+ */
+const getTemplateIcon = (icon?: string) => {
+    switch (icon) {
+        case 'leader':
+            return <PersonRegular />;
+        case 'klarsprak':
+            return <SparkleRegular />;
+        default:
+            return <SparkleRegular />;
+    }
+};
+
 export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
     const chat = useChat();
-    const { features } = useAppSelector((state: RootState) => state.app);
+    const { features, availableTemplates } = useAppSelector((state: RootState) => state.app);
 
     // It needs to keep the menu open to keep the FileUploader reference
     // when the file uploader is clicked.
@@ -27,6 +58,10 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
         void chat.createChat();
     };
 
+    const onAddTemplateChat = (templateId: string, displayName: string) => {
+        void chat.createChat(templateId, displayName);
+    };
+
     const onJoinClick = () => {
         setIsJoiningBot(true);
     };
@@ -34,6 +69,8 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
     const onCloseDialog = () => {
         setIsJoiningBot(false);
     };
+
+    const hasTemplates = availableTemplates.length > 0;
 
     return (
         <div>
@@ -49,16 +86,79 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
                 </MenuTrigger>
                 <MenuPopover>
                     <MenuList>
-                        <MenuItem data-testid="addNewBotMenuItem" icon={<BotAdd20Regular />} onClick={onAddChat}>
-                            Legg til ein ny bot
+                        {/* Standard Mimir assistant */}
+                        <MenuItem data-testid="addNewBotMenuItem" icon={<BotRegular />} onClick={onAddChat}>
+                            <div>
+                                <div>Mimir</div>
+                                <div
+                                    style={{
+                                        fontSize: '0.75rem',
+                                        color: 'var(--colorNeutralForeground3)',
+                                        marginTop: '2px',
+                                    }}
+                                >
+                                    Generell KI-assistent for alle oppgåver
+                                </div>
+                            </div>
                         </MenuItem>
+
+                        {/* Specialized assistants section */}
+                        {hasTemplates && (
+                            <>
+                                <Divider style={{ margin: '8px 0' }}>
+                                    <Badge
+                                        appearance="outline"
+                                        color="informative"
+                                        size="small"
+                                        style={{ fontSize: '0.65rem' }}
+                                    >
+                                        Spesialiserte assistentar
+                                    </Badge>
+                                </Divider>
+                                {availableTemplates.map((template) => (
+                                    <MenuItem
+                                        key={template.id}
+                                        data-testid={`addTemplate-${template.id}`}
+                                        icon={getTemplateIcon(template.icon)}
+                                        onClick={() => {
+                                            onAddTemplateChat(template.id, template.displayName);
+                                        }}
+                                        style={{
+                                            backgroundColor: tokens.colorNeutralBackground1Hover,
+                                            borderLeft: `3px solid ${tokens.colorBrandForeground1}`,
+                                            marginLeft: '4px',
+                                            marginRight: '4px',
+                                            borderRadius: '4px',
+                                            marginBottom: '4px',
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: 600 }}>{template.displayName}</div>
+                                            {template.description && (
+                                                <div
+                                                    style={{
+                                                        fontSize: '0.75rem',
+                                                        color: 'var(--colorNeutralForeground3)',
+                                                        marginTop: '2px',
+                                                    }}
+                                                >
+                                                    {template.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </MenuItem>
+                                ))}
+                            </>
+                        )}
+
+                        <Divider style={{ margin: '8px 0' }} />
                         <MenuItem
                             data-testid="uploadABotMenuItem"
                             disabled={!features[FeatureKeys.BotAsDocs].enabled}
                             icon={<ArrowUploadRegular />}
                             onClick={onFileUpload}
                         >
-                            <div>Last opp ein bot</div>
+                            Last opp ein bot
                         </MenuItem>
                         <MenuItem
                             data-testid="joinABotMenuItem"

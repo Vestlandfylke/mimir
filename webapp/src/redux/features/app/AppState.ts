@@ -2,6 +2,7 @@
 
 import { AuthConfig } from '../../../libs/auth/AuthHelper';
 import { AlertType } from '../../../libs/models/AlertType';
+import { IAvailableTemplate } from '../../../libs/models/ChatTemplate';
 import { IChatUser } from '../../../libs/models/ChatUser';
 import { ServiceInfo } from '../../../libs/models/ServiceInfo';
 import { TokenUsage } from '../../../libs/models/TokenUsage';
@@ -62,6 +63,7 @@ export interface AppState {
     serviceInfo: ServiceInfo;
     isMaintenance: boolean;
     connectionReconnected: boolean; // Flag to trigger message sync after reconnection
+    availableTemplates: IAvailableTemplate[]; // Specialized assistants available to the user
 }
 
 export enum FeatureKeys {
@@ -158,4 +160,5 @@ export const initialState: AppState = {
     },
     isMaintenance: false,
     connectionReconnected: false,
+    availableTemplates: [],
 };

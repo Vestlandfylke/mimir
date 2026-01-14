@@ -153,15 +153,15 @@ export const TokenUsageGraph: React.FC<ITokenUsageGraph> = ({ promptView, tokenU
                                 </div>
                                 <div className={mergeClasses(classes.legend, classes.horizontal)}>
                                     <TokenUsageLegendItem
-                                        key={'Respons Generering'}
-                                        name={'Respons Generering'}
+                                        key={'Svar'}
+                                        name={'Svar'}
                                         usageCount={responseGenerationUsage}
                                         items={Object.values(responseGenerationView)}
                                         color={semanticKernelBrandRamp[graphColors.brand.legend]}
                                     />
                                     <TokenUsageLegendItem
-                                        key={'Minne Generering'}
-                                        name={'Minne Generering'}
+                                        key={'Dokument og minne'}
+                                        name={'Dokument og minne'}
                                         usageCount={memoryGenerationUsage}
                                         items={Object.values(memoryGenerationView)}
                                         color={contrastColors[graphColors.contrast.legend]}

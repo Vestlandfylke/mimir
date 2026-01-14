@@ -18,9 +18,12 @@ import {
     mergeClasses,
     shorthands,
     Spinner,
+    Tab,
+    TabList,
     tokens,
     Tooltip,
 } from '@fluentui/react-components';
+import { Code20Regular, Eye20Regular } from '@fluentui/react-icons';
 import {
     Add20Regular,
     ArrowDownload20Regular,
@@ -43,17 +46,43 @@ import {
     LIGHT_BACKGROUND,
 } from './MermaidStyles';
 
+// Mobile breakpoint
+const MOBILE_BREAKPOINT = '768px';
+
 const useClasses = makeStyles({
     surface: {
         maxWidth: '95vw',
         width: '1600px',
         maxHeight: '92vh',
+        // Mobile: fullscreen modal
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            width: '100vw',
+            maxWidth: '100vw',
+            height: '100vh',
+            maxHeight: '100vh',
+            ...shorthands.borderRadius('0'),
+        },
     },
     contentWrapper: {
         display: 'flex',
         height: '75vh',
         minHeight: '500px',
         userSelect: 'none',
+        // Mobile: stack vertically, full height
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            flexDirection: 'column',
+            height: 'calc(100vh - 180px)',
+            minHeight: '300px',
+        },
+    },
+    // Mobile tab bar
+    mobileTabBar: {
+        display: 'none',
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: tokens.spacingVerticalS,
+        },
     },
     editorPane: {
         display: 'flex',
@@ -61,6 +90,18 @@ const useClasses = makeStyles({
         gap: tokens.spacingVerticalXS,
         minWidth: '200px',
         overflow: 'hidden',
+        // Mobile: full size - use !important to override inline style
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            minWidth: 'unset',
+            width: '100% !important',
+            flex: 1,
+            minHeight: 0,
+        },
+    },
+    editorPaneHidden: {
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
+        },
     },
     previewPane: {
         display: 'flex',
@@ -68,6 +109,18 @@ const useClasses = makeStyles({
         gap: tokens.spacingVerticalXS,
         minWidth: '200px',
         overflow: 'hidden',
+        // Mobile: full size - use !important to override inline style
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            minWidth: 'unset',
+            width: '100% !important',
+            flex: 1,
+            minHeight: 0,
+        },
+    },
+    previewPaneHidden: {
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
+        },
     },
     resizeHandle: {
         width: '8px',
@@ -79,6 +132,10 @@ const useClasses = makeStyles({
         flexShrink: 0,
         ':hover': {
             backgroundColor: tokens.colorNeutralBackground3,
+        },
+        // Mobile: hide resize handles
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
         },
     },
     resizeHandleActive: {
@@ -96,6 +153,10 @@ const useClasses = makeStyles({
         justifyContent: 'space-between',
         gap: tokens.spacingHorizontalS,
         flexShrink: 0,
+        // Mobile: hide pane headers (tabs replace them)
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
+        },
     },
     paneTitle: {
         fontSize: tokens.fontSizeBase300,
@@ -166,7 +227,7 @@ const useClasses = makeStyles({
         flex: 1,
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
         // Same background as MermaidBlock - works with light-mode diagrams
-        backgroundColor: '#e8e8e8',
+        backgroundColor: '#f5f5f5',
         ...shorthands.padding(tokens.spacingVerticalM),
         overflow: 'hidden',
         position: 'relative',
@@ -222,14 +283,35 @@ const useClasses = makeStyles({
         gap: tokens.spacingHorizontalS,
         justifyContent: 'space-between',
         flexWrap: 'wrap',
+        // Mobile: center actions, smaller gaps
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            justifyContent: 'center',
+            gap: tokens.spacingHorizontalXS,
+        },
     },
     actionsLeft: {
         display: 'flex',
         gap: tokens.spacingHorizontalS,
+        // Mobile: wrap buttons
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: tokens.spacingHorizontalXS,
+        },
     },
     actionsRight: {
         display: 'flex',
         gap: tokens.spacingHorizontalS,
+        // Mobile: hide close button (use X in header)
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
+        },
+    },
+    // Hide help button on mobile
+    helpButton: {
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
+        },
     },
     helpPanel: {
         display: 'flex',
@@ -239,6 +321,27 @@ const useClasses = makeStyles({
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
         ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
         overflowY: 'auto',
+        // Mobile: full size when visible
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            minWidth: 'unset',
+            width: '100%',
+            flex: 1,
+            minHeight: 0,
+            ...shorthands.borderRadius('0'),
+        },
+    },
+    helpPanelHidden: {
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
+        },
+    },
+    helpPanelDesktopHidden: {
+        // Hide on desktop when showHelp is false
+        display: 'none',
+        // But show on mobile when the help tab is active (overridden by helpPanelHidden if needed)
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'flex',
+        },
     },
     helpHeader: {
         display: 'flex',
@@ -251,6 +354,10 @@ const useClasses = makeStyles({
         display: 'flex',
         gap: tokens.spacingHorizontalXS,
         alignItems: 'center',
+        // Hide close button on mobile (use tabs instead)
+        [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
+            display: 'none',
+        },
     },
     helpTypeSelector: {
         width: '100%',
@@ -895,6 +1002,8 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
     const [zoom, setZoom] = useState(100);
     const [showHelp, setShowHelp] = useState(false);
     const [selectedHelpTopic, setSelectedHelpTopic] = useState<string>('flytskjema');
+    // Mobile tab state: 'code', 'preview', or 'help'
+    const [mobileTab, setMobileTab] = useState<'code' | 'preview' | 'help'>('code');
 
     // Resizable pane state (percentages)
     const [editorWidth, setEditorWidth] = useState(35); // % of total width
@@ -1295,6 +1404,25 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
                         Diagrameditor
                     </DialogTitle>
                     <DialogContent>
+                        {/* Mobile tab bar */}
+                        <div className={classes.mobileTabBar}>
+                            <TabList
+                                selectedValue={mobileTab}
+                                onTabSelect={(_, data) => {
+                                    setMobileTab(data.value as 'code' | 'preview' | 'help');
+                                }}
+                            >
+                                <Tab value="code" icon={<Code20Regular />}>
+                                    Kode
+                                </Tab>
+                                <Tab value="preview" icon={<Eye20Regular />}>
+                                    Førehandsvisning
+                                </Tab>
+                                <Tab value="help" icon={<Question20Regular />}>
+                                    Hjelp
+                                </Tab>
+                            </TabList>
+                        </div>
                         <div
                             ref={containerRef}
                             className={classes.contentWrapper}
@@ -1304,7 +1432,10 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
                         >
                             {/* Editor pane */}
                             <div
-                                className={classes.editorPane}
+                                className={mergeClasses(
+                                    classes.editorPane,
+                                    mobileTab !== 'code' && classes.editorPaneHidden,
+                                )}
                                 style={{
                                     width: showHelp
                                         ? `${editorWidth}%`
@@ -1371,7 +1502,10 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
 
                             {/* Preview pane */}
                             <div
-                                className={classes.previewPane}
+                                className={mergeClasses(
+                                    classes.previewPane,
+                                    mobileTab !== 'preview' && classes.previewPaneHidden,
+                                )}
                                 style={{
                                     width: showHelp
                                         ? `${previewWidth}%`
@@ -1457,188 +1591,193 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Help panel (right side) */}
-                            {showHelp && (
-                                <div className={classes.helpPanel} style={{ width: `${helpWidth}%` }}>
-                                    <div className={classes.helpHeader}>
-                                        <div className={classes.helpTitle}>
-                                            <Question20Regular />
-                                            Hjelp
-                                        </div>
-                                        <div className={classes.helpHeaderControls}>
-                                            <Tooltip content="Lukk hjelp" relationship="label">
-                                                <Button
-                                                    appearance="subtle"
-                                                    size="small"
-                                                    icon={<Dismiss24Regular />}
-                                                    onClick={() => {
-                                                        setShowHelp(false);
-                                                    }}
-                                                    aria-label="Lukk hjelp"
-                                                />
-                                            </Tooltip>
-                                        </div>
+                            {/* Help panel (right side on desktop, tab on mobile) */}
+                            <div
+                                className={mergeClasses(
+                                    classes.helpPanel,
+                                    !showHelp && classes.helpPanelDesktopHidden,
+                                    mobileTab !== 'help' && classes.helpPanelHidden,
+                                )}
+                                style={{ width: showHelp ? `${helpWidth}%` : undefined }}
+                            >
+                                <div className={classes.helpHeader}>
+                                    <div className={classes.helpTitle}>
+                                        <Question20Regular />
+                                        Hjelp
                                     </div>
-
-                                    {/* Diagram type selector */}
-                                    <Menu>
-                                        <MenuTrigger disableButtonEnhancement>
+                                    <div className={classes.helpHeaderControls}>
+                                        <Tooltip content="Lukk hjelp" relationship="label">
                                             <Button
-                                                appearance="outline"
+                                                appearance="subtle"
                                                 size="small"
-                                                iconPosition="after"
-                                                icon={<ChevronDown16Regular />}
-                                                className={classes.helpTypeSelector}
-                                            >
-                                                {DIAGRAM_HELP[selectedHelpTopic].title}
-                                            </Button>
-                                        </MenuTrigger>
-                                        <MenuPopover>
-                                            <MenuList>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('flytskjema');
-                                                    }}
-                                                >
-                                                    Flytskjema
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('sekvens');
-                                                    }}
-                                                >
-                                                    Sekvensdiagram
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('brukarreise');
-                                                    }}
-                                                >
-                                                    Brukarreise
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('tidslinje');
-                                                    }}
-                                                >
-                                                    Tidslinje
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('tankekart');
-                                                    }}
-                                                >
-                                                    Tankekart
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('sektor');
-                                                    }}
-                                                >
-                                                    Sektordiagram
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('tilstand');
-                                                    }}
-                                                >
-                                                    Tilstandsdiagram
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('klasse');
-                                                    }}
-                                                >
-                                                    Klassediagram
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('kanban');
-                                                    }}
-                                                >
-                                                    Kanban-tavle
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('kvadrant');
-                                                    }}
-                                                >
-                                                    Kvadrantdiagram
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('xygraf');
-                                                    }}
-                                                >
-                                                    XY-graf
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('arkitektur');
-                                                    }}
-                                                >
-                                                    Arkitektur
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('blokk');
-                                                    }}
-                                                >
-                                                    Blokkdiagram
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('radar');
-                                                    }}
-                                                >
-                                                    Radardiagram
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setSelectedHelpTopic('trekart');
-                                                    }}
-                                                >
-                                                    Trekart
-                                                </MenuItem>
-                                            </MenuList>
-                                        </MenuPopover>
-                                    </Menu>
-
-                                    <div className={classes.helpContent}>
-                                        <div className={classes.helpDescription}>
-                                            {DIAGRAM_HELP[selectedHelpTopic].description}
-                                        </div>
-
-                                        <div className={classes.helpSteps}>
-                                            <div className={classes.helpLabel}>Slik gjer du:</div>
-                                            {DIAGRAM_HELP[selectedHelpTopic].steps.map((step, index) => (
-                                                <div key={index} className={classes.helpStep}>
-                                                    <div className={classes.helpStepNumber}>{index + 1}</div>
-                                                    <div className={classes.helpStepText}>{step}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div>
-                                            <div className={classes.helpLabel} style={{ marginBottom: '8px' }}>
-                                                Eksempel:
-                                            </div>
-                                            <pre className={classes.helpExample}>
-                                                {DIAGRAM_HELP[selectedHelpTopic].example}
-                                            </pre>
-                                        </div>
-
-                                        {DIAGRAM_HELP[selectedHelpTopic].tip && (
-                                            <div className={classes.helpTip}>
-                                                <Info20Regular className={classes.helpTipIcon} />
-                                                <span>
-                                                    <strong>Tips:</strong> {DIAGRAM_HELP[selectedHelpTopic].tip}
-                                                </span>
-                                            </div>
-                                        )}
+                                                icon={<Dismiss24Regular />}
+                                                onClick={() => {
+                                                    setShowHelp(false);
+                                                }}
+                                                aria-label="Lukk hjelp"
+                                            />
+                                        </Tooltip>
                                     </div>
                                 </div>
-                            )}
+
+                                {/* Diagram type selector */}
+                                <Menu>
+                                    <MenuTrigger disableButtonEnhancement>
+                                        <Button
+                                            appearance="outline"
+                                            size="small"
+                                            iconPosition="after"
+                                            icon={<ChevronDown16Regular />}
+                                            className={classes.helpTypeSelector}
+                                        >
+                                            {DIAGRAM_HELP[selectedHelpTopic].title}
+                                        </Button>
+                                    </MenuTrigger>
+                                    <MenuPopover>
+                                        <MenuList>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('flytskjema');
+                                                }}
+                                            >
+                                                Flytskjema
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('sekvens');
+                                                }}
+                                            >
+                                                Sekvensdiagram
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('brukarreise');
+                                                }}
+                                            >
+                                                Brukarreise
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('tidslinje');
+                                                }}
+                                            >
+                                                Tidslinje
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('tankekart');
+                                                }}
+                                            >
+                                                Tankekart
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('sektor');
+                                                }}
+                                            >
+                                                Sektordiagram
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('tilstand');
+                                                }}
+                                            >
+                                                Tilstandsdiagram
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('klasse');
+                                                }}
+                                            >
+                                                Klassediagram
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('kanban');
+                                                }}
+                                            >
+                                                Kanban-tavle
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('kvadrant');
+                                                }}
+                                            >
+                                                Kvadrantdiagram
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('xygraf');
+                                                }}
+                                            >
+                                                XY-graf
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('arkitektur');
+                                                }}
+                                            >
+                                                Arkitektur
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('blokk');
+                                                }}
+                                            >
+                                                Blokkdiagram
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('radar');
+                                                }}
+                                            >
+                                                Radardiagram
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    setSelectedHelpTopic('trekart');
+                                                }}
+                                            >
+                                                Trekart
+                                            </MenuItem>
+                                        </MenuList>
+                                    </MenuPopover>
+                                </Menu>
+
+                                <div className={classes.helpContent}>
+                                    <div className={classes.helpDescription}>
+                                        {DIAGRAM_HELP[selectedHelpTopic].description}
+                                    </div>
+
+                                    <div className={classes.helpSteps}>
+                                        <div className={classes.helpLabel}>Slik gjer du:</div>
+                                        {DIAGRAM_HELP[selectedHelpTopic].steps.map((step, index) => (
+                                            <div key={index} className={classes.helpStep}>
+                                                <div className={classes.helpStepNumber}>{index + 1}</div>
+                                                <div className={classes.helpStepText}>{step}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div>
+                                        <div className={classes.helpLabel} style={{ marginBottom: '8px' }}>
+                                            Eksempel:
+                                        </div>
+                                        <pre className={classes.helpExample}>
+                                            {DIAGRAM_HELP[selectedHelpTopic].example}
+                                        </pre>
+                                    </div>
+
+                                    {DIAGRAM_HELP[selectedHelpTopic].tip && (
+                                        <div className={classes.helpTip}>
+                                            <Info20Regular className={classes.helpTipIcon} />
+                                            <span>
+                                                <strong>Tips:</strong> {DIAGRAM_HELP[selectedHelpTopic].tip}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </DialogContent>
                     <DialogActions className={classes.actions}>
@@ -1739,6 +1878,7 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
                                 onClick={() => {
                                     setShowHelp(!showHelp);
                                 }}
+                                className={classes.helpButton}
                             >
                                 {showHelp ? 'Skjul hjelp' : 'Vis hjelp'}
                             </Button>

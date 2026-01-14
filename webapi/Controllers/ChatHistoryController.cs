@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Auth;
 using CopilotChat.WebApi.Extensions;
@@ -36,6 +36,7 @@ public class ChatHistoryController : ControllerBase
     private readonly ChatParticipantRepository _participantRepository;
     private readonly ChatMemorySourceRepository _sourceRepository;
     private readonly PromptsOptions _promptOptions;
+    private readonly ChatAuthenticationOptions _authOptions;
     private readonly IAuthInfo _authInfo;
 
     /// <summary>
@@ -48,6 +49,7 @@ public class ChatHistoryController : ControllerBase
     /// <param name="participantRepository">The chat participant repository.</param>
     /// <param name="sourceRepository">The chat memory resource repository.</param>
     /// <param name="promptsOptions">The prompts options.</param>
+    /// <param name="authOptions">The authentication options.</param>
     /// <param name="authInfo">The auth info for the current request.</param>
     public ChatHistoryController(
         ILogger<ChatHistoryController> logger,
@@ -57,6 +59,7 @@ public class ChatHistoryController : ControllerBase
         ChatParticipantRepository participantRepository,
         ChatMemorySourceRepository sourceRepository,
         IOptions<PromptsOptions> promptsOptions,
+        IOptions<ChatAuthenticationOptions> authOptions,
         IAuthInfo authInfo)
     {
         this._logger = logger;
@@ -66,6 +69,7 @@ public class ChatHistoryController : ControllerBase
         this._participantRepository = participantRepository;
         this._sourceRepository = sourceRepository;
         this._promptOptions = promptsOptions.Value;
+        this._authOptions = authOptions.Value;
         this._authInfo = authInfo;
     }
 
@@ -78,6 +82,7 @@ public class ChatHistoryController : ControllerBase
     [Route("chats")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateChatSessionAsync(
         [FromBody] CreateChatParameters chatParameters)
     {
@@ -94,6 +99,38 @@ public class ChatHistoryController : ControllerBase
         {
             if (this._promptOptions.Templates.TryGetValue(chatParameters.Template, out var template))
             {
+                // Validate that the template is enabled
+                if (!template.Enabled)
+                {
+                    this._logger.LogWarning(
+                        "User {UserId} attempted to create chat with disabled template '{Template}'.",
+                        this._authInfo.UserId,
+                        chatParameters.Template);
+                    return this.BadRequest($"Template '{chatParameters.Template}' is not available.");
+                }
+
+                // Check if we're in dev mode (no authentication) - skip access check
+                bool isDevMode = this._authOptions.Type == ChatAuthenticationOptions.AuthenticationType.None;
+
+                // Validate that the user has access to this template (user ID or group membership check)
+                // Skip this check in dev mode for easier testing
+                if (!isDevMode && !template.IsUserAllowed(this._authInfo.UserId, this._authInfo.Groups))
+                {
+                    this._logger.LogWarning(
+                        "User {UserId} attempted to create chat with template '{Template}' but does not have access. User groups: [{UserGroups}], Required groups: [{AllowedGroups}], Required users: [{AllowedUsers}]",
+                        this._authInfo.UserId,
+                        chatParameters.Template,
+                        string.Join(", ", this._authInfo.Groups),
+                        string.Join(", ", template.AllowedGroups ?? new List<string>()),
+                        string.Join(", ", template.AllowedUsers ?? new List<string>()));
+                    return this.StatusCode(StatusCodes.Status403Forbidden, $"You do not have access to the '{chatParameters.Template}' assistant.");
+                }
+
+                if (isDevMode)
+                {
+                    this._logger.LogDebug("Dev mode: Skipping access check for template '{Template}'.", chatParameters.Template);
+                }
+
                 systemDescription = template.SystemDescription;
                 initialBotMessage = template.InitialBotMessage;
                 this._logger.LogDebug("Using template '{0}' for new chat session.", chatParameters.Template);

@@ -205,6 +205,8 @@ const App = () => {
                         dispatch(setServiceInfo(serviceInfo));
                     }
                 }),
+                // Load available templates (specialized assistants)
+                chat.loadAvailableTemplates(),
             ]);
         } // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [instance, isAuthenticated, isMsalAuthenticated, isTeamsAuthenticated, appState, isMaintenance]);

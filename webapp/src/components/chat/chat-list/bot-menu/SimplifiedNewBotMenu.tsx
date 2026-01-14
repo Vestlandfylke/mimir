@@ -3,6 +3,7 @@
 import { FC, useState } from 'react';
 
 import {
+    Badge,
     Button,
     Divider,
     Menu,
@@ -11,7 +12,9 @@ import {
     MenuPopover,
     MenuTrigger,
     Tooltip,
+    tokens,
 } from '@fluentui/react-components';
+import { BotRegular, PersonRegular, SparkleRegular } from '@fluentui/react-icons';
 import { useChat } from '../../../../libs/hooks';
 import { useAppSelector } from '../../../../redux/app/hooks';
 import { RootState } from '../../../../redux/app/store';
@@ -23,9 +26,23 @@ interface SimplifiedNewBotMenuProps {
     onFileUpload: () => void;
 }
 
+/**
+ * Get an icon for a template based on its icon identifier.
+ */
+const getTemplateIcon = (icon?: string) => {
+    switch (icon) {
+        case 'leader':
+            return <PersonRegular />;
+        case 'klarsprak':
+            return <SparkleRegular />;
+        default:
+            return <SparkleRegular />;
+    }
+};
+
 export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUpload }) => {
     const chat = useChat();
-    const { features } = useAppSelector((state: RootState) => state.app);
+    const { features, availableTemplates } = useAppSelector((state: RootState) => state.app);
 
     // It needs to keep the menu open to keep the FileUploader reference
     // when the file uploader is clicked.
@@ -35,6 +52,10 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
         void chat.createChat();
     };
 
+    const onAddTemplateChat = (templateId: string, displayName: string) => {
+        void chat.createChat(templateId, displayName);
+    };
+
     const onJoinClick = () => {
         setIsJoiningBot(true);
     };
@@ -42,6 +63,8 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
     const onCloseDialog = () => {
         setIsJoiningBot(false);
     };
+
+    const hasTemplates = availableTemplates.length > 0;
 
     return (
         <div>
@@ -53,10 +76,72 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
                 </MenuTrigger>
                 <MenuPopover>
                     <MenuList>
-                        <MenuItem data-testid="addNewBotMenuItem" onClick={onAddChat}>
-                            Ny samtaleøkt
+                        {/* Standard Mimir assistant */}
+                        <MenuItem data-testid="addNewBotMenuItem" icon={<BotRegular />} onClick={onAddChat}>
+                            <div>
+                                <div>Mimir</div>
+                                <div
+                                    style={{
+                                        fontSize: '0.75rem',
+                                        color: 'var(--colorNeutralForeground3)',
+                                        marginTop: '2px',
+                                    }}
+                                >
+                                    Generell KI-assistent for alle oppgåver
+                                </div>
+                            </div>
                         </MenuItem>
-                        <Divider />
+
+                        {/* Specialized assistants section */}
+                        {hasTemplates && (
+                            <>
+                                <Divider style={{ margin: '8px 0' }}>
+                                    <Badge
+                                        appearance="outline"
+                                        color="informative"
+                                        size="small"
+                                        style={{ fontSize: '0.65rem' }}
+                                    >
+                                        Spesialiserte assistentar
+                                    </Badge>
+                                </Divider>
+                                {availableTemplates.map((template) => (
+                                    <MenuItem
+                                        key={template.id}
+                                        data-testid={`addTemplate-${template.id}`}
+                                        icon={getTemplateIcon(template.icon)}
+                                        onClick={() => {
+                                            onAddTemplateChat(template.id, template.displayName);
+                                        }}
+                                        style={{
+                                            backgroundColor: tokens.colorNeutralBackground1Hover,
+                                            borderLeft: `3px solid ${tokens.colorBrandForeground1}`,
+                                            marginLeft: '4px',
+                                            marginRight: '4px',
+                                            borderRadius: '4px',
+                                            marginBottom: '4px',
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ fontWeight: 600 }}>{template.displayName}</div>
+                                            {template.description && (
+                                                <div
+                                                    style={{
+                                                        fontSize: '0.75rem',
+                                                        color: 'var(--colorNeutralForeground3)',
+                                                        marginTop: '2px',
+                                                    }}
+                                                >
+                                                    {template.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </MenuItem>
+                                ))}
+                            </>
+                        )}
+
+                        <Divider style={{ margin: '8px 0' }} />
                         <MenuItem
                             data-testid="joinABotMenuItem"
                             disabled={!features[FeatureKeys.MultiUserChat].enabled}

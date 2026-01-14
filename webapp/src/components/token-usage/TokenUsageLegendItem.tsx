@@ -65,7 +65,7 @@ export const TokenUsageLegendItem: React.FC<ITokenUsageLegendItem> = ({ name, us
                         : 'Ingen bruk'}
                     {
                         // TODO: [Issue #150, sk#2106] Remove this once core team finishes work to return token usage.
-                        name === 'Respons Generering' && `(Planleggjarbruk kjem snart)`
+                        name === 'Svar' && `(Planleggjarbruk kjem snart)`
                     }
                 </PopoverSurface>
             </Popover>

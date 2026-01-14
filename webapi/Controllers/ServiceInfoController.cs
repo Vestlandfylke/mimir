@@ -1,7 +1,8 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Diagnostics;
 using System.Reflection;
+using CopilotChat.WebApi.Auth;
 using CopilotChat.WebApi.Models.Response;
 using CopilotChat.WebApi.Options;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,8 @@ public class ServiceInfoController : ControllerBase
     private readonly FrontendOptions _frontendOptions;
     private readonly IEnumerable<Plugin> _availablePlugins;
     private readonly ContentSafetyOptions _contentSafetyOptions;
+    private readonly PromptsOptions _promptsOptions;
+    private readonly IAuthInfo _authInfo;
 
     public ServiceInfoController(
         ILogger<ServiceInfoController> logger,
@@ -32,7 +35,9 @@ public class ServiceInfoController : ControllerBase
         IOptions<ChatAuthenticationOptions> chatAuthenticationOptions,
         IOptions<FrontendOptions> frontendOptions,
         IDictionary<string, Plugin> availablePlugins,
-        IOptions<ContentSafetyOptions> contentSafetyOptions)
+        IOptions<ContentSafetyOptions> contentSafetyOptions,
+        IOptions<PromptsOptions> promptsOptions,
+        IAuthInfo authInfo)
     {
         this._logger = logger;
         this._configuration = configuration;
@@ -41,6 +46,8 @@ public class ServiceInfoController : ControllerBase
         this._frontendOptions = frontendOptions.Value;
         this._availablePlugins = this.SanitizePlugins(availablePlugins);
         this._contentSafetyOptions = contentSafetyOptions.Value;
+        this._promptsOptions = promptsOptions.Value;
+        this._authInfo = authInfo;
     }
 
     /// <summary>
@@ -101,6 +108,77 @@ public class ServiceInfoController : ControllerBase
         FileVersionInfo fileVersion = FileVersionInfo.GetVersionInfo(assembly.Location);
 
         return fileVersion.FileVersion ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Get available chat templates for the current user.
+    /// Templates may be restricted by Azure AD group membership.
+    /// In dev mode (Authentication.Type = None), all enabled templates are shown.
+    /// </summary>
+    [Route("templates")]
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult GetAvailableTemplates()
+    {
+        var availableTemplates = new List<AvailableTemplate>();
+
+        if (this._promptsOptions.Templates == null)
+        {
+            return this.Ok(availableTemplates);
+        }
+
+        // Check if we're in dev mode (no authentication)
+        bool isDevMode = this._chatAuthenticationOptions.Type == ChatAuthenticationOptions.AuthenticationType.None;
+
+        if (isDevMode)
+        {
+            this._logger.LogDebug("Dev mode detected (Authentication.Type = None). Showing all enabled templates.");
+        }
+
+        var userGroups = this._authInfo.Groups;
+
+        this._logger.LogDebug(
+            "Getting available templates for user {UserId}. User groups: [{Groups}]",
+            this._authInfo.UserId,
+            string.Join(", ", userGroups));
+
+        foreach (var (templateId, template) in this._promptsOptions.Templates)
+        {
+            // Skip disabled templates
+            if (!template.Enabled)
+            {
+                this._logger.LogDebug("Template '{TemplateId}' is disabled, skipping.", templateId);
+                continue;
+            }
+
+            // In dev mode, skip access check and show all enabled templates
+            if (!isDevMode)
+            {
+                // Check if user has access to this template (by user ID or group membership)
+                if (!template.IsUserAllowed(this._authInfo.UserId, userGroups))
+                {
+                    this._logger.LogDebug(
+                        "User {UserId} does not have access to template '{TemplateId}'. Required groups: [{AllowedGroups}], Required users: [{AllowedUsers}]",
+                        this._authInfo.UserId,
+                        templateId,
+                        string.Join(", ", template.AllowedGroups ?? new List<string>()),
+                        string.Join(", ", template.AllowedUsers ?? new List<string>()));
+                    continue;
+                }
+            }
+
+            availableTemplates.Add(new AvailableTemplate
+            {
+                Id = templateId,
+                DisplayName = template.DisplayName ?? templateId,
+                Description = template.Description,
+                Icon = template.Icon,
+            });
+
+            this._logger.LogDebug("Template '{TemplateId}' is available for user {UserId}.", templateId, this._authInfo.UserId);
+        }
+
+        return this.Ok(availableTemplates);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
+using System.Security.Claims;
 using Azure.Identity;
 using Microsoft.Identity.Web;
 
@@ -12,9 +13,16 @@ public class AuthInfo : IAuthInfo
 {
     private record struct AuthData(
         string UserId,
-        string UserName);
+        string UserName,
+        string? Email,
+        IReadOnlyList<string> Groups,
+        bool IsAuthenticated);
 
     private readonly Lazy<AuthData> _data;
+
+    // Common claim types for groups in Azure AD tokens
+    private const string GroupsClaimType = "groups";
+    private const string GroupsClaimTypeAlt = "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups";
 
     public AuthInfo(IHttpContextAccessor httpContextAccessor)
     {
@@ -34,6 +42,9 @@ public class AuthInfo : IAuthInfo
                 {
                     UserId = string.Empty,
                     UserName = string.Empty,
+                    Email = null,
+                    Groups = Array.Empty<string>(),
+                    IsAuthenticated = false,
                 };
             }
 
@@ -53,12 +64,55 @@ public class AuthInfo : IAuthInfo
             {
                 throw new CredentialUnavailableException("User name was not present in the request token.");
             }
+
+            // Get email claim (preferred_username or email)
+            var emailClaim = user.FindFirst("preferred_username")
+                            ?? user.FindFirst(ClaimTypes.Email)
+                            ?? user.FindFirst("email");
+
+            // Extract group claims from the token
+            // Azure AD can emit groups as either object IDs or names depending on config
+            var groups = ExtractGroupClaims(user);
+
             return new AuthData
             {
                 UserId = (tenantIdClaim is null) ? userIdClaim.Value : string.Join(".", userIdClaim.Value, tenantIdClaim.Value),
                 UserName = userNameClaim.Value,
+                Email = emailClaim?.Value,
+                Groups = groups,
+                IsAuthenticated = true,
             };
         }, isThreadSafe: false);
+    }
+
+    /// <summary>
+    /// Extracts group claims from the user's claims principal.
+    /// </summary>
+    private static IReadOnlyList<string> ExtractGroupClaims(ClaimsPrincipal user)
+    {
+        var groups = new List<string>();
+
+        // Try standard 'groups' claim type
+        var groupClaims = user.FindAll(GroupsClaimType);
+        foreach (var claim in groupClaims)
+        {
+            if (!string.IsNullOrWhiteSpace(claim.Value))
+            {
+                groups.Add(claim.Value);
+            }
+        }
+
+        // Also try the full URI claim type
+        var altGroupClaims = user.FindAll(GroupsClaimTypeAlt);
+        foreach (var claim in altGroupClaims)
+        {
+            if (!string.IsNullOrWhiteSpace(claim.Value) && !groups.Contains(claim.Value))
+            {
+                groups.Add(claim.Value);
+            }
+        }
+
+        return groups;
     }
 
     /// <summary>
@@ -70,4 +124,19 @@ public class AuthInfo : IAuthInfo
     /// The authenticated user's name.
     /// </summary>
     public string Name => this._data.Value.UserName;
+
+    /// <summary>
+    /// The authenticated user's email address.
+    /// </summary>
+    public string? Email => this._data.Value.Email;
+
+    /// <summary>
+    /// The Azure AD group IDs the user belongs to.
+    /// </summary>
+    public IReadOnlyList<string> Groups => this._data.Value.Groups;
+
+    /// <summary>
+    /// Whether the user is authenticated.
+    /// </summary>
+    public bool IsAuthenticated => this._data.Value.IsAuthenticated;
 }

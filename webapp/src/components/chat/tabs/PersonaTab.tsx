@@ -477,10 +477,7 @@ export const PersonaTab: React.FC = () => {
                                         <div className={classes.modelOption}>
                                             <div className={classes.modelIcon}>{getModelIcon(model)}</div>
                                             <div className={classes.modelInfo}>
-                                                <span className={classes.modelName}>
-                                                    {model.displayName}
-                                                    {model.supportsReasoning && ' 🧠'}
-                                                </span>
+                                                <span className={classes.modelName}>{model.displayName}</span>
                                                 <span className={classes.modelDescription}>{model.description}</span>
                                             </div>
                                         </div>
