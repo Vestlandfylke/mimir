@@ -55,4 +55,14 @@ public interface ICopilotChatMessageStorageContext : IStorageContext<CopilotChat
     /// <param name="count">The number of messages to return. -1 returns all messages.</param>
     /// <returns>A list of ChatMessages matching the given chatId sorted from most recent to oldest.</returns>
     Task<IEnumerable<CopilotChatMessage>> QueryEntitiesAsync(Func<CopilotChatMessage, bool> predicate, int skip = 0, int count = -1);
+
+    /// <summary>
+    /// Query messages by chat ID using optimized partition key query.
+    /// This is much faster than the generic QueryEntitiesAsync for CosmosDB.
+    /// </summary>
+    /// <param name="chatId">The chat ID (partition key).</param>
+    /// <param name="skip">Number of messages to skip.</param>
+    /// <param name="count">The number of messages to return. -1 returns all messages.</param>
+    /// <returns>A list of ChatMessages sorted from most recent to oldest.</returns>
+    Task<IEnumerable<CopilotChatMessage>> QueryByChatIdAsync(string chatId, int skip = 0, int count = -1);
 }

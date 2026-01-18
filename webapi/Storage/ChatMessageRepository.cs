@@ -20,6 +20,7 @@ public class ChatMessageRepository : CopilotChatMessageRepository
 
     /// <summary>
     /// Finds chat messages by chat id.
+    /// Uses optimized partition key query for CosmosDB.
     /// </summary>
     /// <param name="chatId">The chat id.</param>
     /// <param name="skip">Number of messages to skip before starting to return messages.</param>
@@ -27,7 +28,8 @@ public class ChatMessageRepository : CopilotChatMessageRepository
     /// <returns>A list of ChatMessages matching the given chatId sorted from most recent to oldest.</returns>
     public Task<IEnumerable<CopilotChatMessage>> FindByChatIdAsync(string chatId, int skip = 0, int count = -1)
     {
-        return base.QueryEntitiesAsync(e => e.ChatId == chatId, skip, count);
+        // Use optimized partition key query instead of generic predicate query
+        return base.QueryByChatIdAsync(chatId, skip, count);
     }
 
     /// <summary>

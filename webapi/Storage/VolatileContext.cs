@@ -106,4 +106,20 @@ public class VolatileCopilotChatMessageContext : VolatileContext<CopilotChatMess
             () => this.Entities.Values
                 .Where(predicate).OrderByDescending(m => m.Timestamp).Skip(skip).Take(count));
     }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<CopilotChatMessage>> QueryByChatIdAsync(string chatId, int skip = 0, int count = -1)
+    {
+        var query = this.Entities.Values
+            .Where(m => m.ChatId == chatId)
+            .OrderByDescending(m => m.Timestamp)
+            .Skip(skip);
+
+        if (count > 0)
+        {
+            query = query.Take(count);
+        }
+
+        return Task.FromResult(query.AsEnumerable());
+    }
 }

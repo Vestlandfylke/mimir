@@ -94,4 +94,17 @@ public class CopilotChatMessageRepository : Repository<CopilotChatMessage>
         return await Task.Run<IEnumerable<CopilotChatMessage>>(
             () => this._messageStorageContext.QueryEntitiesAsync(predicate, skip, count));
     }
+
+    /// <summary>
+    /// Finds chat messages by chat ID using optimized partition key query.
+    /// This is the preferred method for querying messages by chat ID.
+    /// </summary>
+    /// <param name="chatId">The chat ID (partition key).</param>
+    /// <param name="skip">Number of messages to skip.</param>
+    /// <param name="count">The number of messages to return. -1 returns all messages.</param>
+    /// <returns>A list of ChatMessages sorted from most recent to oldest.</returns>
+    public Task<IEnumerable<CopilotChatMessage>> QueryByChatIdAsync(string chatId, int skip = 0, int count = -1)
+    {
+        return this._messageStorageContext.QueryByChatIdAsync(chatId, skip, count);
+    }
 }

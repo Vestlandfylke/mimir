@@ -169,7 +169,7 @@ export const TokenUsageGraph: React.FC<ITokenUsageGraph> = ({ promptView, tokenU
                                 </div>
                             </>
                         ) : promptView ? (
-                            <Text>Ingen token blei brukt. Dette er enten eit hardkoda svar eller ein lagra plan.</Text>
+                            <Text>Ingen token vart brukt i denne spørsmålai denne meldinga.</Text>
                         ) : (
                             <Text>Ingen token har blitt brukt i denne økta enno.</Text>
                         )}

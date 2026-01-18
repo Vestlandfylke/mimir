@@ -292,11 +292,12 @@ const useClasses = makeStyles({
     actionsLeft: {
         display: 'flex',
         gap: tokens.spacingHorizontalS,
-        // Mobile: wrap buttons
+        // Mobile: keep buttons on same line, reduce gap
         [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
-            flexWrap: 'wrap',
+            flexWrap: 'nowrap',
             justifyContent: 'center',
             gap: tokens.spacingHorizontalXS,
+            width: '100%',
         },
     },
     actionsRight: {

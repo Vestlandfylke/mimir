@@ -166,10 +166,56 @@ public class CosmosDbCopilotChatMessageContext : CosmosDbContext<CopilotChatMess
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Legacy method - prefer QueryByChatIdAsync for better performance.
+    /// </remarks>
     public Task<IEnumerable<CopilotChatMessage>> QueryEntitiesAsync(Func<CopilotChatMessage, bool> predicate, int skip, int count)
     {
         return Task.Run<IEnumerable<CopilotChatMessage>>(
             () => this.Container.GetItemLinqQueryable<CopilotChatMessage>(true)
                 .Where(predicate).OrderByDescending(m => m.Timestamp).Skip(skip).Take(count).AsEnumerable());
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// OPTIMIZED: Uses partition key directly for efficient server-side query.
+    /// ChatId is the partition key, so this query only hits one partition.
+    /// </remarks>
+    public async Task<IEnumerable<CopilotChatMessage>> QueryByChatIdAsync(string chatId, int skip = 0, int count = -1)
+    {
+        // Use parameterized query for safety and efficiency
+        var queryText = count > 0
+            ? "SELECT * FROM c WHERE c.chatId = @chatId ORDER BY c.timestamp DESC OFFSET @skip LIMIT @count"
+            : "SELECT * FROM c WHERE c.chatId = @chatId ORDER BY c.timestamp DESC";
+
+        var queryDefinition = new QueryDefinition(queryText)
+            .WithParameter("@chatId", chatId)
+            .WithParameter("@skip", skip)
+            .WithParameter("@count", count > 0 ? count : 1000);
+
+        var results = new List<CopilotChatMessage>();
+
+        // Use partition key for efficient single-partition query
+        using var iterator = this.Container.GetItemQueryIterator<CopilotChatMessage>(
+            queryDefinition,
+            requestOptions: new QueryRequestOptions
+            {
+                PartitionKey = new PartitionKey(chatId),
+                MaxItemCount = count > 0 ? count : 100
+            });
+
+        while (iterator.HasMoreResults)
+        {
+            var response = await iterator.ReadNextAsync();
+            results.AddRange(response);
+
+            // If we have enough results for pagination, stop early
+            if (count > 0 && results.Count >= count)
+            {
+                break;
+            }
+        }
+
+        return results;
     }
 }
