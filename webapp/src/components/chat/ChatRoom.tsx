@@ -5,6 +5,7 @@ import { ArrowDownRegular } from '@fluentui/react-icons';
 import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
 import { useConnectionSync } from '../../libs/hooks/useConnectionSync';
+import { AuthorRoles } from '../../libs/models/ChatMessage';
 import { logger } from '../../libs/utils/Logger';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
@@ -95,6 +96,7 @@ export const ChatRoom: React.FC = () => {
     const conversation = conversations[selectedId];
     // Use the messages array directly from the conversation to ensure reactivity
     const messages = conversation.messages;
+    const botResponseStatus = conversation.botResponseStatus;
 
     // Debug logging for message updates
     React.useEffect(() => {
@@ -117,6 +119,8 @@ export const ChatRoom: React.FC = () => {
     const justSubmittedRef = React.useRef(false);
     // Track previous message count to detect new messages
     const prevMessageCountRef = React.useRef(messages.length);
+    // Track previous botResponseStatus to detect when Mimir starts typing
+    const prevBotResponseStatusRef = React.useRef(botResponseStatus);
 
     const [isDraggingOver, setIsDraggingOver] = React.useState(false);
     const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -128,24 +132,82 @@ export const ChatRoom: React.FC = () => {
         setIsDraggingOver(false);
     };
 
+    // Helper function to scroll to the last bot message (start of response)
+    const scrollToLastBotMessage = React.useCallback(() => {
+        const container = scrollViewTargetRef.current;
+        if (!container) return;
+
+        // Find the last bot message element
+        const botMessages = container.querySelectorAll('[data-message-author="1"]'); // 1 = Bot
+        if (botMessages.length > 0) {
+            const lastBotMessage = botMessages[botMessages.length - 1] as HTMLElement;
+            // Scroll so the bot message is at the top of the viewport (with some padding)
+            lastBotMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            logger.debug('📋 ChatRoom: Scrolled to start of bot response');
+        } else {
+            // Fallback to bottom if no bot message found
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+    }, []);
+
+    // Scroll when Mimir STARTS typing (shows "Mimir skriv")
+    // This ensures user sees when the bot begins responding
+    React.useEffect(() => {
+        const wasNotTyping = !prevBotResponseStatusRef.current;
+        const isNowTyping = !!botResponseStatus;
+        prevBotResponseStatusRef.current = botResponseStatus;
+
+        // When Mimir starts typing, scroll to show the typing indicator
+        if (wasNotTyping && isNowTyping) {
+            logger.debug('📋 ChatRoom: Mimir started typing');
+            // Scroll to bottom initially to show typing indicator
+            const container = scrollViewTargetRef.current;
+            if (container) {
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            }
+        }
+
+        // When Mimir STOPS typing (response is complete), scroll to start of bot response
+        const wasTyping = !!prevBotResponseStatusRef.current;
+        const isNowNotTyping = !botResponseStatus;
+        if (wasTyping && isNowNotTyping && messages.length > 0) {
+            // Small delay to ensure the message is rendered
+            setTimeout(() => {
+                scrollToLastBotMessage();
+                setShouldAutoScroll(false); // Let user read
+            }, 100);
+        }
+    }, [botResponseStatus, messages.length, scrollToLastBotMessage]);
+
     // Smarter scroll behavior when messages change
     React.useEffect(() => {
         const container = scrollViewTargetRef.current;
         if (!container) return;
 
         const messageCountChanged = messages.length !== prevMessageCountRef.current;
+        const prevCount = prevMessageCountRef.current;
         prevMessageCountRef.current = messages.length;
 
-        // If user just submitted a message, scroll to show their message (not to very bottom)
+        // If user just submitted a message, scroll to show their message
         if (justSubmittedRef.current && messageCountChanged) {
             justSubmittedRef.current = false;
-            // Scroll to bottom to show user's message, then let them read the response
+            // Scroll to bottom to show user's message
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-            // After initial scroll, disable auto-scroll so user can read
-            setTimeout(() => {
-                setShouldAutoScroll(false);
-            }, 500);
             return;
+        }
+
+        // If a new message was added and it's a bot message, scroll to its start
+        if (messageCountChanged && messages.length > prevCount) {
+            const lastMessage = messages[messages.length - 1];
+            // Check if it's a bot message (AuthorRoles.Bot = 1)
+            if (lastMessage.authorRole === AuthorRoles.Bot) {
+                // Small delay to ensure the message is rendered
+                setTimeout(() => {
+                    scrollToLastBotMessage();
+                    setShouldAutoScroll(false);
+                }, 100);
+                return;
+            }
         }
 
         // Only auto-scroll if user is actively at the bottom (opted in)
@@ -153,7 +215,7 @@ export const ChatRoom: React.FC = () => {
         if (shouldAutoScroll) {
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
         }
-    }, [messages, shouldAutoScroll]);
+    }, [messages, shouldAutoScroll, scrollToLastBotMessage]);
 
     // Scroll to bottom on initial load and when conversation changes
     React.useEffect(() => {

@@ -30,7 +30,14 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({ messages }) => {
     return (
         <div className={classes.root}>
             {messages.map((message, index) => (
-                <ChatHistoryItem key={message.timestamp} message={message} messageIndex={index} />
+                <div
+                    key={message.timestamp}
+                    data-message-index={index}
+                    data-message-author={message.authorRole}
+                    className={classes.item}
+                >
+                    <ChatHistoryItem message={message} messageIndex={index} />
+                </div>
             ))}
         </div>
     );
