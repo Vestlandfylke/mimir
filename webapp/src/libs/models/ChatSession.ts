@@ -9,6 +9,7 @@ export interface IChatSession {
     memoryBalance: number;
     enabledPlugins: string[];
     modelId?: string;
+    createdOn?: string | number; // Timestamp from backend (ISO string or ms)
 }
 
 export interface ICreateChatSessionResponse {

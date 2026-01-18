@@ -297,13 +297,27 @@ export const useChat = () => {
                 const loadedConversations: Conversations = {};
                 const limitedChatSessions = chatSessions.slice(0, 15); // Limit to 15 chat sessions
 
-                // Use the first chat session as the one to load messages for initially
-                // Backend typically returns chats sorted, so first one is the most recent
-                const firstChatId = limitedChatSessions[0]?.id;
+                // Helper to parse createdOn timestamp from backend
+                const parseTimestamp = (value: string | number | undefined): number => {
+                    if (!value) return 0;
+                    if (typeof value === 'number') return value;
+                    const parsed = Date.parse(value);
+                    return Number.isNaN(parsed) ? 0 : parsed;
+                };
+
+                // Sort chat sessions by createdOn (newest first) before processing
+                const sortedChatSessions = [...limitedChatSessions].sort((a, b) => {
+                    const timeA = parseTimestamp(a.createdOn as string | number | undefined);
+                    const timeB = parseTimestamp(b.createdOn as string | number | undefined);
+                    return timeB - timeA; // Descending order (newest first)
+                });
+
+                // Use the first (newest) chat session as the one to load messages for initially
+                const firstChatId = sortedChatSessions[0]?.id;
 
                 // PERFORMANCE FIX: Load all chat data in parallel instead of sequentially
                 // This reduces loading time from O(n * latency) to O(latency)
-                const chatDataPromises = limitedChatSessions.map(async (chatSession, index) => {
+                const chatDataPromises = sortedChatSessions.map(async (chatSession, index) => {
                     // Load participants for all chats (needed to determine hidden status)
                     const chatUsers = await chatService.getAllChatParticipantsAsync(chatSession.id, accessToken);
 
@@ -326,6 +340,11 @@ export const useChat = () => {
 
                 // Build the conversations object from parallel results
                 for (const { chatSession, chatUsers, chatMessages, index } of chatDataResults) {
+                    // Use message timestamp if available, otherwise fall back to chat createdOn
+                    const lastMessageTimestamp =
+                        chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].timestamp : undefined;
+                    const chatCreatedTimestamp = parseTimestamp(chatSession.createdOn as string | number | undefined);
+
                     loadedConversations[chatSession.id] = {
                         id: chatSession.id,
                         title: chatSession.title,
@@ -338,8 +357,7 @@ export const useChat = () => {
                         input: '',
                         botResponseStatus: undefined,
                         userDataLoaded: chatMessages.length > 0, // Only marked as loaded if we fetched messages
-                        lastUpdatedTimestamp:
-                            chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].timestamp : Date.now(),
+                        lastUpdatedTimestamp: lastMessageTimestamp ?? chatCreatedTimestamp,
                         disabled: false,
                         hidden: !features[FeatureKeys.MultiUserChat].enabled && chatUsers.length > 1,
                     };
@@ -353,7 +371,7 @@ export const useChat = () => {
                 if (nonHiddenChats.length === 0) {
                     await createChat();
                 } else {
-                    // Always select newest chat on startup.
+                    // Select the newest chat - which is also the one we loaded messages for
                     dispatch(setSelectedConversation(nonHiddenChats[0].id));
                 }
             } else {

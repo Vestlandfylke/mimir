@@ -80,6 +80,15 @@ export const ChatRoom: React.FC = () => {
         logger.debug(`📋 ChatRoom: messages updated, count: ${messages.length}`);
     }, [messages.length]);
 
+    // Trigger lazy loading of messages when conversation changes and messages aren't loaded
+    React.useEffect(() => {
+        const conv = conversation as typeof conversation | undefined;
+        if (conv && !conv.userDataLoaded && conv.messages.length === 0) {
+            logger.debug(`📋 ChatRoom: Triggering lazy load for chat ${selectedId}`);
+            void chat.loadChatMessages(selectedId);
+        }
+    }, [selectedId, conversation, chat]);
+
     const scrollViewTargetRef = React.useRef<HTMLDivElement>(null);
     const [shouldAutoScroll, setShouldAutoScroll] = React.useState(true);
 
