@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { makeStyles, shorthands, Spinner, tokens } from '@fluentui/react-components';
+import { makeStyles, shorthands, Spinner, tokens, Button } from '@fluentui/react-components';
+import { ArrowDownRegular } from '@fluentui/react-icons';
 import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
 import { useConnectionSync } from '../../libs/hooks/useConnectionSync';
@@ -61,6 +62,26 @@ const useClasses = makeStyles({
         color: tokens.colorNeutralForeground3,
         fontSize: tokens.fontSizeBase300,
     },
+    scrollToBottomButton: {
+        position: 'absolute',
+        bottom: tokens.spacingVerticalXXL,
+        right: tokens.spacingHorizontalL,
+        zIndex: 100,
+        boxShadow: tokens.shadow8,
+        borderRadius: '50%',
+        minWidth: '40px',
+        width: '40px',
+        height: '40px',
+        padding: 0,
+    },
+    scrollContainer: {
+        position: 'relative',
+        flexGrow: 1,
+        flexShrink: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+    },
 });
 
 export const ChatRoom: React.FC = () => {
@@ -91,6 +112,11 @@ export const ChatRoom: React.FC = () => {
 
     const scrollViewTargetRef = React.useRef<HTMLDivElement>(null);
     const [shouldAutoScroll, setShouldAutoScroll] = React.useState(true);
+    const [showScrollButton, setShowScrollButton] = React.useState(false);
+    // Track if we just submitted a message (to scroll once to show user's message)
+    const justSubmittedRef = React.useRef(false);
+    // Track previous message count to detect new messages
+    const prevMessageCountRef = React.useRef(messages.length);
 
     const [isDraggingOver, setIsDraggingOver] = React.useState(false);
     const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -102,10 +128,31 @@ export const ChatRoom: React.FC = () => {
         setIsDraggingOver(false);
     };
 
-    // Scroll to bottom when messages change (if auto-scroll is enabled)
+    // Smarter scroll behavior when messages change
     React.useEffect(() => {
-        if (!shouldAutoScroll) return;
-        scrollViewTargetRef.current?.scrollTo(0, scrollViewTargetRef.current.scrollHeight);
+        const container = scrollViewTargetRef.current;
+        if (!container) return;
+
+        const messageCountChanged = messages.length !== prevMessageCountRef.current;
+        prevMessageCountRef.current = messages.length;
+
+        // If user just submitted a message, scroll to show their message (not to very bottom)
+        if (justSubmittedRef.current && messageCountChanged) {
+            justSubmittedRef.current = false;
+            // Scroll to bottom to show user's message, then let them read the response
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            // After initial scroll, disable auto-scroll so user can read
+            setTimeout(() => {
+                setShouldAutoScroll(false);
+            }, 500);
+            return;
+        }
+
+        // Only auto-scroll if user is actively at the bottom (opted in)
+        // This prevents scrolling when user is reading earlier content
+        if (shouldAutoScroll) {
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
     }, [messages, shouldAutoScroll]);
 
     // Scroll to bottom on initial load and when conversation changes
@@ -125,18 +172,27 @@ export const ChatRoom: React.FC = () => {
 
         // Reset auto-scroll on conversation change
         setShouldAutoScroll(true);
+        setShowScrollButton(false);
 
         return () => {
             clearTimeout(timeoutId);
         };
     }, [selectedId]);
 
+    // Track scroll position to show/hide scroll-to-bottom button
     React.useEffect(() => {
         const onScroll = () => {
             if (!scrollViewTargetRef.current) return;
             const { scrollTop, scrollHeight, clientHeight } = scrollViewTargetRef.current;
-            const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
+
+            // Use a larger threshold (100px) to be more forgiving
+            // This prevents auto-scroll from kicking in when user scrolls up slightly
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+            const isAtBottom = distanceFromBottom < 100;
+
             setShouldAutoScroll(isAtBottom);
+            // Show scroll button when user is more than 300px from bottom
+            setShowScrollButton(distanceFromBottom > 300);
         };
 
         if (!scrollViewTargetRef.current) return;
@@ -149,9 +205,16 @@ export const ChatRoom: React.FC = () => {
         };
     }, []);
 
-    const handleSubmit = async (options: GetResponseOptions) => {
-        await chat.getResponse(options);
+    const scrollToBottom = () => {
+        scrollViewTargetRef.current?.scrollTo({ top: scrollViewTargetRef.current.scrollHeight, behavior: 'smooth' });
         setShouldAutoScroll(true);
+        setShowScrollButton(false);
+    };
+
+    const handleSubmit = async (options: GetResponseOptions) => {
+        justSubmittedRef.current = true;
+        setShouldAutoScroll(true); // Enable scroll for initial response
+        await chat.getResponse(options);
     };
 
     if (conversations[selectedId].hidden) {
@@ -175,17 +238,28 @@ export const ChatRoom: React.FC = () => {
 
     return (
         <div className={classes.root} onDragEnter={onDragEnter} onDragOver={onDragEnter} onDragLeave={onDragLeave}>
-            <div ref={scrollViewTargetRef} className={classes.scroll}>
-                <div className={classes.history}>
-                    {isLoadingMessages ? (
-                        <div className={classes.loadingContainer}>
-                            <Spinner size="medium" />
-                            <span className={classes.loadingText}>Lastar meldingar...</span>
-                        </div>
-                    ) : (
-                        <ChatHistory messages={messages} />
-                    )}
+            <div className={classes.scrollContainer}>
+                <div ref={scrollViewTargetRef} className={classes.scroll}>
+                    <div className={classes.history}>
+                        {isLoadingMessages ? (
+                            <div className={classes.loadingContainer}>
+                                <Spinner size="medium" />
+                                <span className={classes.loadingText}>Lastar meldingar...</span>
+                            </div>
+                        ) : (
+                            <ChatHistory messages={messages} />
+                        )}
+                    </div>
                 </div>
+                {showScrollButton && (
+                    <Button
+                        className={classes.scrollToBottomButton}
+                        icon={<ArrowDownRegular />}
+                        appearance="secondary"
+                        onClick={scrollToBottom}
+                        title="Scroll til botn"
+                    />
+                )}
             </div>
             <div className={classes.input}>
                 <ChatInput isDraggingOver={isDraggingOver} onDragLeave={onDragLeave} onSubmit={handleSubmit} />
