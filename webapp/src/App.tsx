@@ -89,6 +89,44 @@ const App = () => {
         }
     }, [isMsalAuthenticated]);
 
+    // Prevent pinch-to-zoom on trackpad while allowing Ctrl+scroll for text zoom
+    // Browser sends trackpad pinch as wheel events with ctrlKey=true, same as Ctrl+scroll
+    // We track if Ctrl key was physically pressed to distinguish between them
+    useEffect(() => {
+        let isCtrlKeyPhysicallyPressed = false;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Control') {
+                isCtrlKeyPhysicallyPressed = true;
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Control') {
+                isCtrlKeyPhysicallyPressed = false;
+            }
+        };
+
+        const preventPinchZoom = (e: WheelEvent) => {
+            // If ctrlKey is set but we didn't see a physical Ctrl keypress,
+            // it's likely a trackpad pinch gesture - block it
+            if (e.ctrlKey && !isCtrlKeyPhysicallyPressed) {
+                e.preventDefault();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        // Use passive: false to allow preventDefault
+        document.addEventListener('wheel', preventPinchZoom, { passive: false });
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keyup', handleKeyUp);
+            document.removeEventListener('wheel', preventPinchZoom);
+        };
+    }, []);
+
     // Combined authentication status
     const isAuthenticated = isMsalAuthenticated || isTeamsAuthenticated;
 

@@ -16,6 +16,7 @@ import {
     addConversation,
     addMessageToConversationFromUser,
     deleteConversation,
+    setConversationMessages,
     setConversations,
     setSelectedConversation,
     updateBotResponseStatus,
@@ -296,10 +297,35 @@ export const useChat = () => {
                 const loadedConversations: Conversations = {};
                 const limitedChatSessions = chatSessions.slice(0, 15); // Limit to 15 chat sessions
 
-                for (const chatSession of limitedChatSessions) {
-                    const chatUsers = await chatService.getAllChatParticipantsAsync(chatSession.id, accessToken);
-                    const chatMessages = await chatService.getChatMessagesAsync(chatSession.id, 0, 100, accessToken);
+                // Use the first chat session as the one to load messages for initially
+                // Backend typically returns chats sorted, so first one is the most recent
+                const firstChatId = limitedChatSessions[0]?.id;
 
+                // PERFORMANCE FIX: Load all chat data in parallel instead of sequentially
+                // This reduces loading time from O(n * latency) to O(latency)
+                const chatDataPromises = limitedChatSessions.map(async (chatSession, index) => {
+                    // Load participants for all chats (needed to determine hidden status)
+                    const chatUsers = await chatService.getAllChatParticipantsAsync(chatSession.id, accessToken);
+
+                    // LAZY LOADING: Only fetch messages for the first (newest) chat
+                    // Other chats will load messages on-demand when selected
+                    const isFirstChat = chatSession.id === firstChatId;
+                    const chatMessages = isFirstChat
+                        ? await chatService.getChatMessagesAsync(chatSession.id, 0, 100, accessToken)
+                        : [];
+
+                    return {
+                        chatSession,
+                        chatUsers,
+                        chatMessages,
+                        index,
+                    };
+                });
+
+                const chatDataResults = await Promise.all(chatDataPromises);
+
+                // Build the conversations object from parallel results
+                for (const { chatSession, chatUsers, chatMessages, index } of chatDataResults) {
                     loadedConversations[chatSession.id] = {
                         id: chatSession.id,
                         title: chatSession.title,
@@ -308,10 +334,10 @@ export const useChat = () => {
                         users: chatUsers,
                         messages: chatMessages,
                         enabledHostedPlugins: chatSession.enabledPlugins,
-                        botProfilePicture: getBotProfilePicture(Object.keys(loadedConversations).length),
+                        botProfilePicture: getBotProfilePicture(index),
                         input: '',
                         botResponseStatus: undefined,
-                        userDataLoaded: false,
+                        userDataLoaded: chatMessages.length > 0, // Only marked as loaded if we fetched messages
                         lastUpdatedTimestamp:
                             chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].timestamp : Date.now(),
                         disabled: false,
@@ -341,6 +367,30 @@ export const useChat = () => {
             dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
 
             return false;
+        }
+    };
+
+    /**
+     * Lazy load messages for a chat that doesn't have them yet.
+     * Called when switching to a chat whose messages weren't loaded on startup.
+     */
+    const loadChatMessages = async (chatId: string) => {
+        // Check if messages are already loaded
+        const chat = conversations[chatId] as ChatState | undefined;
+        if (chat?.userDataLoaded) {
+            return; // Already loaded
+        }
+        if (!chat) {
+            return; // Chat doesn't exist
+        }
+
+        try {
+            const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+            const chatMessages = await chatService.getChatMessagesAsync(chatId, 0, 100, accessToken);
+            dispatch(setConversationMessages({ chatId, messages: chatMessages }));
+        } catch (e: unknown) {
+            const errorMessage = `Unable to load messages. Details: ${getErrorDetails(e)}`;
+            dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
         }
     };
 
@@ -605,6 +655,7 @@ export const useChat = () => {
         getChatUserById,
         createChat,
         loadChats,
+        loadChatMessages,
         getResponse,
         downloadBot,
         uploadBot,

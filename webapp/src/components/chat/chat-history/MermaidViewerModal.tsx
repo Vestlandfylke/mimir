@@ -22,11 +22,11 @@ import {
 import {
     Add20Regular,
     ArrowDownload20Regular,
+    ArrowReset20Regular,
     ChevronDown16Regular,
     Dismiss24Regular,
     Open20Regular,
     Subtract20Regular,
-    ZoomFit20Regular,
 } from '@fluentui/react-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { diagramBaseStyles, diagramLightModeStyles, LIGHT_BACKGROUND } from './MermaidStyles';
@@ -54,13 +54,13 @@ const useClasses = makeStyles({
         maxWidth: '95vw',
         width: '1400px',
         maxHeight: '92vh',
-        // Mobile: fullscreen
+        // Mobile: 90% of screen with rounded corners
         [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
-            width: '100vw',
-            maxWidth: '100vw',
-            height: '100vh',
-            maxHeight: '100vh',
-            ...shorthands.borderRadius('0'),
+            width: '90vw',
+            maxWidth: '90vw',
+            height: '90vh',
+            maxHeight: '90vh',
+            ...shorthands.borderRadius(tokens.borderRadiusLarge),
         },
     },
     titleBar: {
@@ -89,10 +89,10 @@ const useClasses = makeStyles({
         height: '80vh',
         minHeight: '400px',
         userSelect: 'none',
-        // Mobile: full height
+        // Mobile: fit within 90vh modal
         [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
-            height: 'calc(100vh - 160px)',
-            minHeight: '300px',
+            height: 'calc(90vh - 140px)',
+            minHeight: '250px',
         },
     },
     viewerContainer: {
@@ -103,9 +103,9 @@ const useClasses = makeStyles({
         ...shorthands.padding(tokens.spacingVerticalM),
         overflow: 'hidden',
         position: 'relative',
-        // Mobile: no border radius, less padding
+        // Mobile: keep border radius, less padding
         [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
-            ...shorthands.borderRadius('0'),
+            ...shorthands.borderRadius(tokens.borderRadiusMedium),
             ...shorthands.padding(tokens.spacingVerticalS),
         },
     },
@@ -184,12 +184,6 @@ const useClasses = makeStyles({
             gap: tokens.spacingHorizontalXS,
         },
     },
-    // Hide editor button on very small screens
-    editorButton: {
-        [`@media (max-width: 480px)`]: {
-            display: 'none',
-        },
-    },
 });
 
 interface MermaidViewerModalProps {
@@ -217,6 +211,9 @@ export const MermaidViewerModal: React.FC<MermaidViewerModalProps> = ({
     const [showHint, setShowHint] = useState(true);
     const [downloading, setDownloading] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Touch support ref for pinch-zoom
+    const lastPinchDistanceRef = useRef<number | null>(null);
 
     // Get SVG dimensions from viewBox or data attributes
     const svgDimensions = useMemo(() => {
@@ -434,6 +431,57 @@ export const MermaidViewerModal: React.FC<MermaidViewerModalProps> = ({
         setIsPanning(false);
     }, []);
 
+    // Touch handlers for mobile pinch-zoom and pan
+    const handleTouchStart = useCallback(
+        (e: React.TouchEvent) => {
+            if (e.touches.length === 2) {
+                // Pinch start - calculate initial distance between fingers
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+                lastPinchDistanceRef.current = distance;
+            } else if (e.touches.length === 1) {
+                // Single finger - start panning
+                const touch = e.touches[0];
+                setIsPanning(true);
+                setPanStart({ x: touch.clientX - panOffset.x, y: touch.clientY - panOffset.y });
+            }
+            setShowHint(false);
+        },
+        [panOffset],
+    );
+
+    const handleTouchMove = useCallback(
+        (e: React.TouchEvent) => {
+            if (e.touches.length === 2 && lastPinchDistanceRef.current !== null) {
+                // Pinch zoom
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+                const delta = distance - lastPinchDistanceRef.current;
+
+                // Scale the delta for smoother zooming
+                const zoomDelta = delta * 0.5;
+                setZoom((z) => Math.max(10, Math.min(1000, z + zoomDelta)));
+                lastPinchDistanceRef.current = distance;
+            } else if (e.touches.length === 1 && isPanning) {
+                // Single finger pan
+                const touch = e.touches[0];
+                setPanOffset({
+                    x: touch.clientX - panStart.x,
+                    y: touch.clientY - panStart.y,
+                });
+            }
+        },
+        [isPanning, panStart],
+    );
+
+    const handleTouchEnd = useCallback(() => {
+        lastPinchDistanceRef.current = null;
+        setIsPanning(false);
+    }, []);
+
     const handleOpenEditor = () => {
         onOpenChange(false);
         onOpenEditor?.();
@@ -472,13 +520,13 @@ export const MermaidViewerModal: React.FC<MermaidViewerModalProps> = ({
                                         aria-label="Zoom inn"
                                     />
                                 </Tooltip>
-                                <Tooltip content="Tilpass" relationship="label">
+                                <Tooltip content="Nullstill visning" relationship="label">
                                     <Button
                                         size="small"
                                         appearance="subtle"
-                                        icon={<ZoomFit20Regular />}
+                                        icon={<ArrowReset20Regular />}
                                         onClick={handleZoomReset}
-                                        aria-label="Tilpass"
+                                        aria-label="Nullstill visning"
                                     />
                                 </Tooltip>
                                 <DialogTrigger action="close">
@@ -502,6 +550,9 @@ export const MermaidViewerModal: React.FC<MermaidViewerModalProps> = ({
                                     onMouseMove={handleMouseMove}
                                     onMouseUp={handleMouseUp}
                                     onMouseLeave={handleMouseLeave}
+                                    onTouchStart={handleTouchStart}
+                                    onTouchMove={handleTouchMove}
+                                    onTouchEnd={handleTouchEnd}
                                 >
                                     <div
                                         className={mergeClasses(classes.viewerSvg, classes.viewerSvgLight)}
@@ -512,10 +563,15 @@ export const MermaidViewerModal: React.FC<MermaidViewerModalProps> = ({
                                     />
                                 </div>
                                 {showHint && (
-                                    <div className={classes.hint}>Bruk scrollhjul for å zoome • Dra for å flytte</div>
+                                    <div className={classes.hint}>Scroll/knip for å zoome • Dra for å flytte</div>
                                 )}
                             </div>
                             <div className={classes.actions}>
+                                <Tooltip content="Opne i diagrameditor for å redigere" relationship="label">
+                                    <Button appearance="secondary" icon={<Open20Regular />} onClick={handleOpenEditor}>
+                                        Opne i editor
+                                    </Button>
+                                </Tooltip>
                                 <Menu>
                                     <MenuTrigger disableButtonEnhancement>
                                         <Button
@@ -557,16 +613,6 @@ export const MermaidViewerModal: React.FC<MermaidViewerModalProps> = ({
                                         </MenuList>
                                     </MenuPopover>
                                 </Menu>
-                                <Tooltip content="Opne i diagrameditor for å redigere" relationship="label">
-                                    <Button
-                                        appearance="secondary"
-                                        icon={<Open20Regular />}
-                                        onClick={handleOpenEditor}
-                                        className={classes.editorButton}
-                                    >
-                                        Opne i editor
-                                    </Button>
-                                </Tooltip>
                             </div>
                         </div>
                     </DialogContent>

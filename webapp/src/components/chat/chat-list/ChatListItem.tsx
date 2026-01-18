@@ -1,6 +1,7 @@
 import { makeStyles, mergeClasses, Persona, shorthands, Text, tokens } from '@fluentui/react-components';
 import { ShieldTask16Regular } from '@fluentui/react-icons';
 import { FC, useState } from 'react';
+import { useChat } from '../../../libs/hooks';
 import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { FeatureKeys } from '../../../redux/features/app/AppState';
@@ -97,6 +98,8 @@ export const ChatListItem: FC<IChatListItemProps> = ({
     const classes = useClasses();
     const dispatch = useAppDispatch();
     const { features } = useAppSelector((state: RootState) => state.app);
+    const { conversations } = useAppSelector((state: RootState) => state.conversations);
+    const chat = useChat();
 
     const showPreview = !features[FeatureKeys.SimplifiedExperience].enabled && preview;
     const showActions = features[FeatureKeys.SimplifiedExperience].enabled && isSelected;
@@ -105,6 +108,12 @@ export const ChatListItem: FC<IChatListItemProps> = ({
 
     const onClick = (_ev: any) => {
         dispatch(setSelectedConversation(id));
+
+        // Lazy load messages if not already loaded (performance optimization)
+        const conversation = conversations[id] as (typeof conversations)[string] | undefined;
+        if (conversation && !conversation.userDataLoaded) {
+            void chat.loadChatMessages(id);
+        }
     };
 
     const time = timestampToDateString(timestamp);

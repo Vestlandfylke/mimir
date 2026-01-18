@@ -35,7 +35,7 @@ import {
     Open20Regular,
     Question20Regular,
     Subtract20Regular,
-    ZoomFit20Regular,
+    ArrowReset20Regular,
 } from '@fluentui/react-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -54,13 +54,13 @@ const useClasses = makeStyles({
         maxWidth: '95vw',
         width: '1600px',
         maxHeight: '92vh',
-        // Mobile: fullscreen modal
+        // Mobile: 90% of screen with rounded corners
         [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
-            width: '100vw',
-            maxWidth: '100vw',
-            height: '100vh',
-            maxHeight: '100vh',
-            ...shorthands.borderRadius('0'),
+            width: '90vw',
+            maxWidth: '90vw',
+            height: '90vh',
+            maxHeight: '90vh',
+            ...shorthands.borderRadius(tokens.borderRadiusLarge),
         },
     },
     contentWrapper: {
@@ -68,11 +68,11 @@ const useClasses = makeStyles({
         height: '75vh',
         minHeight: '500px',
         userSelect: 'none',
-        // Mobile: stack vertically, full height
+        // Mobile: stack vertically, fit within 90vh modal
         [`@media (max-width: ${MOBILE_BREAKPOINT})`]: {
             flexDirection: 'column',
-            height: 'calc(100vh - 180px)',
-            minHeight: '300px',
+            height: 'calc(90vh - 160px)',
+            minHeight: '250px',
         },
     },
     // Mobile tab bar
@@ -1115,6 +1115,9 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
     const [panStart, setPanStart] = useState({ x: 0, y: 0 });
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
+    // Touch support ref for pinch-zoom
+    const lastPinchDistanceRef = useRef<number | null>(null);
+
     const handleZoomIn = () => {
         setZoom((z) => Math.min(z + 50, 1000));
     };
@@ -1159,6 +1162,56 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
     }, []);
 
     const handleMouseLeave = useCallback(() => {
+        setIsPanning(false);
+    }, []);
+
+    // Touch handlers for mobile pinch-zoom and pan
+    const handleTouchStart = useCallback(
+        (e: React.TouchEvent) => {
+            if (e.touches.length === 2) {
+                // Pinch start - calculate initial distance between fingers
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+                lastPinchDistanceRef.current = distance;
+            } else if (e.touches.length === 1) {
+                // Single finger - start panning
+                const touch = e.touches[0];
+                setIsPanning(true);
+                setPanStart({ x: touch.clientX - panOffset.x, y: touch.clientY - panOffset.y });
+            }
+        },
+        [panOffset],
+    );
+
+    const handleTouchMove = useCallback(
+        (e: React.TouchEvent) => {
+            if (e.touches.length === 2 && lastPinchDistanceRef.current !== null) {
+                // Pinch zoom
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+                const delta = distance - lastPinchDistanceRef.current;
+
+                // Scale the delta for smoother zooming
+                const zoomDelta = delta * 0.5;
+                setZoom((z) => Math.max(10, Math.min(1000, z + zoomDelta)));
+                lastPinchDistanceRef.current = distance;
+            } else if (e.touches.length === 1 && isPanning) {
+                // Single finger pan
+                const touch = e.touches[0];
+                setPanOffset({
+                    x: touch.clientX - panStart.x,
+                    y: touch.clientY - panStart.y,
+                });
+            }
+        },
+        [isPanning, panStart],
+    );
+
+    const handleTouchEnd = useCallback(() => {
+        lastPinchDistanceRef.current = null;
         setIsPanning(false);
     }, []);
 
@@ -1538,12 +1591,13 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
                                                 aria-label="Zoom inn"
                                             />
                                         </Tooltip>
-                                        <Tooltip content="Tilpass" relationship="label">
+                                        <Tooltip content="Nullstill visning" relationship="label">
                                             <Button
                                                 size="small"
                                                 appearance="subtle"
-                                                icon={<ZoomFit20Regular />}
+                                                icon={<ArrowReset20Regular />}
                                                 onClick={handleZoomReset}
+                                                aria-label="Nullstill visning"
                                             />
                                         </Tooltip>
                                     </div>
@@ -1556,6 +1610,9 @@ export const MermaidEditorModal: React.FC<MermaidEditorModalProps> = ({
                                         onMouseMove={handleMouseMove}
                                         onMouseUp={handleMouseUp}
                                         onMouseLeave={handleMouseLeave}
+                                        onTouchStart={handleTouchStart}
+                                        onTouchMove={handleTouchMove}
+                                        onTouchEnd={handleTouchEnd}
                                     >
                                         {isRendering ? (
                                             <div className={classes.loading}>

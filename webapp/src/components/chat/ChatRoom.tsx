@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { makeStyles, shorthands, tokens } from '@fluentui/react-components';
+import { makeStyles, shorthands, Spinner, tokens } from '@fluentui/react-components';
 import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
 import { useConnectionSync } from '../../libs/hooks/useConnectionSync';
@@ -48,6 +48,18 @@ const useClasses = makeStyles({
         ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingVerticalNone),
         // Add safe area padding for iPhone home indicator
         paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+    },
+    loadingContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        gap: tokens.spacingVerticalM,
+    },
+    loadingText: {
+        color: tokens.colorNeutralForeground3,
+        fontSize: tokens.fontSizeBase300,
     },
 });
 
@@ -149,11 +161,21 @@ export const ChatRoom: React.FC = () => {
         );
     }
 
+    // Show loading state when messages haven't been loaded yet (lazy loading)
+    const isLoadingMessages = !conversation.userDataLoaded && messages.length === 0;
+
     return (
         <div className={classes.root} onDragEnter={onDragEnter} onDragOver={onDragEnter} onDragLeave={onDragLeave}>
             <div ref={scrollViewTargetRef} className={classes.scroll}>
                 <div className={classes.history}>
-                    <ChatHistory messages={messages} />
+                    {isLoadingMessages ? (
+                        <div className={classes.loadingContainer}>
+                            <Spinner size="medium" />
+                            <span className={classes.loadingText}>Lastar meldingar...</span>
+                        </div>
+                    ) : (
+                        <ChatHistory messages={messages} />
+                    )}
                 </div>
             </div>
             <div className={classes.input}>

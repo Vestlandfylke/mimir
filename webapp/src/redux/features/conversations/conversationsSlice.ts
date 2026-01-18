@@ -89,6 +89,18 @@ export const conversationsSlice = createSlice({
         setUsersLoaded: (state: ConversationsState, action: PayloadAction<string>) => {
             state.conversations[action.payload].userDataLoaded = true;
         },
+        setConversationMessages: (
+            state: ConversationsState,
+            action: PayloadAction<{ chatId: string; messages: IChatMessage[] }>,
+        ) => {
+            const { chatId, messages } = action.payload;
+            const conversation = state.conversations[chatId] as ChatState | undefined;
+            if (!conversation) return;
+            conversation.messages = messages;
+            conversation.userDataLoaded = true;
+            conversation.lastUpdatedTimestamp =
+                messages.length > 0 ? messages[messages.length - 1].timestamp : Date.now();
+        },
         /*
          * addMessageToConversationFromUser() and addMessageToConversationFromServer() both update the conversations state.
          * However they are for different purposes. The former action is for updating the conversation from the
@@ -348,6 +360,7 @@ export const {
     updateUserIsTypingFromServer,
     updateBotResponseStatus,
     setUsersLoaded,
+    setConversationMessages,
     deleteConversation,
     disableConversation,
     updatePluginState,
