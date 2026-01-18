@@ -307,8 +307,8 @@ export const useChat = () => {
 
                 // Sort chat sessions by createdOn (newest first) before processing
                 const sortedChatSessions = [...limitedChatSessions].sort((a, b) => {
-                    const timeA = parseTimestamp(a.createdOn as string | number | undefined);
-                    const timeB = parseTimestamp(b.createdOn as string | number | undefined);
+                    const timeA = parseTimestamp(a.createdOn);
+                    const timeB = parseTimestamp(b.createdOn);
                     return timeB - timeA; // Descending order (newest first)
                 });
 
@@ -343,7 +343,7 @@ export const useChat = () => {
                     // Use message timestamp if available, otherwise fall back to chat createdOn
                     const lastMessageTimestamp =
                         chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].timestamp : undefined;
-                    const chatCreatedTimestamp = parseTimestamp(chatSession.createdOn as string | number | undefined);
+                    const chatCreatedTimestamp = parseTimestamp(chatSession.createdOn);
 
                     loadedConversations[chatSession.id] = {
                         id: chatSession.id,
