@@ -16,12 +16,30 @@ RUN cd webapi && \
 
 # final stage/image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+# Default environment variables for local development
 ENV Kestrel__Endpoints__Http__Url=http://0.0.0.0:8080
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ChatStore__Type=volatile
+ENV Authentication__Type=None
+
 WORKDIR /app
+
+# Create data directories for local file storage
+RUN mkdir -p /app/data/files /app/data/vectors /app/data/queues
+
 COPY --from=builder /app .
 COPY --from=builder /root/.dotnet/corefx/cryptography/x509stores/my/* /root/.dotnet/corefx/cryptography/x509stores/my/
+
+# Install Tesseract dependencies for OCR
 RUN apt update && \
-  apt install -y libleptonica-dev libtesseract-dev libc6-dev libjpeg62-turbo-dev libgdiplus && \
+  apt install -y libleptonica-dev libtesseract-dev libc6-dev libjpeg62-turbo-dev libgdiplus curl && \
   ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 x64/libleptonica-1.82.0.so && \
-  ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.4.0.1 x64/libtesseract50.so
+  ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.4.0.1 x64/libtesseract50.so && \
+  rm -rf /var/lib/apt/lists/*
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/healthz || exit 1
+
 ENTRYPOINT ["./CopilotChatWebApi"]

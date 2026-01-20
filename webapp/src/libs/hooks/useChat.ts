@@ -40,6 +40,7 @@ import botIcon2 from '../../assets/bot-icons/bot-icon-2.png';
 import botIcon3 from '../../assets/bot-icons/bot-icon-3.png';
 import botIcon4 from '../../assets/bot-icons/bot-icon-4.png';
 import botIcon5 from '../../assets/bot-icons/bot-icon-5.png';
+import botIcon6 from '../../assets/bot-icons/bot-icon-6.png';
 import { getErrorDetails } from '../../components/utils/TextUtils';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import {
@@ -74,7 +75,7 @@ export const useChat = () => {
     const chatService = new ChatService();
     const documentImportService = new DocumentImportService();
 
-    const botProfilePictures: string[] = [botIcon1, botIcon2, botIcon3, botIcon4, botIcon5];
+    const botProfilePictures: string[] = [botIcon1, botIcon2, botIcon3, botIcon4, botIcon5, botIcon6];
 
     const userId = activeUserInfo?.id ?? '';
     const fullName = activeUserInfo?.username ?? '';

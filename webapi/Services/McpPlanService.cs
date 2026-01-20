@@ -18,13 +18,16 @@ public class McpPlanService
 {
   private readonly ILogger<McpPlanService> _logger;
   private readonly McpServerOptions _mcpOptions;
+  private readonly SharePointOboPluginOptions _sharePointOptions;
 
   public McpPlanService(
       ILogger<McpPlanService> logger,
-      IOptions<McpServerOptions> mcpOptions)
+      IOptions<McpServerOptions> mcpOptions,
+      IOptions<SharePointOboPluginOptions> sharePointOptions)
   {
     this._logger = logger;
     this._mcpOptions = mcpOptions.Value;
+    this._sharePointOptions = sharePointOptions.Value;
   }
 
   /// <summary>
@@ -33,11 +36,11 @@ public class McpPlanService
   public PlanApprovalMode ApprovalMode => this._mcpOptions.PlanApprovalMode;
 
   /// <summary>
-  /// Gets the list of MCP server names that require approval based on current mode.
+  /// Gets the list of plugin names that require approval based on current mode.
   /// </summary>
   public IReadOnlyList<string> GetServersRequiringApproval()
   {
-    return this._mcpOptions.PlanApprovalMode switch
+    var result = this._mcpOptions.PlanApprovalMode switch
     {
       PlanApprovalMode.Auto => new List<string>(),
       PlanApprovalMode.RequireApproval => this._mcpOptions.Servers
@@ -50,14 +53,34 @@ public class McpPlanService
           .ToList(),
       _ => new List<string>()
     };
+
+    // Add SharePoint OBO plugin if it requires approval
+    if (this._sharePointOptions.Enabled && this._sharePointOptions.RequireApproval)
+    {
+      result.Add(SharePointOboPluginOptions.PluginName);
+    }
+
+    return result;
   }
 
   /// <summary>
-  /// Checks if any MCP tool requires approval based on current settings.
+  /// Checks if any MCP tool or plugin requires approval based on current settings.
   /// </summary>
   public bool AnyServerRequiresApproval()
   {
-    return this._mcpOptions.AnyToolRequiresApproval();
+    // Check MCP servers
+    if (this._mcpOptions.AnyToolRequiresApproval())
+    {
+      return true;
+    }
+
+    // Check SharePoint OBO plugin
+    if (this._sharePointOptions.Enabled && this._sharePointOptions.RequireApproval)
+    {
+      return true;
+    }
+
+    return false;
   }
 
   /// <summary>
@@ -67,6 +90,13 @@ public class McpPlanService
   /// <returns>True if the plugin requires approval.</returns>
   public bool RequiresApproval(string pluginName)
   {
+    // Check if it's the SharePoint OBO plugin
+    if (string.Equals(pluginName, SharePointOboPluginOptions.PluginName, StringComparison.OrdinalIgnoreCase))
+    {
+      return this._sharePointOptions.Enabled && this._sharePointOptions.RequireApproval;
+    }
+
+    // Check MCP servers
     return this._mcpOptions.IsApprovalRequired(pluginName);
   }
 

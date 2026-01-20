@@ -39,7 +39,8 @@ public sealed class Program
             .AddPlugins(builder.Configuration)
             .AddMcpServers(builder.Configuration)
             .AddChatCopilotAuthentication(builder.Configuration)
-            .AddChatCopilotAuthorization();
+            .AddChatCopilotAuthorization()
+            .AddSingleton<IDocumentTextExtractor, DocumentTextExtractor>(); // Document text extraction for SharePoint plugin
 
         // Configure and add semantic services
         builder
@@ -109,7 +110,14 @@ public sealed class Program
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseRateLimiter(); // Rate limiting after auth so we can identify users
+
+        // Only use rate limiter if it's enabled (services registered)
+        var rateLimitingOptions = builder.Configuration.GetSection("RateLimiting").Get<Options.RateLimitingOptions>();
+        if (rateLimitingOptions?.Enabled == true)
+        {
+            app.UseRateLimiter(); // Rate limiting after auth so we can identify users
+        }
+
         app.UseMiddleware<MaintenanceMiddleware>();
         app.MapControllers()
             .RequireAuthorization();

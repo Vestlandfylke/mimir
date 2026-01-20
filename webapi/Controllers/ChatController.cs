@@ -43,9 +43,11 @@ public class ChatController : ControllerBase, IDisposable
     private readonly ITelemetryService _telemetryService;
     private readonly ServiceOptions _serviceOptions;
     private readonly MsGraphOboPluginOptions _msGraphOboPluginOptions;
+    private readonly SharePointOboPluginOptions _sharePointOboPluginOptions;
     private readonly PromptsOptions _promptsOptions;
     private readonly IDictionary<string, Plugin> _plugins;
     private readonly ChatCancellationService _cancellationService;
+    private readonly IDocumentTextExtractor _documentTextExtractor;
 
     private const string ChatPluginName = nameof(ChatPlugin);
     private const string ChatFunctionName = "Chat";
@@ -57,9 +59,11 @@ public class ChatController : ControllerBase, IDisposable
         ITelemetryService telemetryService,
         IOptions<ServiceOptions> serviceOptions,
         IOptions<MsGraphOboPluginOptions> msGraphOboPluginOptions,
+        IOptions<SharePointOboPluginOptions> sharePointOboPluginOptions,
         IOptions<PromptsOptions> promptsOptions,
         IDictionary<string, Plugin> plugins,
-        ChatCancellationService cancellationService)
+        ChatCancellationService cancellationService,
+        IDocumentTextExtractor documentTextExtractor)
     {
         this._logger = logger;
         this._httpClientFactory = httpClientFactory;
@@ -67,9 +71,11 @@ public class ChatController : ControllerBase, IDisposable
         this._disposables = new List<IDisposable>();
         this._serviceOptions = serviceOptions.Value;
         this._msGraphOboPluginOptions = msGraphOboPluginOptions.Value;
+        this._sharePointOboPluginOptions = sharePointOboPluginOptions.Value;
         this._promptsOptions = promptsOptions.Value;
         this._plugins = plugins;
         this._cancellationService = cancellationService;
+        this._documentTextExtractor = documentTextExtractor;
     }
 
     /// <summary>
@@ -141,12 +147,27 @@ public class ChatController : ControllerBase, IDisposable
         // This allows filtering MCP servers by chat type (e.g., klarsprak-specific servers only for klarsprak chats)
         await kernel.RegisterMcpPluginsAsync(this.HttpContext.RequestServices, chat!.Template);
 
+        // Register SharePoint OBO plugin for all assistants
+        // This enables document search across leader, klarsprak, and default assistants
+        await this.RegisterSharePointOboPluginAsync(kernel);
+
         // Register plugins that have been enabled
         var openApiPluginAuthHeaders = this.GetPluginAuthHeaders(this.HttpContext.Request.Headers);
         await this.RegisterFunctionsAsync(kernel, openApiPluginAuthHeaders, contextVariables);
 
         // Register hosted plugins that have been enabled
         await this.RegisterHostedFunctionsAsync(kernel, chat!.EnabledPlugins);
+
+        // Debug: Log all registered plugins and functions
+        this._logger.LogDebug("=== Registered Plugins ===");
+        foreach (var plugin in kernel.Plugins)
+        {
+            this._logger.LogDebug("Plugin: {PluginName} with {FunctionCount} functions", plugin.Name, plugin.Count());
+            foreach (var function in plugin)
+            {
+                this._logger.LogDebug("  - {FunctionName}: {Description}", function.Name, function.Description);
+            }
+        }
 
         // Get the function to invoke
         KernelFunction? chatFunction = kernel.Plugins.GetFunction(ChatPluginName, ChatFunctionName);
@@ -377,6 +398,42 @@ public class ChatController : ControllerBase, IDisposable
     }
 
     /// <summary>
+    /// Register the SharePoint OBO plugin for all assistants.
+    /// This enables SharePoint document search and retrieval using delegated user permissions.
+    /// </summary>
+    private Task RegisterSharePointOboPluginAsync(Kernel kernel)
+    {
+        // Check if SharePoint OBO is configured and enabled
+        if (!this._sharePointOboPluginOptions.Enabled || !this._sharePointOboPluginOptions.IsConfigured)
+        {
+            this._logger.LogDebug("SharePoint OBO plugin not enabled or not configured. Skipping registration.");
+            return Task.CompletedTask;
+        }
+
+        // Get the bearer token from the Authorization header
+        var authHeader = this.HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            this._logger.LogWarning("No bearer token found in request. SharePoint OBO plugin will not be registered.");
+            return Task.CompletedTask;
+        }
+
+        var bearerToken = authHeader.Substring("Bearer ".Length).Trim();
+
+        this._logger.LogInformation("Enabling SharePoint OBO plugin.");
+        kernel.ImportPluginFromObject(
+            new SharePointOboPlugin(
+                bearerToken,
+                this._httpClientFactory,
+                this._documentTextExtractor,
+                this._sharePointOboPluginOptions,
+                this._logger),
+            "sharePointObo");
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Create a Microsoft Graph service client.
     /// </summary>
     /// <param name="accessToken">The bearer token for authentication.</param>
@@ -601,6 +658,9 @@ public class ChatController : ControllerBase, IDisposable
 
         // Register MCP plugins for plan execution
         await kernel.RegisterMcpPluginsAsync(this.HttpContext.RequestServices, chat!.Template);
+
+        // Register SharePoint OBO plugin for all assistants
+        await this.RegisterSharePointOboPluginAsync(kernel);
 
         // Execute the approved plan
         try

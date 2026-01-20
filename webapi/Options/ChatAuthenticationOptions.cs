@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 
@@ -57,5 +57,12 @@ public class ChatAuthenticationOptions
         /// </summary>
         [Required]
         public string? Scopes { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Application ID URI with domain for Teams SSO support.
+        /// If set, this will be used instead of constructing from ClientId.
+        /// Example: "api://mimir.vlfk.no/db0932b4-3bb7-4b89-a398-85be5940e84f"
+        /// </summary>
+        public string? ApplicationIdUri { get; set; }
     }
 }

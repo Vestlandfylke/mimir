@@ -54,6 +54,9 @@ public static class CopilotChatServiceExtensions
 
         AddOptions<MsGraphOboPluginOptions>(MsGraphOboPluginOptions.PropertyName);
 
+        // SharePoint OBO configuration
+        AddOptions<SharePointOboPluginOptions>(SharePointOboPluginOptions.PropertyName);
+
         // MCP configuration
         AddOptions<McpServerOptions>(McpServerOptions.PropertyName);
 

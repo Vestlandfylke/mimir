@@ -1,0 +1,107 @@
+# ============================================
+# MIMIR LOCAL DEVELOPMENT - Docker Compose
+# ============================================
+# Quick start:
+#   1. cp .env.example .env
+#   2. Edit .env with your Azure OpenAI credentials
+#   3. docker compose -f docker-compose.dev.yml up --build
+#   4. Open http://localhost:3000
+#
+# Optional MCP tools:
+#   docker compose -f docker-compose.dev.yml --profile mcp up --build
+
+services:
+  # ============================================
+  # Frontend (React)
+  # ============================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/webapp/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URI=http://localhost:8080
+    depends_on:
+      backend:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ============================================
+  # Backend (ASP.NET Core)
+  # ============================================
+  backend:
+    build:
+      context: .
+      dockerfile: docker/webapi/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # Map root .env variables to what the app expects
+      - KernelMemory__Services__AzureOpenAIText__Endpoint=${AZURE_OPENAI_ENDPOINT}
+      - KernelMemory__Services__AzureOpenAIText__APIKey=${AZURE_OPENAI_API_KEY}
+      - KernelMemory__Services__AzureOpenAIText__Deployment=${AZURE_OPENAI_CHAT_DEPLOYMENT}
+      - KernelMemory__Services__AzureOpenAIEmbedding__Endpoint=${AZURE_OPENAI_ENDPOINT}
+      - KernelMemory__Services__AzureOpenAIEmbedding__APIKey=${AZURE_OPENAI_API_KEY}
+      - KernelMemory__Services__AzureOpenAIEmbedding__Deployment=${AZURE_OPENAI_EMBEDDING_DEPLOYMENT}
+      # Use local storage (no Azure dependencies)
+      - ChatStore__Type=volatile
+      - KernelMemory__DocumentStorageType=SimpleFileStorage
+      - KernelMemory__DataIngestion__OrchestrationType=InProcess
+      - KernelMemory__DataIngestion__MemoryDbTypes__0=SimpleVectorDb
+      - KernelMemory__DataIngestion__EmbeddingGeneratorTypes__0=AzureOpenAIEmbedding
+      - KernelMemory__Retrieval__MemoryDbType=SimpleVectorDb
+      - KernelMemory__Retrieval__EmbeddingGeneratorType=AzureOpenAIEmbedding
+      - KernelMemory__Services__SimpleFileStorage__StorageType=Disk
+      - KernelMemory__Services__SimpleFileStorage__Directory=/app/data/files
+      - KernelMemory__Services__SimpleVectorDb__StorageType=Disk
+      - KernelMemory__Services__SimpleVectorDb__Directory=/app/data/vectors
+      # Authentication (None for local dev)
+      - Authentication__Type=${AUTH_TYPE:-None}
+      # Disable MCP by default
+      - McpServers__Servers__0__Enabled=${MCP_ENABLED:-false}
+      # CORS for local development
+      - AllowedOrigins__0=http://localhost:3000
+      - AllowedOrigins__1=http://127.0.0.1:3000
+    volumes:
+      - mimir-data:/app/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/healthz" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # MCP Bridge (Optional - for Klarsprak tools)
+  # ============================================
+  # Start with: docker compose -f docker-compose.dev.yml --profile mcp up
+  mcp-bridge:
+    build:
+      context: ./mcp-bridge
+      dockerfile: Dockerfile
+    ports:
+      - "${MCP_BRIDGE_PORT:-8002}:8002"
+    environment:
+      - FASTMCP_SERVER_URL=${FASTMCP_SERVER_URL:-https://your-mcp-server.azurecontainerapps.io}
+      - BRIDGE_HOST=0.0.0.0
+      - BRIDGE_PORT=8002
+      - ENTRA_TENANT_ID=${MCP_ENTRA_TENANT_ID:-}
+      - ENTRA_CLIENT_ID=${MCP_ENTRA_CLIENT_ID:-}
+      - ENTRA_CLIENT_SECRET=${MCP_ENTRA_CLIENT_SECRET:-}
+    profiles:
+      - mcp
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mimir-data:
+    driver: local

@@ -18,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="PdfPig" />
     <PackageReference Include="QuestPDF" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />

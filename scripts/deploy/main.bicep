@@ -9,7 +9,7 @@ Bicep template for deploying CopilotChat Azure resources.
 param name string = 'copichat'
 
 @description('SKU for the Azure App Service plan')
-@allowed([ 'B1', 'S1', 'S2', 'S3', 'P1V3', 'P2V3', 'I1V2', 'I2V2' ])
+@allowed(['B1', 'S1', 'S2', 'S3', 'P1V3', 'P2V3', 'I1V2', 'I2V2'])
 param webAppServiceSku string = 'B1'
 
 @description('Location of package to deploy as the web service')
@@ -130,7 +130,8 @@ resource openAI_embeddingModel 'Microsoft.CognitiveServices/accounts/deployments
       name: embeddingModel
     }
   }
-  dependsOn: [// This "dependency" is to create models sequentially because the resource
+  dependsOn: [
+    // This "dependency" is to create models sequentially because the resource
     openAI_completionModel // provider does not support parallel creation of models properly.
   ]
 }
@@ -182,7 +183,8 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
     use32BitWorkerProcess: false
     vnetRouteAllEnabled: true
     webSocketsEnabled: true
-    appSettings: concat([
+    appSettings: concat(
+      [
         {
           name: 'Authentication:Type'
           value: 'AzureAd'
@@ -395,29 +397,23 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
           name: 'KernelMemory:Services:OpenAI:APIKey'
           value: aiApiKey
         }
-        {
-          name: 'Plugins:0:Name'
-          value: 'Klarna Shopping'
-        }
-        {
-          name: 'Plugins:0:ManifestDomain'
-          value: 'https://www.klarna.com'
-        }
       ],
-      (deployWebSearcherPlugin) ? [
-        {
-          name: 'Plugins:1:Name'
-          value: 'WebSearcher'
-        }
-        {
-          name: 'Plugins:1:ManifestDomain'
-          value: 'https://${functionAppWebSearcherPlugin.properties.defaultHostName}'
-        }
-        {
-          name: 'Plugins:1:Key'
-          value: listkeys('${functionAppWebSearcherPlugin.id}/host/default/', '2022-09-01').functionKeys.default
-        }
-      ] : []
+      (deployWebSearcherPlugin)
+        ? [
+            {
+              name: 'Plugins:0:Name'
+              value: 'WebSearcher'
+            }
+            {
+              name: 'Plugins:0:ManifestDomain'
+              value: 'https://${functionAppWebSearcherPlugin.properties.defaultHostName}'
+            }
+            {
+              name: 'Plugins:0:Key'
+              value: listkeys('${functionAppWebSearcherPlugin.id}/host/default/', '2022-09-01').functionKeys.default
+            }
+          ]
+        : []
     )
   }
 }
@@ -699,19 +695,19 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 resource appInsightExtensionWeb 'Microsoft.Web/sites/siteextensions@2022-09-01' = {
   parent: appServiceWeb
   name: 'Microsoft.ApplicationInsights.AzureWebSites'
-  dependsOn: [ appServiceWebDeploy ]
+  dependsOn: [appServiceWebDeploy]
 }
 
 resource appInsightExtensionMemory 'Microsoft.Web/sites/siteextensions@2022-09-01' = {
   parent: appServiceMemoryPipeline
   name: 'Microsoft.ApplicationInsights.AzureWebSites'
-  dependsOn: [ appServiceMemoryPipelineDeploy ]
+  dependsOn: [appServiceMemoryPipelineDeploy]
 }
 
 resource appInsightExtensionWebSearchPlugin 'Microsoft.Web/sites/siteextensions@2022-09-01' = if (deployWebSearcherPlugin) {
   parent: functionAppWebSearcherPlugin
   name: 'Microsoft.ApplicationInsights.AzureWebSites'
-  dependsOn: [ functionAppWebSearcherDeploy ]
+  dependsOn: [functionAppWebSearcherDeploy]
 }
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
@@ -949,7 +945,8 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = if (
   kind: 'GlobalDocumentDB'
   properties: {
     consistencyPolicy: { defaultConsistencyLevel: 'Session' }
-    locations: [ {
+    locations: [
+      {
         locationName: location
         failoverPriority: 0
         isZoneRedundant: false
@@ -1143,7 +1140,4 @@ resource bingSearchService 'Microsoft.Bing/accounts@2020-06-10' = if (deployWebS
 output webapiUrl string = appServiceWeb.properties.defaultHostName
 output webapiName string = appServiceWeb.name
 output memoryPipelineName string = appServiceMemoryPipeline.name
-output pluginNames array = concat(
-  [],
-  (deployWebSearcherPlugin) ? [ functionAppWebSearcherPlugin.name ] : []
-)
+output pluginNames array = concat([], (deployWebSearcherPlugin) ? [functionAppWebSearcherPlugin.name] : [])

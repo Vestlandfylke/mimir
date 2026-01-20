@@ -91,12 +91,18 @@ public class ServiceInfoController : ControllerBase
             authorityUriString = authorityUri.ToString();
         }
 
+        // Build the API scope URI - use ApplicationIdUri if set (for Teams SSO with domain),
+        // otherwise fall back to constructing from ClientId
+        var apiUriBase = !string.IsNullOrEmpty(this._chatAuthenticationOptions.AzureAd!.ApplicationIdUri)
+            ? this._chatAuthenticationOptions.AzureAd!.ApplicationIdUri
+            : $"api://{this._chatAuthenticationOptions.AzureAd!.ClientId}";
+
         var config = new FrontendAuthConfig
         {
             AuthType = this._chatAuthenticationOptions.Type.ToString(),
             AadAuthority = authorityUriString,
             AadClientId = this._frontendOptions.AadClientId,
-            AadApiScope = $"api://{this._chatAuthenticationOptions.AzureAd!.ClientId}/{this._chatAuthenticationOptions.AzureAd!.Scopes}",
+            AadApiScope = $"{apiUriBase}/{this._chatAuthenticationOptions.AzureAd!.Scopes}",
         };
 
         return this.Ok(config);

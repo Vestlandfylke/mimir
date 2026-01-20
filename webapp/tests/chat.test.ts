@@ -41,11 +41,6 @@ test.describe('Copilot Chat App Test Suite', () => {
     });
 
     test.describe('Planner Tests', () => {
-        test('Klarna', async ({ page }) => {
-            test.setTimeout(util.TestTimeout);
-            await plannertests.klarnaTest(page);
-        });
-
         test.skip('Jira', async ({ page }) => {
             test.setTimeout(util.TestTimeout);
             await plannertests.jiraTest(page);
