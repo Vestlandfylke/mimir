@@ -6,6 +6,8 @@ export const Constants = {
         name: 'Mimir',
         updateCheckIntervalSeconds: 60 * 5,
         CONNECTION_ALERT_ID: 'connection-alert',
+        // Maximum number of chats a user can have at once
+        maxChats: 25,
         // Supported file types for document import
         // Text documents: .txt, .pdf, .docx, .doc, .md, .html, .htm, .json, .csv, .xml, .rtf
         // Office documents: .xlsx, .xls, .pptx, .ppt

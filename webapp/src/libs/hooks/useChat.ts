@@ -96,7 +96,36 @@ export const useChat = () => {
         return users.find((user) => user.id === id);
     };
 
-    const createChat = async (template?: string, templateDisplayName?: string) => {
+    const createChat = async (template?: string, templateDisplayName?: string, forceCreate?: boolean) => {
+        // Check if user has reached the maximum number of chats
+        const nonHiddenChats = Object.values(conversations).filter((c) => !c.hidden);
+
+        if (!forceCreate && nonHiddenChats.length >= Constants.app.maxChats) {
+            // Find the oldest chat by lastUpdatedTimestamp (or createdOn if not available)
+            const sortedChats = [...nonHiddenChats].sort((a, b) => {
+                const timeA = a.lastUpdatedTimestamp ?? 0;
+                const timeB = b.lastUpdatedTimestamp ?? 0;
+                return timeA - timeB; // Ascending order (oldest first)
+            });
+            const oldestChat = sortedChats[0];
+            const oldestChatName = getFriendlyChatName(oldestChat);
+
+            dispatch(
+                addAlert({
+                    message: `Du har nådd maks grense på ${Constants.app.maxChats} samtalar. Slett ein samtale for å opprette ein ny, eller klikk "Slett eldste" for å slette "${oldestChatName}" automatisk.`,
+                    type: AlertType.Warning,
+                    onRetry: () => {
+                        // Delete the oldest chat and then create the new one
+                        void deleteChat(oldestChat.id).then(() => {
+                            void createChat(template, templateDisplayName, true);
+                        });
+                    },
+                    retryLabel: 'Slett eldste',
+                }),
+            );
+            return;
+        }
+
         // Generate chat title based on template
         let chatTitle: string;
         if (template && templateDisplayName) {
@@ -296,7 +325,7 @@ export const useChat = () => {
 
             if (chatSessions.length > 0) {
                 const loadedConversations: Conversations = {};
-                const limitedChatSessions = chatSessions.slice(0, 15); // Limit to 15 chat sessions
+                const limitedChatSessions = chatSessions.slice(0, Constants.app.maxChats); // Limit to maxChats
 
                 // Helper to parse createdOn timestamp from backend
                 const parseTimestamp = (value: string | number | undefined): number => {
@@ -601,9 +630,17 @@ export const useChat = () => {
                 }
             })
             .catch((e: any) => {
-                const errorDetails = (e as Error).message.includes('Failed to delete resources for chat id')
+                const errorMessage = (e as Error).message;
+
+                // If chat doesn't exist on backend (404), just remove it locally
+                if (errorMessage.includes('404')) {
+                    dispatch(deleteConversation(chatId));
+                    return;
+                }
+
+                const errorDetails = errorMessage.includes('Failed to delete resources for chat id')
                     ? "Some or all resources associated with this chat couldn't be deleted. Please try again."
-                    : `Details: ${(e as Error).message}`;
+                    : `Details: ${errorMessage}`;
                 dispatch(
                     addAlert({
                         message: `Unable to delete chat {${friendlyChatName}}. ${errorDetails}`,

@@ -144,9 +144,18 @@ const App = () => {
             try {
                 const context = await teamsAuthHelper.getContext();
                 if (context?.user) {
+                    // Use stable ID format: objectId.tenantId (same as MSAL) for message matching
+                    const tenantId = context.user.tenant?.id ?? '';
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                    const objectId = context.user.id ?? '';
+                    const stableId =
+                        objectId && tenantId
+                            ? `${objectId}.${tenantId}`
+                            : (context.user.userPrincipalName ?? context.user.loginHint ?? 'teams-user');
+
                     dispatch(
                         setActiveUserInfo({
-                            id: context.user.id || 'teams-user',
+                            id: stableId,
                             email: context.user.loginHint ?? context.user.userPrincipalName ?? '',
                             username: context.user.displayName ?? context.user.loginHint ?? 'Teams User',
                         }),
@@ -198,18 +207,31 @@ const App = () => {
                     try {
                         const context = await teamsAuthHelper.getContext();
                         if (context?.user) {
+                            // Use stable ID format: objectId.tenantId (same as MSAL) for message matching
+                            const tenantId = context.user.tenant?.id ?? '';
+                            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                            const objectId = context.user.id ?? '';
+                            const stableId =
+                                objectId && tenantId
+                                    ? `${objectId}.${tenantId}`
+                                    : (context.user.userPrincipalName ?? context.user.loginHint ?? 'teams-user');
+
                             dispatch(
                                 setActiveUserInfo({
-                                    id: context.user.id || `teams-${Date.now()}`,
+                                    id: stableId,
                                     email: context.user.loginHint ?? context.user.userPrincipalName ?? '',
                                     username: context.user.displayName ?? context.user.loginHint ?? 'Teams User',
                                 }),
                             );
                         } else {
-                            // Fallback: create a basic user info
+                            // Fallback: use a deterministic ID based on session storage if available
+                            const fallbackId = sessionStorage.getItem('teams-user-id') ?? 'teams-user';
+                            if (!sessionStorage.getItem('teams-user-id')) {
+                                sessionStorage.setItem('teams-user-id', fallbackId);
+                            }
                             dispatch(
                                 setActiveUserInfo({
-                                    id: `teams-${Date.now()}`,
+                                    id: fallbackId,
                                     email: 'teams@user',
                                     username: 'Teams User',
                                 }),

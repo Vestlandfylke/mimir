@@ -34,6 +34,8 @@ export interface Alert {
     type: AlertType;
     id?: string;
     onRetry?: () => void;
+    /** Custom label for the retry button (default: "Prøv igjen") */
+    retryLabel?: string;
     /** Show a "Oppdater sida" button that refreshes the page */
     showRefresh?: boolean;
 }

@@ -48,7 +48,7 @@ export const Alerts: React.FC = () => {
 
     return (
         <div>
-            {alerts.map(({ type, message, onRetry, showRefresh }, index) => {
+            {alerts.map(({ type, message, onRetry, retryLabel, showRefresh }, index) => {
                 return (
                     <Alert
                         intent={type}
@@ -57,7 +57,7 @@ export const Alerts: React.FC = () => {
                                 <div className={classes.actionItems}>
                                     {onRetry && (
                                         <div className={classes.retryButton} onClick={onRetry}>
-                                            Prøv igjen
+                                            {retryLabel ?? 'Prøv igjen'}
                                         </div>
                                     )}
                                     {showRefresh && (

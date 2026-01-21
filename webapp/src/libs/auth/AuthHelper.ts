@@ -268,6 +268,37 @@ const logoutAsync = (instance: IPublicClientApplication) => {
 const getAuthConfig = () => store.getState().app.authConfig;
 const isAuthAAD = () => getAuthConfig()?.authType === AuthType.AAD;
 
+// Check if a JWT token is expired (with 5 minute buffer)
+const isTokenExpired = (token: string): boolean => {
+    try {
+        // JWT tokens are base64 encoded: header.payload.signature
+        const payload = token.split('.')[1];
+        if (!payload) return true;
+
+        const decoded = JSON.parse(atob(payload)) as { exp?: number };
+        const exp = decoded.exp;
+        if (!exp) return true;
+
+        // Check if token expires within 5 minutes (300 seconds buffer)
+        const now = Math.floor(Date.now() / 1000);
+        const isExpired = exp < now + 300;
+
+        if (isExpired) {
+            log(
+                'Token is expired or expiring soon. Exp:',
+                new Date(exp * 1000).toISOString(),
+                'Now:',
+                new Date(now * 1000).toISOString(),
+            );
+        }
+
+        return isExpired;
+    } catch (error) {
+        log('Error checking token expiration:', error);
+        return true; // Assume expired if we can't parse
+    }
+};
+
 // SKaaS = Semantic Kernel as a Service
 // Gets token with scopes to authorize SKaaS specifically
 const getSKaaSAccessToken = async (instance: IPublicClientApplication, inProgress: InteractionStatus) => {
@@ -277,11 +308,17 @@ const getSKaaSAccessToken = async (instance: IPublicClientApplication, inProgres
 
     // In Teams context, try to use Teams SSO token first
     if (EmbeddedAppHelper.isInTeams()) {
-        // Check if we have a stored Teams token
+        // Check if we have a stored Teams token that is still valid
         const teamsToken = sessionStorage.getItem('teamsToken');
-        if (teamsToken) {
+        if (teamsToken && !isTokenExpired(teamsToken)) {
             log('Using stored Teams SSO token for API call');
             return teamsToken;
+        }
+
+        // Token is missing or expired, clear it and get a fresh one
+        if (teamsToken) {
+            log('Stored Teams token is expired, getting fresh token');
+            sessionStorage.removeItem('teamsToken');
         }
 
         // Try to get a fresh Teams SSO token
