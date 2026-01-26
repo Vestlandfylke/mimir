@@ -60,9 +60,9 @@ const getMsalConfig = (authConfig: AuthConfig): Configuration => ({
                 }
             },
         },
-        windowHashTimeout: 9000, // Applies just to popup calls - In milliseconds
-        iframeHashTimeout: 9000, // Applies just to silent calls - In milliseconds
-        loadFrameTimeout: 9000, // Applies to both silent and popup calls - In milliseconds
+        windowHashTimeout: 15000, // Applies just to popup calls - In milliseconds
+        iframeHashTimeout: 15000, // Applies just to silent calls - In milliseconds
+        loadFrameTimeout: 15000, // Applies to both silent and popup calls - In milliseconds
     },
 });
 
@@ -301,7 +301,12 @@ const isTokenExpired = (token: string): boolean => {
 
 // SKaaS = Semantic Kernel as a Service
 // Gets token with scopes to authorize SKaaS specifically
-const getSKaaSAccessToken = async (instance: IPublicClientApplication, inProgress: InteractionStatus) => {
+// @param silentOnly - If true, won't trigger interactive auth (popup/redirect) on failure
+const getSKaaSAccessToken = async (
+    instance: IPublicClientApplication,
+    inProgress: InteractionStatus,
+    silentOnly = false,
+) => {
     if (!isAuthAAD()) {
         return '';
     }
@@ -338,7 +343,7 @@ const getSKaaSAccessToken = async (instance: IPublicClientApplication, inProgres
     }
 
     // Fall back to MSAL token
-    return await TokenHelper.getAccessTokenUsingMsal(inProgress, instance, getMsalScopes());
+    return await TokenHelper.getAccessTokenUsingMsal(inProgress, instance, getMsalScopes(), undefined, silentOnly);
 };
 
 export const AuthHelper = {

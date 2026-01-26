@@ -30,10 +30,9 @@ const useClasses = makeStyles({
         fontSize: tokens.fontSizeBase200,
     },
     retryButton: {
-        cursor: 'pointer',
-        '&:hover': {
-            textDecoration: 'underline',
-        },
+        minWidth: 'auto',
+        padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
+        fontSize: tokens.fontSizeBase200,
     },
     dismissButton: {
         alignSelf: 'center',
@@ -56,9 +55,14 @@ export const Alerts: React.FC = () => {
                             children: (
                                 <div className={classes.actionItems}>
                                     {onRetry && (
-                                        <div className={classes.retryButton} onClick={onRetry}>
+                                        <Button
+                                            appearance="primary"
+                                            size="small"
+                                            className={classes.retryButton}
+                                            onClick={onRetry}
+                                        >
                                             {retryLabel ?? 'Prøv igjen'}
-                                        </div>
+                                        </Button>
                                     )}
                                     {showRefresh && (
                                         <Button

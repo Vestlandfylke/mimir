@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { makeStyles, shorthands, Spinner, tokens, Button } from '@fluentui/react-components';
+import { Button, makeStyles, shorthands, Spinner, tokens } from '@fluentui/react-components';
 import { ArrowDownRegular } from '@fluentui/react-icons';
 import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
@@ -10,7 +10,6 @@ import { logger } from '../../libs/utils/Logger';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys, Features } from '../../redux/features/app/AppState';
-import { SharedStyles } from '../../styles';
 import { ChatInput } from './ChatInput';
 import { ChatHistory } from './chat-history/ChatHistory';
 
@@ -19,18 +18,32 @@ const useClasses = makeStyles({
         ...shorthands.overflow('hidden'),
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        // Removed justifyContent: 'space-between' - flexGrow on children handles spacing
+        // Using space-between with flex children that have flexGrow can cause layout glitches
         height: '100%',
-        flexGrow: 1,
+        flex: '1 1 0%',
         // Ensure it never exceeds parent
         minHeight: 0,
     },
     scroll: {
         ...shorthands.margin(tokens.spacingVerticalXS),
-        ...SharedStyles.scroll,
-        flexGrow: 1,
-        flexShrink: 1,
+        // Use flex shorthand for more reliable sizing in flex containers
+        // Don't use height: '100%' with flexGrow as it causes conflicts
+        flex: '1 1 0%',
         minHeight: 0, // Important for flex scroll containers
+        overflowY: 'auto',
+        // Custom scrollbar styling (from SharedStyles.scroll but without height: 100%)
+        '&:hover': {
+            '&::-webkit-scrollbar-thumb': {
+                backgroundColor: tokens.colorScrollbarOverlay,
+                visibility: 'visible',
+            },
+            '&::-webkit-scrollbar-track': {
+                backgroundColor: tokens.colorNeutralBackground1,
+                WebkitBoxShadow: 'inset 0 0 5px rgba(0, 0, 0, 0.1)',
+                visibility: 'visible',
+            },
+        },
         // Ensure proper scrolling on mobile
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain', // Prevent scroll chaining
@@ -77,11 +90,13 @@ const useClasses = makeStyles({
     },
     scrollContainer: {
         position: 'relative',
-        flexGrow: 1,
-        flexShrink: 1,
+        // Use flex shorthand for more reliable cross-browser behavior
+        flex: '1 1 0%',
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
+        // Ensure container always fills available space
+        overflow: 'hidden',
     },
 });
 
@@ -123,14 +138,59 @@ export const ChatRoom: React.FC = () => {
     const prevBotResponseStatusRef = React.useRef(botResponseStatus);
 
     const [isDraggingOver, setIsDraggingOver] = React.useState(false);
+    // Use a counter to properly track drag enter/leave across nested elements
+    // This prevents the "stuck" drag state when moving between child elements
+    const dragCounterRef = React.useRef(0);
+
     const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
-        setIsDraggingOver(true);
+        dragCounterRef.current++;
+        if (dragCounterRef.current === 1) {
+            setIsDraggingOver(true);
+        }
     };
+
     const onDragLeave = (e: React.DragEvent<HTMLDivElement | HTMLTextAreaElement>) => {
         e.preventDefault();
+        dragCounterRef.current--;
+        if (dragCounterRef.current === 0) {
+            setIsDraggingOver(false);
+        }
+    };
+
+    const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        // Ensure we're in drag state even if dragenter was missed
+        if (!isDraggingOver && dragCounterRef.current > 0) {
+            setIsDraggingOver(true);
+        }
+    };
+
+    // Reset drag state when drop happens anywhere in the container
+    const onDrop = (_e: React.DragEvent<HTMLDivElement>) => {
+        // Don't prevent default here - let child handlers process the drop
+        dragCounterRef.current = 0;
         setIsDraggingOver(false);
     };
+
+    // Listen for drag end on document to reset state when drag is cancelled
+    // (e.g., user presses Escape or moves cursor outside browser window)
+    React.useEffect(() => {
+        const resetDragState = () => {
+            dragCounterRef.current = 0;
+            setIsDraggingOver(false);
+        };
+
+        // Handle when drag operation ends (drop or cancel)
+        document.addEventListener('dragend', resetDragState);
+        // Handle drop anywhere on the document
+        document.addEventListener('drop', resetDragState);
+
+        return () => {
+            document.removeEventListener('dragend', resetDragState);
+            document.removeEventListener('drop', resetDragState);
+        };
+    }, []);
 
     // Helper function to scroll to the last bot message (start of response)
     const scrollToLastBotMessage = React.useCallback(() => {
@@ -299,7 +359,13 @@ export const ChatRoom: React.FC = () => {
     const isLoadingMessages = !conversation.userDataLoaded && messages.length === 0;
 
     return (
-        <div className={classes.root} onDragEnter={onDragEnter} onDragOver={onDragEnter} onDragLeave={onDragLeave}>
+        <div
+            className={classes.root}
+            onDragEnter={onDragEnter}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+        >
             <div className={classes.scrollContainer}>
                 <div ref={scrollViewTargetRef} className={classes.scroll}>
                     <div className={classes.history}>

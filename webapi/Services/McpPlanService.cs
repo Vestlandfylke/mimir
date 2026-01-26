@@ -13,21 +13,25 @@ namespace CopilotChat.WebApi.Services;
 
 /// <summary>
 /// Service for handling MCP tool plan approval workflow.
+/// Supports MCP servers, SharePoint OBO plugin, and LeiarKontekst plugin.
 /// </summary>
 public class McpPlanService
 {
   private readonly ILogger<McpPlanService> _logger;
   private readonly McpServerOptions _mcpOptions;
   private readonly SharePointOboPluginOptions _sharePointOptions;
+  private readonly LeiarKontekstPluginOptions _leiarKontekstOptions;
 
   public McpPlanService(
       ILogger<McpPlanService> logger,
       IOptions<McpServerOptions> mcpOptions,
-      IOptions<SharePointOboPluginOptions> sharePointOptions)
+      IOptions<SharePointOboPluginOptions> sharePointOptions,
+      IOptions<LeiarKontekstPluginOptions> leiarKontekstOptions)
   {
     this._logger = logger;
     this._mcpOptions = mcpOptions.Value;
     this._sharePointOptions = sharePointOptions.Value;
+    this._leiarKontekstOptions = leiarKontekstOptions.Value;
   }
 
   /// <summary>
@@ -60,6 +64,12 @@ public class McpPlanService
       result.Add(SharePointOboPluginOptions.PluginName);
     }
 
+    // Add LeiarKontekst plugin if it requires approval
+    if (this._leiarKontekstOptions.Enabled && this._leiarKontekstOptions.IsConfigured && this._leiarKontekstOptions.RequireApproval)
+    {
+      result.Add(LeiarKontekstPluginOptions.PluginName);
+    }
+
     return result;
   }
 
@@ -80,6 +90,12 @@ public class McpPlanService
       return true;
     }
 
+    // Check LeiarKontekst plugin
+    if (this._leiarKontekstOptions.Enabled && this._leiarKontekstOptions.IsConfigured && this._leiarKontekstOptions.RequireApproval)
+    {
+      return true;
+    }
+
     return false;
   }
 
@@ -94,6 +110,12 @@ public class McpPlanService
     if (string.Equals(pluginName, SharePointOboPluginOptions.PluginName, StringComparison.OrdinalIgnoreCase))
     {
       return this._sharePointOptions.Enabled && this._sharePointOptions.RequireApproval;
+    }
+
+    // Check if it's the LeiarKontekst plugin
+    if (string.Equals(pluginName, LeiarKontekstPluginOptions.PluginName, StringComparison.OrdinalIgnoreCase))
+    {
+      return this._leiarKontekstOptions.Enabled && this._leiarKontekstOptions.IsConfigured && this._leiarKontekstOptions.RequireApproval;
     }
 
     // Check MCP servers

@@ -66,7 +66,7 @@ const useClasses = makeStyles({
             ...shorthands.padding('1px', '4px'),
             ...shorthands.borderRadius('4px'),
             backgroundColor: tokens.colorNeutralBackground4,
-            fontFamily: 'monospace',
+            fontFamily: '"Roboto Mono", Consolas, Monaco, monospace',
             fontSize: '0.9em',
         },
     },

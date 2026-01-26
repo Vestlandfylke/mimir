@@ -79,9 +79,12 @@ export const BackendProbe: FC<IData> = ({ onBackendFound }) => {
                 }
             };
 
-            AuthHelper.getSKaaSAccessToken(instance, inProgress)
-                .then((token) =>
-                    maintenanceService
+            // Use silentOnly=true to avoid triggering login prompts during background probe
+            AuthHelper.getSKaaSAccessToken(instance, inProgress, true)
+                .then((token) => {
+                    // If we got an empty token (silent auth failed), still try the probe
+                    // The backend might allow unauthenticated maintenance checks
+                    return maintenanceService
                         .getMaintenanceStatus(token)
                         .then((data) => {
                             // Body has payload. This means the app is in maintenance
@@ -96,8 +99,8 @@ export const BackendProbe: FC<IData> = ({ onBackendFound }) => {
                             // JSON Exception since response has no body. This means app is not in maintenance.
                             dispatch(setMaintenance(false));
                             onBackendFoundWithAuthCheck();
-                        }),
-                )
+                        });
+                })
                 .catch(() => {
                     // Ignore - we'll retry on the next interval
                 });

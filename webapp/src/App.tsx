@@ -13,9 +13,9 @@ import { EmbeddedAppHelper } from './libs/utils/EmbeddedAppHelper';
 import { logger } from './libs/utils/Logger';
 import { useAppDispatch, useAppSelector } from './redux/app/hooks';
 import { RootState } from './redux/app/store';
-import { FeatureKeys } from './redux/features/app/AppState';
+import { BrandColors, FeatureKeys } from './redux/features/app/AppState';
 import { addAlert, setActiveUserInfo, setServiceInfo } from './redux/features/app/appSlice';
-import { semanticKernelDarkTheme, semanticKernelLightTheme } from './styles';
+import { createCustomDarkTheme, createCustomLightTheme } from './styles';
 
 export const useClasses = makeStyles({
     container: {
@@ -34,7 +34,7 @@ export const useClasses = makeStyles({
     header: {
         alignItems: 'center',
         backgroundColor: tokens.colorBrandForeground2,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1e1e1e', // Dark gray text matching dark mode background
         display: 'flex',
         '& h1': {
             paddingLeft: tokens.spacingHorizontalXL,
@@ -73,7 +73,7 @@ const App = () => {
     const dispatch = useAppDispatch();
     const { instance } = useMsal();
     const isMsalAuthenticated = useIsAuthenticated();
-    const { features, isMaintenance } = useAppSelector((state: RootState) => state.app);
+    const { features, isMaintenance, brandColor } = useAppSelector((state: RootState) => state.app);
 
     const chat = useChat();
     const file = useFile();
@@ -271,7 +271,10 @@ const App = () => {
         } // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [instance, isAuthenticated, isMsalAuthenticated, isTeamsAuthenticated, appState, isMaintenance]);
 
-    const theme = features[FeatureKeys.DarkMode].enabled ? semanticKernelDarkTheme : semanticKernelLightTheme;
+    const brandHex = BrandColors[brandColor].hex;
+    const theme = features[FeatureKeys.DarkMode].enabled
+        ? createCustomDarkTheme(brandHex)
+        : createCustomLightTheme(brandHex);
 
     // Render logic that handles both MSAL and Teams authentication
     const renderContent = () => {

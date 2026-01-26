@@ -44,6 +44,8 @@ public class ChatController : ControllerBase, IDisposable
     private readonly ServiceOptions _serviceOptions;
     private readonly MsGraphOboPluginOptions _msGraphOboPluginOptions;
     private readonly SharePointOboPluginOptions _sharePointOboPluginOptions;
+    private readonly LeiarKontekstPluginOptions _leiarKontekstPluginOptions;
+    private readonly LeiarKontekstCitationService _leiarKontekstCitationService;
     private readonly PromptsOptions _promptsOptions;
     private readonly IDictionary<string, Plugin> _plugins;
     private readonly ChatCancellationService _cancellationService;
@@ -60,6 +62,8 @@ public class ChatController : ControllerBase, IDisposable
         IOptions<ServiceOptions> serviceOptions,
         IOptions<MsGraphOboPluginOptions> msGraphOboPluginOptions,
         IOptions<SharePointOboPluginOptions> sharePointOboPluginOptions,
+        IOptions<LeiarKontekstPluginOptions> leiarKontekstPluginOptions,
+        LeiarKontekstCitationService leiarKontekstCitationService,
         IOptions<PromptsOptions> promptsOptions,
         IDictionary<string, Plugin> plugins,
         ChatCancellationService cancellationService,
@@ -72,6 +76,8 @@ public class ChatController : ControllerBase, IDisposable
         this._serviceOptions = serviceOptions.Value;
         this._msGraphOboPluginOptions = msGraphOboPluginOptions.Value;
         this._sharePointOboPluginOptions = sharePointOboPluginOptions.Value;
+        this._leiarKontekstPluginOptions = leiarKontekstPluginOptions.Value;
+        this._leiarKontekstCitationService = leiarKontekstCitationService;
         this._promptsOptions = promptsOptions.Value;
         this._plugins = plugins;
         this._cancellationService = cancellationService;
@@ -147,9 +153,17 @@ public class ChatController : ControllerBase, IDisposable
         // This allows filtering MCP servers by chat type (e.g., klarsprak-specific servers only for klarsprak chats)
         await kernel.RegisterMcpPluginsAsync(this.HttpContext.RequestServices, chat!.Template);
 
-        // Register SharePoint OBO plugin for all assistants
-        // This enables document search across leader, klarsprak, and default assistants
-        await this.RegisterSharePointOboPluginAsync(kernel);
+        // Register SharePoint OBO plugin only for the leader assistant
+        // This provides access to HR and organizational SharePoint content
+        await this.RegisterSharePointOboPluginAsync(kernel, chat!.Template);
+
+        // Register Leiar Kontekst plugin only for the leader assistant
+        // This provides strategic documents and organizational context from Azure AI Search
+        this.RegisterLeiarKontekstPlugin(kernel, chat!.Template);
+
+        // Store the citation service in kernel data so ChatPlugin can access it
+        // This ensures the correct scoped instance is used regardless of kernel lifetime
+        kernel.Data["LeiarKontekstCitationService"] = this._leiarKontekstCitationService;
 
         // Register plugins that have been enabled
         var openApiPluginAuthHeaders = this.GetPluginAuthHeaders(this.HttpContext.Request.Headers);
@@ -398,11 +412,20 @@ public class ChatController : ControllerBase, IDisposable
     }
 
     /// <summary>
-    /// Register the SharePoint OBO plugin for all assistants.
+    /// Register the SharePoint OBO plugin for the leader assistant only.
     /// This enables SharePoint document search and retrieval using delegated user permissions.
     /// </summary>
-    private Task RegisterSharePointOboPluginAsync(Kernel kernel)
+    /// <param name="kernel">The kernel to register the plugin with.</param>
+    /// <param name="template">The chat template (e.g., "leader").</param>
+    private Task RegisterSharePointOboPluginAsync(Kernel kernel, string? template)
     {
+        // Only register for the "leader" template
+        if (!string.Equals(template, "leader", StringComparison.OrdinalIgnoreCase))
+        {
+            this._logger.LogDebug("SharePoint OBO plugin only available for leader template. Current template: '{Template}'", template);
+            return Task.CompletedTask;
+        }
+
         // Check if SharePoint OBO is configured and enabled
         if (!this._sharePointOboPluginOptions.Enabled || !this._sharePointOboPluginOptions.IsConfigured)
         {
@@ -420,7 +443,7 @@ public class ChatController : ControllerBase, IDisposable
 
         var bearerToken = authHeader.Substring("Bearer ".Length).Trim();
 
-        this._logger.LogInformation("Enabling SharePoint OBO plugin.");
+        this._logger.LogInformation("Enabling SharePoint OBO plugin for leader assistant.");
         kernel.ImportPluginFromObject(
             new SharePointOboPlugin(
                 bearerToken,
@@ -431,6 +454,41 @@ public class ChatController : ControllerBase, IDisposable
             "sharePointObo");
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Register the Leiar Kontekst plugin for the leader assistant only.
+    /// This provides strategic documents and organizational context using Azure AI Search.
+    /// </summary>
+    /// <param name="kernel">The kernel to register the plugin with.</param>
+    /// <param name="template">The chat template (e.g., "leader").</param>
+    private void RegisterLeiarKontekstPlugin(Kernel kernel, string? template)
+    {
+        // Only register for the "leader" template
+        if (!string.Equals(template, "leader", StringComparison.OrdinalIgnoreCase))
+        {
+            this._logger.LogDebug("Leiar Kontekst plugin only available for leader template. Current template: '{Template}'", template);
+            return;
+        }
+
+        // Check if the plugin is configured and enabled
+        if (!this._leiarKontekstPluginOptions.Enabled || !this._leiarKontekstPluginOptions.IsConfigured)
+        {
+            this._logger.LogDebug("Leiar Kontekst plugin not enabled or not configured. Skipping registration.");
+            return;
+        }
+
+        this._logger.LogInformation("Enabling Leiar Kontekst plugin for leader assistant.");
+
+        // Clear any previous citations before registering the plugin
+        this._leiarKontekstCitationService.Clear();
+
+        kernel.ImportPluginFromObject(
+            new LeiarKontekstPlugin(
+                this._leiarKontekstPluginOptions,
+                this._logger,
+                this._leiarKontekstCitationService),
+            LeiarKontekstPluginOptions.PluginName);
     }
 
     /// <summary>
@@ -659,8 +717,14 @@ public class ChatController : ControllerBase, IDisposable
         // Register MCP plugins for plan execution
         await kernel.RegisterMcpPluginsAsync(this.HttpContext.RequestServices, chat!.Template);
 
-        // Register SharePoint OBO plugin for all assistants
-        await this.RegisterSharePointOboPluginAsync(kernel);
+        // Register SharePoint OBO plugin only for the leader assistant
+        await this.RegisterSharePointOboPluginAsync(kernel, chat!.Template);
+
+        // Register Leiar Kontekst plugin only for the leader assistant
+        this.RegisterLeiarKontekstPlugin(kernel, chat!.Template);
+
+        // Store the citation service in kernel data for plan execution
+        kernel.Data["LeiarKontekstCitationService"] = this._leiarKontekstCitationService;
 
         // Execute the approved plan
         try

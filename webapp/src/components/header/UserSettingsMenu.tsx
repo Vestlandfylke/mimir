@@ -17,11 +17,12 @@ import {
     shorthands,
     tokens,
 } from '@fluentui/react-components';
-import { Settings24Regular } from '@fluentui/react-icons';
+import { ChatMultiple20Regular, Settings24Regular } from '@fluentui/react-icons';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
-import { useAppSelector } from '../../redux/app/hooks';
+import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState, resetState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
+import { setChatManagementModalOpen } from '../../redux/features/app/appSlice';
 import { SettingsDialog } from './settings-dialog/SettingsDialog';
 
 export const useClasses = makeStyles({
@@ -40,9 +41,11 @@ interface IUserSettingsProps {
 
 export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) => {
     const classes = useClasses();
+    const dispatch = useAppDispatch();
     const { instance } = useMsal();
 
     const { activeUserInfo, features } = useAppSelector((state: RootState) => state.app);
+    const isDarkMode = features[FeatureKeys.DarkMode].enabled;
 
     const [openSettingsDialog, setOpenSettingsDialog] = useState(false);
 
@@ -51,6 +54,10 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
         AuthHelper.logoutAsync(instance);
         resetState();
     }, [instance, setLoadingState]);
+
+    const onManageChats = useCallback(() => {
+        dispatch(setChatManagementModalOpen(true));
+    }, [dispatch]);
 
     return (
         <>
@@ -63,6 +70,16 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                                 key={activeUserInfo?.username}
                                 name={activeUserInfo?.username}
                                 size={28}
+                                color={isDarkMode ? 'neutral' : 'colorful'}
+                                style={
+                                    isDarkMode
+                                        ? {
+                                              backgroundColor: 'transparent',
+                                              color: '#ffffff',
+                                              border: '1px solid rgba(255, 255, 255, 0.6)',
+                                          }
+                                        : undefined
+                                }
                                 badge={
                                     !features[FeatureKeys.SimplifiedExperience].enabled
                                         ? { status: 'available' }
@@ -86,6 +103,13 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                                 avatar={{ color: 'colorful' }}
                             />
                             <MenuDivider />
+                            <MenuItem
+                                data-testid="manageChatsMenuItem"
+                                icon={<ChatMultiple20Regular />}
+                                onClick={onManageChats}
+                            >
+                                Administrer samtalar
+                            </MenuItem>
                             <MenuItem
                                 data-testid="settingsMenuItem"
                                 onClick={() => {

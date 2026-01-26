@@ -71,21 +71,30 @@ export function renderApp() {
                 await msalInstance.initialize();
 
                 // Handle redirect promise (for redirect-based auth)
-                void msalInstance.handleRedirectPromise().then((response) => {
-                    if (response) {
-                        msalInstance.setActiveAccount(response.account);
-                        logger.debug('Authentication successful via redirect');
+                const redirectResponse = await msalInstance.handleRedirectPromise();
+                if (redirectResponse) {
+                    msalInstance.setActiveAccount(redirectResponse.account);
+                    logger.debug('Authentication successful via redirect');
+                }
+
+                // Ensure an active account is set if we have any accounts
+                if (!msalInstance.getActiveAccount()) {
+                    const accounts = msalInstance.getAllAccounts();
+                    if (accounts.length > 0) {
+                        msalInstance.setActiveAccount(accounts[0]);
+                        logger.debug('Set active account from cache:', accounts[0].username);
+                    }
+                }
+
+                // Attempt silent SSO in background (don't block render)
+                logger.debug('Attempting silent SSO...');
+                void AuthHelper.initializeAndAttemptSso(msalInstance).then((ssoAccount) => {
+                    if (ssoAccount) {
+                        logger.debug('Silent SSO successful:', ssoAccount.username);
+                    } else {
+                        logger.debug('Silent SSO not available - user will need to login interactively');
                     }
                 });
-
-                // Attempt silent SSO on startup
-                logger.debug('Attempting silent SSO...');
-                const ssoAccount = await AuthHelper.initializeAndAttemptSso(msalInstance);
-                if (ssoAccount) {
-                    logger.debug('Silent SSO successful:', ssoAccount.username);
-                } else {
-                    logger.debug('Silent SSO not available - user will need to login interactively');
-                }
 
                 // render with the MsalProvider if AAD is enabled
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -98,18 +107,28 @@ export function renderApp() {
                         </ReduxProvider>
                     </React.StrictMode>,
                 );
+            } else {
+                // render without MsalProvider if AAD is not enabled
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                root!.render(
+                    <React.StrictMode>
+                        <ReduxProvider store={store}>
+                            <App />
+                        </ReduxProvider>
+                    </React.StrictMode>,
+                );
             }
         })
         .catch(() => {
             store.dispatch(setAuthConfig(undefined));
+            // render without MsalProvider on auth config fetch failure
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            root!.render(
+                <React.StrictMode>
+                    <ReduxProvider store={store}>
+                        <App />
+                    </ReduxProvider>
+                </React.StrictMode>,
+            );
         });
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    root!.render(
-        <React.StrictMode>
-            <ReduxProvider store={store}>
-                <App />
-            </ReduxProvider>
-        </React.StrictMode>,
-    );
 }

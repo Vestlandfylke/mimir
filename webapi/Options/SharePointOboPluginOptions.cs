@@ -32,10 +32,17 @@ public class SharePointOboPluginOptions
     public string? ClientSecret { get; set; }
 
     /// <summary>
-    /// The SharePoint site URL to access.
-    /// Example: https://vestlandfylke.sharepoint.com/sites/leiar-dokumenter
+    /// The primary SharePoint site URL to access (used as default for document operations).
+    /// Example: https://vlfksky.sharepoint.com/sites/HR-kvalitet-HMS
     /// </summary>
     public string? SiteUrl { get; set; }
+
+    /// <summary>
+    /// List of SharePoint site URLs that the plugin is allowed to search.
+    /// If empty, searches all sites the user has access to.
+    /// Example: ["https://vlfksky.sharepoint.com/sites/HR-kvalitet-HMS", "https://vlfksky.sharepoint.com/sites/Omoss"]
+    /// </summary>
+    public List<string>? AllowedSites { get; set; }
 
     /// <summary>
     /// Optional: Specific document library drive ID.

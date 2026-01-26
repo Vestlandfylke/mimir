@@ -7,6 +7,7 @@ import { RootState } from '../../redux/app/store';
 import {
     addAlert,
     setAvailableTemplates,
+    setChatManagementModalOpen,
     toggleFeatureState,
     updateTokenUsage,
 } from '../../redux/features/app/appSlice';
@@ -41,6 +42,7 @@ import botIcon3 from '../../assets/bot-icons/bot-icon-3.png';
 import botIcon4 from '../../assets/bot-icons/bot-icon-4.png';
 import botIcon5 from '../../assets/bot-icons/bot-icon-5.png';
 import botIcon6 from '../../assets/bot-icons/bot-icon-6.png';
+import botIcon7 from '../../assets/bot-icons/bot-icon-7.png'; // Leader assistant specific icon
 import { getErrorDetails } from '../../components/utils/TextUtils';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import {
@@ -98,29 +100,19 @@ export const useChat = () => {
 
     const createChat = async (template?: string, templateDisplayName?: string, forceCreate?: boolean) => {
         // Check if user has reached the maximum number of chats
-        const nonHiddenChats = Object.values(conversations).filter((c) => !c.hidden);
+        const nonHiddenChats = Object.values(conversations).filter((c) => !c.hidden && !c.disabled);
 
         if (!forceCreate && nonHiddenChats.length >= Constants.app.maxChats) {
-            // Find the oldest chat by lastUpdatedTimestamp (or createdOn if not available)
-            const sortedChats = [...nonHiddenChats].sort((a, b) => {
-                const timeA = a.lastUpdatedTimestamp ?? 0;
-                const timeB = b.lastUpdatedTimestamp ?? 0;
-                return timeA - timeB; // Ascending order (oldest first)
-            });
-            const oldestChat = sortedChats[0];
-            const oldestChatName = getFriendlyChatName(oldestChat);
-
+            // Show alert and open the chat management modal
             dispatch(
                 addAlert({
-                    message: `Du har nådd maks grense på ${Constants.app.maxChats} samtalar. Slett ein samtale for å opprette ein ny, eller klikk "Slett eldste" for å slette "${oldestChatName}" automatisk.`,
+                    message: `Du har nådd maks grense på ${Constants.app.maxChats} samtalar. Slett ein eller fleire samtalar for å opprette ein ny.`,
                     type: AlertType.Warning,
                     onRetry: () => {
-                        // Delete the oldest chat and then create the new one
-                        void deleteChat(oldestChat.id).then(() => {
-                            void createChat(template, templateDisplayName, true);
-                        });
+                        // Open the chat management modal
+                        dispatch(setChatManagementModalOpen(true));
                     },
-                    retryLabel: 'Slett eldste',
+                    retryLabel: 'Administrer samtalar',
                 }),
             );
             return;
@@ -149,7 +141,7 @@ export const useChat = () => {
                         messages: [result.initialBotMessage],
                         enabledHostedPlugins: result.chatSession.enabledPlugins,
                         users: [loggedInUser],
-                        botProfilePicture: getBotProfilePicture(Object.keys(conversations).length),
+                        botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, template),
                         input: '',
                         botResponseStatus: undefined,
                         userDataLoaded: false,
@@ -375,6 +367,9 @@ export const useChat = () => {
                         chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].timestamp : undefined;
                     const chatCreatedTimestamp = parseTimestamp(chatSession.createdOn);
 
+                    // Detect template from title for proper bot icon
+                    const detectedTemplate = chatSession.title.includes('Leiar-assistent') ? 'leader' : undefined;
+
                     loadedConversations[chatSession.id] = {
                         id: chatSession.id,
                         title: chatSession.title,
@@ -383,7 +378,7 @@ export const useChat = () => {
                         users: chatUsers,
                         messages: chatMessages,
                         enabledHostedPlugins: chatSession.enabledPlugins,
-                        botProfilePicture: getBotProfilePicture(index),
+                        botProfilePicture: getBotProfilePicture(index, detectedTemplate),
                         input: '',
                         botResponseStatus: undefined,
                         userDataLoaded: chatMessages.length > 0, // Only marked as loaded if we fetched messages
@@ -459,6 +454,9 @@ export const useChat = () => {
             await botService.uploadAsync(bot, accessToken).then(async (chatSession: IChatSession) => {
                 const chatMessages = await chatService.getChatMessagesAsync(chatSession.id, 0, 100, accessToken);
 
+                // Detect template from title for proper bot icon
+                const detectedTemplate = chatSession.title.includes('Leiar-assistent') ? 'leader' : undefined;
+
                 const newChat: ChatState = {
                     id: chatSession.id,
                     title: chatSession.title,
@@ -467,7 +465,7 @@ export const useChat = () => {
                     users: [loggedInUser],
                     messages: chatMessages,
                     enabledHostedPlugins: chatSession.enabledPlugins,
-                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length),
+                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, detectedTemplate),
                     input: '',
                     botResponseStatus: undefined,
                     userDataLoaded: false,
@@ -483,7 +481,11 @@ export const useChat = () => {
         }
     };
 
-    const getBotProfilePicture = (index: number): string => {
+    const getBotProfilePicture = (index: number, template?: string): string => {
+        // Use specific icon for leader assistant
+        if (template === 'leader') {
+            return botIcon7;
+        }
         return botProfilePictures[index % botProfilePictures.length];
     };
 
@@ -565,6 +567,9 @@ export const useChat = () => {
                 // Get chat users
                 const chatUsers = await chatService.getAllChatParticipantsAsync(result.id, accessToken);
 
+                // Detect template from title for proper bot icon
+                const detectedTemplate = result.title.includes('Leiar-assistent') ? 'leader' : undefined;
+
                 const newChat: ChatState = {
                     id: result.id,
                     title: result.title,
@@ -573,7 +578,7 @@ export const useChat = () => {
                     messages: chatMessages,
                     enabledHostedPlugins: result.enabledPlugins,
                     users: chatUsers,
-                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length),
+                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, detectedTemplate),
                     input: '',
                     botResponseStatus: undefined,
                     userDataLoaded: false,

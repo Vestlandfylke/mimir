@@ -92,6 +92,11 @@ public class ChatPlugin
     private readonly ModelKernelFactory? _modelKernelFactory;
 
     /// <summary>
+    /// Service for collecting citations from the Leiar Kontekst plugin.
+    /// </summary>
+    private readonly LeiarKontekstCitationService? _leiarKontekstCitationService;
+
+    /// <summary>
     /// Regex pattern to extract thinking/reasoning content from model responses.
     /// Matches content within &lt;thinking&gt;...&lt;/thinking&gt; tags.
     /// </summary>
@@ -116,7 +121,8 @@ public class ChatPlugin
         AzureContentSafety? contentSafety = null,
         McpPlanService? mcpPlanService = null,
         ITelemetryService? telemetryService = null,
-        ModelKernelFactory? modelKernelFactory = null)
+        ModelKernelFactory? modelKernelFactory = null,
+        LeiarKontekstCitationService? leiarKontekstCitationService = null)
     {
         this._logger = logger;
         this._kernel = kernel;
@@ -133,6 +139,7 @@ public class ChatPlugin
         this._mcpPlanService = mcpPlanService;
         this._telemetryService = telemetryService;
         this._modelKernelFactory = modelKernelFactory;
+        this._leiarKontekstCitationService = leiarKontekstCitationService;
     }
 
     /// <summary>
@@ -337,6 +344,8 @@ public class ChatPlugin
         // Stream the response to the client
         var promptView = new BotResponsePrompt(systemInstructions, audience, userIntent, memoryText, allowedChatHistory, metaPrompt);
 
+        // Pass memory citations - LeiarKontekst citations will be merged later in CreateBotMessageOnClient
+        // after the LLM has had a chance to call the LeiarKontekst plugin during streaming
         return await this.HandleBotResponseAsync(chatId, userId, chatContext, promptView, citationMap.Values.AsEnumerable(), cancellationToken, userIntent);
     }
 
@@ -791,17 +800,16 @@ public class ChatPlugin
             this._logger.LogDebug("📝 Standard mode (no reasoning) - ModelId: {ModelId}", chatSession?.ModelId);
         }
 
-        // MCP plan approval is disabled for now - all models use streaming
-        // TODO: Re-enable MCP plan approval when MCP tools are implemented
-        // bool requireApproval = this._mcpPlanService?.AnyServerRequiresApproval() ?? false;
-        // if (requireApproval)
-        // {
-        //     this._logger.LogDebug("MCP plan approval required - using non-streaming path");
-        //     return await this.GetResponseWithPlanApprovalAsync(
-        //         chatId, userId, prompt, chatCompletion, cancellationToken, citations, userIntent, isReasoningMode);
-        // }
+        // Check if any plugins require plan approval (MCP, SharePoint, LeiarKontekst)
+        bool requireApproval = this._mcpPlanService?.AnyServerRequiresApproval() ?? false;
+        if (requireApproval)
+        {
+            this._logger.LogInformation("Plan approval required - using non-streaming path with tool interception");
+            return await this.GetResponseWithPlanApprovalAsync(
+                chatId, userId, prompt, chatCompletion, cancellationToken, citations, userIntent, isReasoningMode);
+        }
 
-        // Standard streaming response (auto-invoke functions)
+        // Standard streaming response (auto-invoke functions) - used when no approval required
         // Pass chatId to improve prompt cache routing, and modelId for native reasoning support
         var stream = chatCompletion.GetStreamingChatMessageContentsAsync(
             prompt.MetaPromptTemplate,
@@ -1023,7 +1031,11 @@ public class ChatPlugin
         Dictionary<string, int>? tokenUsage = null,
         CopilotChatMessage.ChatMessageType messageType = CopilotChatMessage.ChatMessageType.Message)
     {
-        var chatMessage = CopilotChatMessage.CreateBotResponseMessage(chatId, content, prompt, citations, tokenUsage, messageType);
+        // Merge citations from LeiarKontekst plugin (collected during streaming/function calls)
+        // This must happen here because plugins are called DURING streaming, after citations are initially passed
+        var allCitations = this.MergeCitationsFromPlugins(citations);
+
+        var chatMessage = CopilotChatMessage.CreateBotResponseMessage(chatId, content, prompt, allCitations, tokenUsage, messageType);
 
         // Enhanced logging to debug SignalR message delivery
         try
@@ -1501,5 +1513,43 @@ public class ChatPlugin
         {
             this._logger.LogError(ex, "Failed to send reasoning update for chat {ChatId}", chatId);
         }
+    }
+
+    /// <summary>
+    /// Merge citations from memory retrieval with citations from plugins (like LeiarKontekst).
+    /// This is called right before message creation, after all function calls have completed.
+    /// </summary>
+    /// <param name="memoryCitations">Citations from memory retrieval (document uploads).</param>
+    /// <returns>Combined list of all citations.</returns>
+    private IEnumerable<CitationSource>? MergeCitationsFromPlugins(IEnumerable<CitationSource>? memoryCitations)
+    {
+        var allCitations = new List<CitationSource>();
+
+        // Add memory citations if any
+        if (memoryCitations != null)
+        {
+            allCitations.AddRange(memoryCitations);
+        }
+
+        // Get the citation service from kernel data (set by ChatController per-request)
+        // This ensures we use the correct scoped instance regardless of kernel lifetime
+        LeiarKontekstCitationService? citationService = null;
+        if (this._kernel.Data.TryGetValue("LeiarKontekstCitationService", out var serviceObj))
+        {
+            citationService = serviceObj as LeiarKontekstCitationService;
+        }
+
+        // Fall back to constructor-injected service (for backwards compatibility)
+        citationService ??= this._leiarKontekstCitationService;
+
+        // Add citations from Leiar Kontekst plugin if available
+        if (citationService != null && citationService.HasCitations)
+        {
+            var leiarCitations = citationService.GetCitations().ToList();
+            allCitations.AddRange(leiarCitations);
+            this._logger.LogInformation("Added {Count} citations from Leiar Kontekst plugin", leiarCitations.Count);
+        }
+
+        return allCitations.Count > 0 ? allCitations : null;
     }
 }

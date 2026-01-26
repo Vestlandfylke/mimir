@@ -10,7 +10,9 @@ import {
     DialogSurface,
     DialogTitle,
     DialogTrigger,
+    Link,
     makeStyles,
+    mergeClasses,
     shorthands,
     Text,
     tokens,
@@ -67,14 +69,26 @@ const useClasses = makeStyles({
         marginBottom: tokens.spacingVerticalXS,
         ...shorthands.gap(tokens.spacingHorizontalS),
     },
-    singleLine: {
+    descriptionContainer: {
+        width: '100%',
+        fontSize: tokens.fontSizeBase200,
+    },
+    descriptionText: {
         ...shorthands.overflow('hidden'),
         lineHeight: tokens.lineHeightBase200,
         display: '-webkit-box',
         WebkitLineClamp: 1,
         WebkitBoxOrient: 'vertical',
-        width: '100%',
+    },
+    descriptionExpanded: {
+        display: 'block',
+        WebkitLineClamp: 'unset',
+        overflow: 'visible',
+    },
+    showMoreLink: {
         fontSize: tokens.fontSizeBase200,
+        marginLeft: tokens.spacingHorizontalXS,
+        cursor: 'pointer',
     },
     dialog: {
         width: '398px',
@@ -104,6 +118,7 @@ interface PlanStepCardProps {
 export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, enableStepDelete, onDeleteStep }) => {
     const classes = useClasses();
     const [openDialog, setOpenDialog] = useState(false);
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     return (
         <Card className={classes.card}>
@@ -165,8 +180,24 @@ export const PlanStepCard: React.FC<PlanStepCardProps> = ({ step, enableEdits, e
                         }
                     />
                     {step.description && (
-                        <div className={classes.singleLine}>
-                            <Text weight="semibold">Om: </Text> <Text>{step.description}</Text>
+                        <div className={classes.descriptionContainer}>
+                            <Text weight="semibold">Om: </Text>
+                            <Text
+                                className={mergeClasses(
+                                    classes.descriptionText,
+                                    isDescriptionExpanded && classes.descriptionExpanded,
+                                )}
+                            >
+                                {step.description}
+                            </Text>
+                            <Link
+                                className={classes.showMoreLink}
+                                onClick={() => {
+                                    setIsDescriptionExpanded(!isDescriptionExpanded);
+                                }}
+                            >
+                                {isDescriptionExpanded ? 'Vis mindre' : 'Vis meir'}
+                            </Link>
                         </div>
                     )}
                 </div>

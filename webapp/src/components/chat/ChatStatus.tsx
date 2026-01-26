@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { makeStyles } from '@fluentui/react-components';
-import { Animation } from '@fluentui/react-northstar';
+import { makeStyles, shorthands, tokens } from '@fluentui/react-components';
 import React from 'react';
 import { IChatUser } from '../../libs/models/ChatUser';
 import { useAppSelector } from '../../redux/app/hooks';
@@ -12,6 +11,23 @@ const useClasses = makeStyles({
     root: {
         display: 'flex',
         flexDirection: 'row',
+        alignItems: 'center',
+        ...shorthands.gap(tokens.spacingHorizontalXS),
+        // Simple CSS animation instead of @fluentui/react-northstar Animation
+        // which can cause layout glitches
+        animationName: {
+            from: {
+                opacity: 0,
+                transform: 'translateY(0.5rem)',
+            },
+            to: {
+                opacity: 1,
+                transform: 'translateY(0)',
+            },
+        },
+        animationDuration: '0.2s',
+        animationTimingFunction: 'ease-out',
+        animationFillMode: 'forwards',
     },
 });
 
@@ -49,11 +65,9 @@ export const ChatStatus: React.FC = () => {
     }
 
     return (
-        <Animation name="slideInCubic" keyframeParams={{ distance: '2.4rem' }}>
-            <div className={classes.root}>
-                <label>{message}</label>
-                <TypingIndicator />
-            </div>
-        </Animation>
+        <div className={classes.root}>
+            <label>{message}</label>
+            <TypingIndicator />
+        </div>
     );
 };

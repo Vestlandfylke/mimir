@@ -9,6 +9,9 @@ import { UserSettingsMenu } from '../header/UserSettingsMenu';
 import { PluginGallery } from '../open-api-plugins/PluginGallery';
 import { BackendProbe, ChatView, Error, LoadingOverlay } from '../views';
 
+// Colors that need white text for contrast
+const darkBrandColors = ['tealblue', 'petrol'];
+
 const Chat = ({
     classes,
     appState,
@@ -18,8 +21,9 @@ const Chat = ({
     appState: AppState;
     setAppState: (state: AppState) => void;
 }) => {
-    const { features } = useAppSelector((state: RootState) => state.app);
+    const { features, brandColor } = useAppSelector((state: RootState) => state.app);
     const isDarkMode = features[FeatureKeys.DarkMode].enabled;
+    const needsWhiteText = darkBrandColors.includes(brandColor);
     const onBackendFound = React.useCallback(() => {
         setAppState(
             AuthHelper.isAuthAAD()
@@ -42,7 +46,9 @@ const Chat = ({
     return (
         <div className={classes.container} style={{ position: 'relative' }}>
             <div className={classes.header}>
-                <Subtitle1 as="h1">Mimir</Subtitle1>
+                <Subtitle1 as="h1" style={needsWhiteText ? { color: '#ffffff' } : undefined}>
+                    Mimir
+                </Subtitle1>
                 {appState > AppState.SettingUserInfo && (
                     <div className={classes.cornerItems}>
                         <div className={classes.cornerItems}>

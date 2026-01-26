@@ -40,7 +40,8 @@ public sealed class Program
             .AddMcpServers(builder.Configuration)
             .AddChatCopilotAuthentication(builder.Configuration)
             .AddChatCopilotAuthorization()
-            .AddSingleton<IDocumentTextExtractor, DocumentTextExtractor>(); // Document text extraction for SharePoint plugin
+            .AddSingleton<IDocumentTextExtractor, DocumentTextExtractor>() // Document text extraction for SharePoint plugin
+            .AddScoped<LeiarKontekstCitationService>(); // Citation collection for LeiarKontekst plugin
 
         // Configure and add semantic services
         builder

@@ -5,7 +5,7 @@ import { Constants } from '../../../Constants';
 import { IAvailableTemplate } from '../../../libs/models/ChatTemplate';
 import { ServiceInfo } from '../../../libs/models/ServiceInfo';
 import { TokenUsage, TokenUsageFunctionNameMap } from '../../../libs/models/TokenUsage';
-import { ActiveUserInfo, Alert, AppState, FeatureKeys, initialState } from './AppState';
+import { ActiveUserInfo, Alert, AppState, BrandColorKey, FeatureKeys, initialState } from './AppState';
 
 export const appSlice = createSlice({
     name: 'app',
@@ -98,6 +98,18 @@ export const appSlice = createSlice({
         setAvailableTemplates: (state: AppState, action: PayloadAction<IAvailableTemplate[]>) => {
             state.availableTemplates = action.payload;
         },
+        setChatManagementModalOpen: (state: AppState, action: PayloadAction<boolean>) => {
+            state.isChatManagementModalOpen = action.payload;
+        },
+        setBrandColor: (state: AppState, action: PayloadAction<BrandColorKey>) => {
+            state.brandColor = action.payload;
+            // Persist to localStorage
+            try {
+                localStorage.setItem('mimir-brand-color', action.payload);
+            } catch {
+                // localStorage might be unavailable in some contexts
+            }
+        },
     },
 });
 
@@ -115,6 +127,8 @@ export const {
     setAuthConfig,
     setConnectionReconnected,
     setAvailableTemplates,
+    setChatManagementModalOpen,
+    setBrandColor,
 } = appSlice.actions;
 
 export default appSlice.reducer;

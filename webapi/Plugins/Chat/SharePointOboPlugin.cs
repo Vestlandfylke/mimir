@@ -44,10 +44,10 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Searches for documents in SharePoint matching the given query.
     /// </summary>
-    [KernelFunction, Description("Search for documents in SharePoint by keywords. Returns document names, paths, and basic metadata.")]
+    [KernelFunction, Description("Søk etter dokument i SharePoint med nøkkelord. Returnerer dokumentnamn, stiar og grunnleggande metadata.")]
     public async Task<string> SearchDocumentsAsync(
-        [Description("Search keywords to find documents")] string query,
-        [Description("Maximum number of results to return (default: 10)")] int maxResults = 10,
+        [Description("Søkeord for å finne dokument")] string query,
+        [Description("Maks antal resultat å returnere (standard: 10)")] int maxResults = 10,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -111,7 +111,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Lists folders in a SharePoint directory.
     /// </summary>
-    [KernelFunction, Description("List folders in a SharePoint directory. Use empty path or '/' for root.")]
+    [KernelFunction, Description("List mapper i ein SharePoint-katalog. Bruk tom sti eller '/' for rotkatalogen.")]
     public async Task<string> ListFoldersAsync(
         [Description("Folder path relative to document library root (e.g., '/Reports' or empty for root)")] string path = "",
         CancellationToken cancellationToken = default)
@@ -170,7 +170,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Lists documents in a SharePoint directory.
     /// </summary>
-    [KernelFunction, Description("List documents in a SharePoint folder. Use empty path or '/' for root.")]
+    [KernelFunction, Description("List dokument i ei SharePoint-mappe. Bruk tom sti eller '/' for rotkatalogen.")]
     public async Task<string> ListDocumentsAsync(
         [Description("Folder path relative to document library root (e.g., '/Reports' or empty for root)")] string path = "",
         [Description("Maximum number of documents to return (default: 20)")] int maxResults = 20,
@@ -232,7 +232,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Gets the text content of a document for RAG purposes.
     /// </summary>
-    [KernelFunction, Description("Download and extract text content from a SharePoint document. Use this to read the contents of a document.")]
+    [KernelFunction, Description("Last ned og hent ut tekstinnhald frå eit SharePoint-dokument. Bruk dette for å lese innhaldet i eit dokument.")]
     public async Task<string> GetDocumentContentAsync(
         [Description("The document ID (from search or list results) or full path (e.g., '/Reports/budget.pdf')")] string documentIdOrPath,
         CancellationToken cancellationToken = default)
@@ -321,7 +321,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Gets metadata for a document without downloading it.
     /// </summary>
-    [KernelFunction, Description("Get metadata (properties) of a SharePoint document without downloading it.")]
+    [KernelFunction, Description("Hent metadata (eigenskapar) for eit SharePoint-dokument utan å laste det ned.")]
     public async Task<string> GetDocumentMetadataAsync(
         [Description("The document ID or full path (e.g., '/Reports/budget.pdf')")] string documentIdOrPath,
         CancellationToken cancellationToken = default)
@@ -391,7 +391,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Lists all SharePoint sites the user has access to.
     /// </summary>
-    [KernelFunction, Description("List all SharePoint sites/areas the user has access to. Use this to discover available sites before searching within them.")]
+    [KernelFunction, Description("List alle SharePoint-nettstader/område brukaren har tilgang til. Bruk dette for å finne tilgjengelege nettstader før du søkjer i dei.")]
     public async Task<string> ListSitesAsync(
         [Description("Maximum number of sites to return (default: 20)")] int maxResults = 20,
         CancellationToken cancellationToken = default)
@@ -448,7 +448,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Gets news articles from a SharePoint site.
     /// </summary>
-    [KernelFunction, Description("Get recent news articles from SharePoint. Returns titles, summaries, and publication info.")]
+    [KernelFunction, Description("Hent nyheitsartiklar frå SharePoint. Returnerer titlar, samandrag og publiseringsinfo.")]
     public async Task<string> GetNewsAsync(
         [Description("Optional: Site URL or ID to get news from. If empty, uses the default configured site.")] string siteUrlOrId = "",
         [Description("Maximum number of news articles to return (default: 10)")] int maxResults = 10,
@@ -541,9 +541,9 @@ public sealed class SharePointOboPlugin
     }
 
     /// <summary>
-    /// Searches for content across all SharePoint sites the user has access to.
+    /// Searches for content across configured SharePoint sites.
     /// </summary>
-    [KernelFunction, Description("Search for documents, pages, and content across ALL SharePoint sites the user has access to. Use this for broad searches when you don't know which site contains the information. This searches both documents AND SharePoint pages/news articles.")]
+    [KernelFunction, Description("Søk etter dokument, sider og innhald på tvers av konfigurerte SharePoint-nettstader. Bruk dette for breie søk når du ikkje veit kva nettstad som inneheld informasjonen. Dette søkjer i både dokument OG SharePoint-sider/nyhetsartiklar.")]
     public async Task<string> SearchAcrossSitesAsync(
         [Description("Search keywords to find content")] string query,
         [Description("Maximum number of results to return (default: 15)")] int maxResults = 15,
@@ -554,7 +554,7 @@ public sealed class SharePointOboPlugin
             return "Please provide a search query.";
         }
 
-        this._logger.LogInformation("SharePoint: Searching across all sites with query '{Query}'", query);
+        this._logger.LogInformation("SharePoint: Searching across configured sites with query '{Query}'", query);
 
         try
         {
@@ -563,7 +563,11 @@ public sealed class SharePointOboPlugin
             using var client = this._httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            // Use the search API to search across all sites
+            // Build site filter if AllowedSites is configured
+            var siteFilter = BuildSiteFilter();
+            var queryString = string.IsNullOrEmpty(siteFilter) ? query : $"{query} {siteFilter}";
+
+            // Use the search API to search across configured sites
             // Include listItem to find SharePoint pages (pages are list items in the Site Pages library)
             var searchRequest = new
             {
@@ -572,7 +576,7 @@ public sealed class SharePointOboPlugin
                     new
                     {
                         entityTypes = new[] { "driveItem", "listItem", "site", "message" },
-                        query = new { queryString = query },
+                        query = new { queryString = queryString },
                         from = 0,
                         size = maxResults,
                         fields = new[] { "id", "name", "title", "webUrl", "lastModifiedDateTime", "createdBy", "parentReference", "summary", "contentclass" }
@@ -620,7 +624,7 @@ public sealed class SharePointOboPlugin
                                         var displayName = resource.TryGetProperty("title", out var titleElem) && !string.IsNullOrEmpty(titleElem.GetString())
                                             ? titleElem.GetString()
                                             : (resource.TryGetProperty("name", out var nameElem) ? nameElem.GetString() : "Unknown");
-                                        
+
                                         result["Title"] = displayName;
                                         result["Name"] = resource.TryGetProperty("name", out var name) ? name.GetString() : "Unknown";
                                         result["WebUrl"] = resource.TryGetProperty("webUrl", out var webUrl) ? webUrl.GetString() : null;
@@ -691,7 +695,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Searches for SharePoint pages (news articles, wiki pages, etc.) by title or content.
     /// </summary>
-    [KernelFunction, Description("Search for SharePoint pages (news articles, wiki pages) by title or keywords. Use this to find specific pages when SearchAcrossSitesAsync returns too many results. Searches all sites the user has access to.")]
+    [KernelFunction, Description("Søk etter SharePoint-sider (nyhetsartiklar, wiki-sider) etter tittel eller nøkkelord. Bruk dette for å finne spesifikke sider når SearchAcrossSitesAsync gir for mange resultat. Søkjer i konfigurerte SharePoint-nettstader.")]
     public async Task<string> SearchPagesAsync(
         [Description("Search keywords or title to find pages")] string query,
         [Description("Maximum number of results to return (default: 10)")] int maxResults = 10,
@@ -711,8 +715,15 @@ public sealed class SharePointOboPlugin
             using var client = this._httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
+            // Build site filter if AllowedSites is configured
+            var siteFilter = BuildSiteFilter();
+
             // Use the search API specifically for SharePoint pages
             // contentclass:STS_Site_Page filters for SharePoint pages
+            var queryString = string.IsNullOrEmpty(siteFilter)
+                ? $"{query} contentclass:STS_Site_Page"
+                : $"{query} contentclass:STS_Site_Page {siteFilter}";
+
             var searchRequest = new
             {
                 requests = new[]
@@ -720,7 +731,7 @@ public sealed class SharePointOboPlugin
                     new
                     {
                         entityTypes = new[] { "listItem" },
-                        query = new { queryString = $"{query} contentclass:STS_Site_Page" },
+                        query = new { queryString = queryString },
                         from = 0,
                         size = maxResults,
                         fields = new[] { "id", "name", "title", "webUrl", "lastModifiedDateTime", "createdBy", "summary", "path" }
@@ -764,7 +775,7 @@ public sealed class SharePointOboPlugin
 
                                     if (hit.TryGetProperty("resource", out var resource))
                                     {
-                                        result["Title"] = resource.TryGetProperty("title", out var title) ? title.GetString() : 
+                                        result["Title"] = resource.TryGetProperty("title", out var title) ? title.GetString() :
                                             (resource.TryGetProperty("name", out var name) ? name.GetString() : "Unknown");
                                         result["WebUrl"] = resource.TryGetProperty("webUrl", out var webUrl) ? webUrl.GetString() : null;
                                         result["Modified"] = resource.TryGetProperty("lastModifiedDateTime", out var modified)
@@ -817,7 +828,7 @@ public sealed class SharePointOboPlugin
     /// <summary>
     /// Gets the content of a SharePoint page (not a document).
     /// </summary>
-    [KernelFunction, Description("Read the content of a SharePoint page or news article. Use this to get the full text of a page. You can provide the full page URL or just the page title to search for.")]
+    [KernelFunction, Description("Les innhaldet på ei SharePoint-side eller nyhetsartikkel. Bruk dette for å hente heile teksten på ei side. Du kan oppgje full side-URL eller berre sidetittelen for å søkje.")]
     public async Task<string> GetPageContentAsync(
         [Description("The page URL, page ID, or page title to search for")] string pageIdOrUrl,
         [Description("Optional: Site URL if the page is not in the default site (e.g., 'https://vlfksky.sharepoint.com/sites/HR-kvalitet-HMS')")] string siteUrlOrId = "",
@@ -840,7 +851,7 @@ public sealed class SharePointOboPlugin
             // Determine which site to use
             string siteId;
             string? extractedSiteUrl = null;
-            
+
             // If the page URL contains /sites/, extract the site URL from it
             if (pageIdOrUrl.StartsWith("http") && pageIdOrUrl.Contains("/sites/"))
             {
@@ -856,7 +867,7 @@ public sealed class SharePointOboPlugin
 
             // Use extracted site URL if available, otherwise use provided siteUrlOrId
             var effectiveSiteUrl = extractedSiteUrl ?? siteUrlOrId;
-            
+
             if (string.IsNullOrWhiteSpace(effectiveSiteUrl))
             {
                 siteId = await this.GetSiteIdAsync(accessToken, cancellationToken);
@@ -895,11 +906,11 @@ public sealed class SharePointOboPlugin
                 // URL decode the page name
                 pageName = Uri.UnescapeDataString(pageName);
                 this._logger.LogInformation("SharePoint: Looking for page with name '{PageName}'", pageName);
-                
+
                 // First try to find by exact name
                 var searchUrl = $"{GraphApiBaseUrl}/sites/{siteId}/pages?$filter=name eq '{pageName}'&$select=id,name,title";
                 var searchResponse = await client.GetAsync(searchUrl, cancellationToken);
-                
+
                 if (searchResponse.IsSuccessStatusCode)
                 {
                     var searchContent = await searchResponse.Content.ReadAsStringAsync(cancellationToken);
@@ -940,7 +951,7 @@ public sealed class SharePointOboPlugin
             {
                 // It's not a URL and not a GUID, so assume it's a title/search term
                 this._logger.LogInformation("SharePoint: Searching for page with title containing '{Title}'", pageIdOrUrl);
-                
+
                 // Search for pages containing the search term in title
                 var listUrl = $"{GraphApiBaseUrl}/sites/{siteId}/pages?$select=id,name,title&$top=50";
                 var listResponse = await client.GetAsync(listUrl, cancellationToken);
@@ -963,7 +974,7 @@ public sealed class SharePointOboPlugin
                         }
                     }
                 }
-                
+
                 if (pageId == null)
                 {
                     return $"No page found with title containing '{pageIdOrUrl}' in this site. Try using SearchAcrossSitesAsync to find which site contains the page, or provide the site URL.";
@@ -973,7 +984,7 @@ public sealed class SharePointOboPlugin
             {
                 pageId = pageIdOrUrl;
             }
-            
+
             if (pageId == null)
             {
                 return $"Page not found. The page may not exist, or you may need to specify the correct site URL. Tip: Use SearchAcrossSitesAsync to search across all sites first.";
@@ -1165,6 +1176,25 @@ public sealed class SharePointOboPlugin
         }
 
         return $"{size:0.##} {sizes[order]}";
+    }
+
+    /// <summary>
+    /// Builds a site filter for the search query based on AllowedSites configuration.
+    /// </summary>
+    private string BuildSiteFilter()
+    {
+        if (this._options.AllowedSites == null || this._options.AllowedSites.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        // Build a KQL filter to restrict search to allowed sites
+        // Format: (path:site1 OR path:site2)
+        var siteFilters = this._options.AllowedSites
+            .Select(site => $"path:\"{site}\"")
+            .ToList();
+
+        return $"({string.Join(" OR ", siteFilters)})";
     }
 
     #region Graph API Response Models

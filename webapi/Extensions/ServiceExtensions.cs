@@ -57,6 +57,9 @@ public static class CopilotChatServiceExtensions
         // SharePoint OBO configuration
         AddOptions<SharePointOboPluginOptions>(SharePointOboPluginOptions.PropertyName);
 
+        // Leiar Kontekst plugin configuration (Azure AI Search for leader assistant)
+        AddOptions<LeiarKontekstPluginOptions>(LeiarKontekstPluginOptions.PropertyName);
+
         // MCP configuration
         AddOptions<McpServerOptions>(McpServerOptions.PropertyName);
 

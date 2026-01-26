@@ -27,6 +27,7 @@ import React from 'react';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { SharedStyles, useDialogClasses } from '../../../styles';
+import { BrandColorPicker } from './BrandColorPicker';
 import { SettingSection } from './SettingSection';
 
 const useClasses = makeStyles({
@@ -92,6 +93,7 @@ export const SettingsDialog: React.FC<ISettingsDialogProps> = ({ open, closeDial
                                 </AccordionHeader>
                                 <AccordionPanel>
                                     <SettingSection key={settings[0].title} setting={settings[0]} contentOnly />
+                                    <BrandColorPicker />
                                 </AccordionPanel>
                             </AccordionItem>
                             <Divider />

@@ -66,6 +66,8 @@ export interface AppState {
     isMaintenance: boolean;
     connectionReconnected: boolean; // Flag to trigger message sync after reconnection
     availableTemplates: IAvailableTemplate[]; // Specialized assistants available to the user
+    isChatManagementModalOpen: boolean; // Flag to show chat management modal when at chat limit
+    brandColor: BrandColorKey; // Selected brand/accent color
 }
 
 export enum FeatureKeys {
@@ -84,6 +86,41 @@ const getSavedDarkModePreference = (): boolean => {
     if (typeof window === 'undefined') return false;
     const saved = localStorage.getItem('mimir-dark-mode');
     return saved === 'true';
+};
+
+// Available brand colors from Vestland design guide
+export const BrandColors = {
+    cyan: { hex: '#9ADBE8', name: 'Cyan' },
+    pink: { hex: '#E06287', name: 'Rosa' },
+    purple: { hex: '#CAA2DD', name: 'Lilla' },
+    lime: { hex: '#E1D555', name: 'Limegrøn' },
+    teal: { hex: '#00C7B1', name: 'Turkis' },
+    olive: { hex: '#B7DD79', name: 'Olivengrøn' },
+    yellow: { hex: '#FDDA25', name: 'Gul' },
+    red: { hex: '#FF5C39', name: 'Raud' },
+    green: { hex: '#50A684', name: 'Grøn' },
+    mint: { hex: '#3CDBC0', name: 'Mint' },
+    orange: { hex: '#FF9E1B', name: 'Oransje' },
+    salmon: { hex: '#F8B5C4', name: 'Lakserosa' },
+    tealblue: { hex: '#0088A3', name: 'Havblå' },
+    petrol: { hex: '#006D8F', name: 'Petrol' },
+} as const;
+
+export type BrandColorKey = keyof typeof BrandColors;
+
+// Get default brand color (cyan for both light and dark mode)
+export const getDefaultBrandColor = (): BrandColorKey => {
+    return 'cyan';
+};
+
+// Load brand color preference from localStorage
+const getSavedBrandColor = (): BrandColorKey => {
+    if (typeof window === 'undefined') return 'cyan';
+    const saved = localStorage.getItem('mimir-brand-color');
+    if (saved && saved in BrandColors) {
+        return saved as BrandColorKey;
+    }
+    return getDefaultBrandColor();
 };
 
 export const Features = {
@@ -163,4 +200,6 @@ export const initialState: AppState = {
     isMaintenance: false,
     connectionReconnected: false,
     availableTemplates: [],
+    isChatManagementModalOpen: false,
+    brandColor: getSavedBrandColor(),
 };

@@ -10,33 +10,59 @@ import {
     tokens,
 } from '@fluentui/react-components';
 
-export const semanticKernelBrandRamp: BrandVariants = {
-    10: '#007096',
-    20: '#007096',
-    30: '#007096',
-    40: '#007096',
-    50: '#007096',
-    60: '#007096',
-    70: '#007096',
-    80: '#007096',
-    90: '#007096',
-    100: '#007096',
-    110: '#007096',
-    120: '#007096',
-    130: '#007096',
-    140: '#007096',
-    150: '#007096',
-    160: '#007096',
+// Create a brand ramp from a hex color
+const createBrandRamp = (hexColor: string): BrandVariants => ({
+    10: hexColor,
+    20: hexColor,
+    30: hexColor,
+    40: hexColor,
+    50: hexColor,
+    60: hexColor,
+    70: hexColor,
+    80: hexColor,
+    90: hexColor,
+    100: hexColor,
+    110: hexColor,
+    120: hexColor,
+    130: hexColor,
+    140: hexColor,
+    150: hexColor,
+    160: hexColor,
+});
+
+// Default brand ramp (green)
+export const semanticKernelBrandRamp: BrandVariants = createBrandRamp('#50A684');
+
+// Segoe UI font families (Fluent UI default)
+const segoeUiFontFamilyBase =
+    '"Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif';
+const segoeUiFontFamilyMonospace = '"Cascadia Code", "Segoe UI Mono", Consolas, Monaco, "Courier New", monospace';
+
+// Export font families for use in components
+export const VlfkFonts = {
+    base: segoeUiFontFamilyBase,
+    mono: segoeUiFontFamilyMonospace,
+    heading: segoeUiFontFamilyBase, // Use same font for headings (Fluent UI style)
 };
 
-export const semanticKernelLightTheme: Theme & { colorMeBackground: string; colorBotBackground: string } = {
-    ...createLightTheme(semanticKernelBrandRamp),
+// Create light theme with a specific brand color
+export const createCustomLightTheme = (
+    brandColor: string,
+): Theme & { colorMeBackground: string; colorBotBackground: string } => ({
+    ...createLightTheme(createBrandRamp(brandColor)),
+    fontFamilyBase: segoeUiFontFamilyBase,
+    fontFamilyMonospace: segoeUiFontFamilyMonospace,
     colorMeBackground: '#e8ebf9', // Brukar-meldingar i lys modus
     colorBotBackground: '#ffffff', // Bot-meldingar i lys modus (original)
-};
+});
 
-export const semanticKernelDarkTheme: Theme & { colorMeBackground: string; colorBotBackground: string } = {
-    ...createDarkTheme(semanticKernelBrandRamp),
+// Create dark theme with a specific brand color
+export const createCustomDarkTheme = (
+    brandColor: string,
+): Theme & { colorMeBackground: string; colorBotBackground: string } => ({
+    ...createDarkTheme(createBrandRamp(brandColor)),
+    fontFamilyBase: segoeUiFontFamilyBase,
+    fontFamilyMonospace: segoeUiFontFamilyMonospace,
     // Mjukare mørk modus - nøytral grå som Cursor
     colorNeutralBackground1: '#1e1e1e', // Hovudbakgrunn
     colorNeutralBackground2: '#252526', // Sekundær bakgrunn
@@ -50,7 +76,11 @@ export const semanticKernelDarkTheme: Theme & { colorMeBackground: string; color
     colorNeutralBackgroundStatic: '#1e1e1e',
     colorMeBackground: '#3c3c3c', // Brukar-meldingar i mørk modus
     colorBotBackground: '#333333', // Bot-meldingar i mørk modus
-};
+});
+
+// Default themes (for backwards compatibility)
+export const semanticKernelLightTheme = createCustomLightTheme('#50A684');
+export const semanticKernelDarkTheme = createCustomDarkTheme('#50A684');
 
 export const customTokens = themeToTokensObject(semanticKernelLightTheme);
 

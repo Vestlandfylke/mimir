@@ -6,6 +6,18 @@
     -webkit-text-size-adjust: 100%;
 }
 
+/* Use Segoe UI (Fluent UI default) for all text */
+body {
+    font-family:
+        'Segoe UI',
+        'Segoe UI Web (West European)',
+        -apple-system,
+        BlinkMacSystemFont,
+        Roboto,
+        'Helvetica Neue',
+        sans-serif;
+}
+
 /* Prevent pinch-to-zoom on trackpad */
 html,
 body {
@@ -33,8 +45,10 @@ body,
 #root,
 #root > .app-container {
     /* Use dvh (dynamic viewport height) with fallback for older browsers */
-    height: 100vh; /* Fallback */
-    height: 100dvh; /* Modern browsers - accounts for mobile browser chrome */
+    height: 100vh;
+    /* Fallback */
+    height: 100dvh;
+    /* Modern browsers - accounts for mobile browser chrome */
     max-height: 100vh;
     max-height: 100dvh;
 }
@@ -42,6 +56,7 @@ body,
 ::-webkit-scrollbar {
     width: 0.4rem;
 }
+
 ::-webkit-scrollbar-thumb {
     border-radius: 12px;
     visibility: 'hidden';

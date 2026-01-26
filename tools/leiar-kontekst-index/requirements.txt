@@ -1,0 +1,8 @@
+# Required for chunk-and-embed.py
+openai>=1.0.0
+tiktoken>=0.5.0
+langchain-text-splitters>=0.0.1
+
+# Optional: Document parsing
+python-docx>=0.8.11
+PyPDF2>=3.0.0
