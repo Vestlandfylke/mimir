@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration settings for connecting to Azure CosmosDB.
 /// </summary>
-public class CosmosOptions
+internal sealed class CosmosOptions
 {
     /// <summary>
     /// Gets or sets the Cosmos database name.

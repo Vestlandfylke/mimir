@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options for content safety.
 /// </summary>
-public class ContentSafetyOptions
+internal sealed class ContentSafetyOptions
 {
     public const string PropertyName = "ContentSafety";
 

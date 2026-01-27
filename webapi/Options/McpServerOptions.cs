@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 
@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options for MCP (Model Context Protocol) servers.
 /// </summary>
-public class McpServerOptions
+internal sealed class McpServerOptions
 {
     public const string PropertyName = "McpServers";
 
@@ -61,7 +61,7 @@ public class McpServerOptions
 /// <summary>
 /// Defines how MCP tool approval works.
 /// </summary>
-public enum PlanApprovalMode
+internal enum PlanApprovalMode
 {
     /// <summary>
     /// Tools are executed automatically without user approval (default).
@@ -84,7 +84,7 @@ public enum PlanApprovalMode
 /// <summary>
 /// Configuration for a single MCP server connection.
 /// </summary>
-public class McpServer
+internal sealed class McpServer
 {
     /// <summary>
     /// Name of the MCP server (used as plugin name in Semantic Kernel).
@@ -171,4 +171,3 @@ public class McpServer
         return Templates.Contains(chatTemplate, StringComparer.OrdinalIgnoreCase);
     }
 }
-

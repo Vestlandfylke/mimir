@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 namespace CopilotChat.WebApi.Options;
 
@@ -6,7 +6,7 @@ namespace CopilotChat.WebApi.Options;
 /// Configuration options for SharePoint OBO (On-Behalf-Of) plugin.
 /// Used to access SharePoint documents on behalf of the authenticated user.
 /// </summary>
-public class SharePointOboPluginOptions
+internal sealed class SharePointOboPluginOptions
 {
     public const string PropertyName = "SharePointObo";
 

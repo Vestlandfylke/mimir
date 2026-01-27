@@ -1,11 +1,11 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 namespace CopilotChat.WebApi.Models.Request;
 
 /// <summary>
 /// Request parameters for updating a chat message.
 /// </summary>
-public class UpdateMessageRequest
+internal sealed class UpdateMessageRequest
 {
     /// <summary>
     /// The updated content of the message.
@@ -13,4 +13,3 @@ public class UpdateMessageRequest
     /// </summary>
     public string Content { get; set; } = string.Empty;
 }
-

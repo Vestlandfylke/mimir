@@ -12,7 +12,7 @@ namespace CopilotChat.WebApi.Services;
 /// <summary>
 /// Middleware for determining if site is undergoing maintenance.
 /// </summary>
-public class MaintenanceMiddleware
+internal sealed class MaintenanceMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly IReadOnlyList<IMaintenanceAction> _actions;

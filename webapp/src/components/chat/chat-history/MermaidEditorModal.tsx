@@ -944,6 +944,8 @@ interface MermaidConfig {
     securityLevel?: 'strict' | 'loose' | 'antiscript';
     theme?: 'default' | 'forest' | 'dark' | 'neutral' | 'base';
     themeVariables?: Record<string, string>;
+    // Suppress error rendering in DOM - we handle errors ourselves
+    suppressErrorRendering?: boolean;
     xyChart?: Record<string, string>;
 }
 interface MermaidAPI {
@@ -965,6 +967,9 @@ const getPreviewMermaid = async (): Promise<MermaidAPI> => {
         previewMermaid.initialize({
             startOnLoad: false,
             securityLevel: 'strict',
+            // Prevent Mermaid from injecting error SVGs directly into DOM
+            // We handle errors ourselves via the catch block
+            suppressErrorRendering: true,
             theme: 'base',
             themeVariables: buildVestlandThemeVariables(false), // Always light mode
             xyChart: getXYChartConfig(false), // Always light mode

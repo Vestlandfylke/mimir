@@ -1,10 +1,8 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using CopilotChat.WebApi.Options;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace CopilotChat.WebApi.Extensions;
@@ -12,7 +10,7 @@ namespace CopilotChat.WebApi.Extensions;
 /// <summary>
 /// Extension methods for configuring rate limiting.
 /// </summary>
-public static class RateLimitingExtensions
+internal static class RateLimitingExtensions
 {
     /// <summary>
     /// Policy name for chat message rate limiting.

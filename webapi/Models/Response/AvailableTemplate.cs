@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Text.Json.Serialization;
 
@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Models.Response;
 /// <summary>
 /// Represents a chat template available to the current user.
 /// </summary>
-public class AvailableTemplate
+internal sealed class AvailableTemplate
 {
     /// <summary>
     /// The template identifier (key in config).

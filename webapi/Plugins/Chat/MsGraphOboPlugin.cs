@@ -11,7 +11,7 @@ namespace CopilotChat.WebApi.Plugins.Chat;
 /// <summary>
 /// This class is a plugin that calls Graph API using the On-behalf-of flow.
 /// </summary>
-public sealed class MsGraphOboPlugin
+internal sealed class MsGraphOboPlugin
 {
     private readonly string _bearerToken;
     private readonly ILogger _logger;

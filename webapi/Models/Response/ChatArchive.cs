@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Models.Response;
 /// <summary>
 /// The data model of a chat archive.
 /// </summary>
-public class ChatArchive
+internal sealed class ChatArchive
 {
     /// <summary>
     /// Schema information for the chat archive.

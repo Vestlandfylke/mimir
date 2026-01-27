@@ -10,7 +10,7 @@ namespace CopilotChat.WebApi.Services;
 /// A telemetry initializer used by the TelemetryClient to fill in data for requests.
 /// This implementation injects the id of the current authenticated user (if there is one).
 /// </summary>
-public class AppInsightsUserTelemetryInitializerService : ITelemetryInitializer
+internal sealed class AppInsightsUserTelemetryInitializerService : ITelemetryInitializer
 {
     public AppInsightsUserTelemetryInitializerService(IHttpContextAccessor httpContextAccessor)
     {

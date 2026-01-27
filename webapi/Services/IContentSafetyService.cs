@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Services;
 /// <summary>
 /// Defines a service that performs content safety analysis on images.
 /// </summary>
-public interface IContentSafetyService : IDisposable
+internal interface IContentSafetyService : IDisposable
 {
     /// <summary>
     /// Invokes a sync API to perform harmful content analysis on image.

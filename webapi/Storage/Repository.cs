@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Storage;
 /// <summary>
 /// Defines the basic CRUD operations for a repository.
 /// </summary>
-public class Repository<T> : IRepository<T> where T : IStorageEntity
+internal class Repository<T> : IRepository<T> where T : IStorageEntity
 {
     /// <summary>
     /// The storage context.
@@ -72,7 +72,7 @@ public class Repository<T> : IRepository<T> where T : IStorageEntity
 /// <summary>
 /// Specialization of Repository<T> for CopilotChatMessage.
 /// </summary>
-public class CopilotChatMessageRepository : Repository<CopilotChatMessage>
+internal class CopilotChatMessageRepository : Repository<CopilotChatMessage>
 {
     private readonly ICopilotChatMessageStorageContext _messageStorageContext;
 

@@ -2,7 +2,7 @@
 
 namespace CopilotChat.WebApi.Models.Response;
 
-public class AskResult
+internal sealed class AskResult
 {
     public string Value { get; set; } = string.Empty;
 

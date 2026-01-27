@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Text;
 using DocumentFormat.OpenXml.Packaging;
@@ -13,7 +13,7 @@ namespace CopilotChat.WebApi.Services;
 /// Service for extracting text content from various document formats.
 /// Supports PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), and plain text files.
 /// </summary>
-public class DocumentTextExtractor : IDocumentTextExtractor
+internal sealed class DocumentTextExtractor : IDocumentTextExtractor
 {
     private readonly ILogger<DocumentTextExtractor> _logger;
 
@@ -268,7 +268,7 @@ public class DocumentTextExtractor : IDocumentTextExtractor
 /// <summary>
 /// Interface for document text extraction service.
 /// </summary>
-public interface IDocumentTextExtractor
+internal interface IDocumentTextExtractor
 {
     /// <summary>
     /// Extracts text from a document stream.

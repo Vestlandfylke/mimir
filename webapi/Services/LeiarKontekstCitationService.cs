@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Models.Storage;
 
@@ -8,7 +8,7 @@ namespace CopilotChat.WebApi.Services;
 /// Scoped service to collect citations from the LeiarKontekst plugin during a request.
 /// This allows the plugin to register citations that can be included in the chat response.
 /// </summary>
-public class LeiarKontekstCitationService
+internal sealed class LeiarKontekstCitationService
 {
     private readonly Dictionary<string, CitationSource> _citations = new(StringComparer.OrdinalIgnoreCase);
 
@@ -61,7 +61,9 @@ public class LeiarKontekstCitationService
     private static string GetContentType(string source)
     {
         if (string.IsNullOrEmpty(source))
+        {
             return "text/plain";
+        }
 
         var extension = Path.GetExtension(source).ToLowerInvariant();
         return extension switch
@@ -80,7 +82,9 @@ public class LeiarKontekstCitationService
     private static string TruncateSnippet(string snippet, int maxLength)
     {
         if (string.IsNullOrEmpty(snippet) || snippet.Length <= maxLength)
+        {
             return snippet;
+        }
 
         return snippet.Substring(0, maxLength) + "...";
     }

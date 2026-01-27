@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Auth;
 using CopilotChat.WebApi.Extensions;
@@ -23,7 +23,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// retrieving chat messages, and editing chat sessions.
 /// </summary>
 [ApiController]
-public class ChatHistoryController : ControllerBase
+internal sealed class ChatHistoryController : ControllerBase
 {
     private const string ChatEditedClientCall = "ChatEdited";
     private const string ChatDeletedClientCall = "ChatDeleted";

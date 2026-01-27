@@ -8,7 +8,7 @@ namespace CopilotChat.WebApi.Models.Storage;
 /// <summary>
 /// Type of the memory source.
 /// </summary>
-public enum MemorySourceType
+internal enum MemorySourceType
 {
     // A file source.
     File,
@@ -17,7 +17,7 @@ public enum MemorySourceType
 /// <summary>
 /// The external memory source.
 /// </summary>
-public class MemorySource : IStorageEntity
+internal sealed class MemorySource : IStorageEntity
 {
     /// <summary>
     /// Source ID that is persistent and unique.

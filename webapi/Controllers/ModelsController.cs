@@ -1,8 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Auth;
-using CopilotChat.WebApi.Models.Response;
-using CopilotChat.WebApi.Options;
 using CopilotChat.WebApi.Services;
 using CopilotChat.WebApi.Storage;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +12,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// </summary>
 [ApiController]
 [Route("models")]
-public class ModelsController : ControllerBase
+internal sealed class ModelsController : ControllerBase
 {
     private readonly ILogger<ModelsController> _logger;
     private readonly ModelKernelFactory _modelKernelFactory;
@@ -160,7 +158,7 @@ public class ModelsController : ControllerBase
 /// <summary>
 /// Response containing available AI models.
 /// </summary>
-public class AvailableModelsResponse
+internal sealed class AvailableModelsResponse
 {
     public List<ModelInfo> Models { get; set; } = new();
     public string DefaultModelId { get; set; } = string.Empty;
@@ -169,7 +167,7 @@ public class AvailableModelsResponse
 /// <summary>
 /// Information about a single AI model.
 /// </summary>
-public class ModelInfo
+internal sealed class ModelInfo
 {
     public string Id { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
@@ -184,7 +182,7 @@ public class ModelInfo
 /// <summary>
 /// Response with the model configuration for a chat.
 /// </summary>
-public class ChatModelResponse
+internal sealed class ChatModelResponse
 {
     public string ChatId { get; set; } = string.Empty;
     public string ModelId { get; set; } = string.Empty;
@@ -195,7 +193,7 @@ public class ChatModelResponse
 /// <summary>
 /// Request to set the model for a chat.
 /// </summary>
-public class SetChatModelRequest
+internal sealed class SetChatModelRequest
 {
     public string ModelId { get; set; } = string.Empty;
 }

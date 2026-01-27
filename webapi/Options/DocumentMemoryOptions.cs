@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options for handling memorized documents.
 /// </summary>
-public class DocumentMemoryOptions
+internal sealed class DocumentMemoryOptions
 {
     public const string PropertyName = "DocumentMemory";
 

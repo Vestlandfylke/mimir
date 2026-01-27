@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Options;
 using Microsoft.Extensions.Options;
@@ -11,7 +11,7 @@ namespace CopilotChat.WebApi.Services;
 /// Factory service for creating Semantic Kernel instances configured for different AI models.
 /// Supports dynamic model selection per chat session.
 /// </summary>
-public class ModelKernelFactory
+internal sealed class ModelKernelFactory
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IConfiguration _configuration;

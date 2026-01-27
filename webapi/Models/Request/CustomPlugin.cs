@@ -8,7 +8,7 @@ namespace CopilotChat.WebApi.Models.Request;
 /// Custom plugin imported from ChatGPT Manifest file.
 /// Docs: https://platform.openai.com/docs/plugins/introduction.
 /// </summary>
-public class CustomPlugin
+internal sealed class CustomPlugin
 {
     /// <summary>
     /// Human-readable name, such as the full company name.

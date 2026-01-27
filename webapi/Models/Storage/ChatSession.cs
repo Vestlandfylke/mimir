@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Text.Json.Serialization;
 using CopilotChat.WebApi.Storage;
@@ -8,7 +8,7 @@ namespace CopilotChat.WebApi.Models.Storage;
 /// <summary>
 /// A chat session
 /// </summary>
-public class ChatSession : IStorageEntity
+internal sealed class ChatSession : IStorageEntity
 {
     private const string CurrentVersion = "2.0";
 

@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Plugins.Utils;
 /// <summary>
 /// Utility methods for prompt generation.
 /// </summary>
-public static class PromptUtils
+internal static class PromptUtils
 {
     /// <summary>
     /// Convert a chat message to a string in the format of: "Role: Content".

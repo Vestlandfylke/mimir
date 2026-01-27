@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 namespace CopilotChat.WebApi.Options;
 
@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Options;
 /// Provides strategic documents and organizational context specifically for the Leader assistant.
 /// Uses Azure AI Search for semantic search over pre-indexed documents.
 /// </summary>
-public class LeiarKontekstPluginOptions
+internal sealed class LeiarKontekstPluginOptions
 {
     public const string PropertyName = "LeiarKontekst";
 

@@ -23,7 +23,6 @@ using Microsoft.Graph;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Plugins.MsGraph;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors.Client;
@@ -35,7 +34,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// Controller responsible for handling chat messages and responses.
 /// </summary>
 [ApiController]
-public class ChatController : ControllerBase, IDisposable
+internal sealed class ChatController : ControllerBase, IDisposable
 {
     private readonly ILogger<ChatController> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -45,6 +44,7 @@ public class ChatController : ControllerBase, IDisposable
     private readonly MsGraphOboPluginOptions _msGraphOboPluginOptions;
     private readonly SharePointOboPluginOptions _sharePointOboPluginOptions;
     private readonly LeiarKontekstPluginOptions _leiarKontekstPluginOptions;
+    private readonly LovdataPluginOptions _lovdataPluginOptions;
     private readonly LeiarKontekstCitationService _leiarKontekstCitationService;
     private readonly PromptsOptions _promptsOptions;
     private readonly IDictionary<string, Plugin> _plugins;
@@ -63,6 +63,7 @@ public class ChatController : ControllerBase, IDisposable
         IOptions<MsGraphOboPluginOptions> msGraphOboPluginOptions,
         IOptions<SharePointOboPluginOptions> sharePointOboPluginOptions,
         IOptions<LeiarKontekstPluginOptions> leiarKontekstPluginOptions,
+        IOptions<LovdataPluginOptions> lovdataPluginOptions,
         LeiarKontekstCitationService leiarKontekstCitationService,
         IOptions<PromptsOptions> promptsOptions,
         IDictionary<string, Plugin> plugins,
@@ -77,6 +78,7 @@ public class ChatController : ControllerBase, IDisposable
         this._msGraphOboPluginOptions = msGraphOboPluginOptions.Value;
         this._sharePointOboPluginOptions = sharePointOboPluginOptions.Value;
         this._leiarKontekstPluginOptions = leiarKontekstPluginOptions.Value;
+        this._lovdataPluginOptions = lovdataPluginOptions.Value;
         this._leiarKontekstCitationService = leiarKontekstCitationService;
         this._promptsOptions = promptsOptions.Value;
         this._plugins = plugins;
@@ -161,6 +163,10 @@ public class ChatController : ControllerBase, IDisposable
         // This provides strategic documents and organizational context from Azure AI Search
         this.RegisterLeiarKontekstPlugin(kernel, chat!.Template);
 
+        // Register Lovdata plugin only for the leader assistant
+        // This provides access to Norwegian laws and regulations
+        this.RegisterLovdataPlugin(kernel, chat!.Template);
+
         // Store the citation service in kernel data so ChatPlugin can access it
         // This ensures the correct scoped instance is used regardless of kernel lifetime
         kernel.Data["LeiarKontekstCitationService"] = this._leiarKontekstCitationService;
@@ -213,16 +219,14 @@ public class ChatController : ControllerBase, IDisposable
                     this._logger.LogError("The {FunctionName} operation timed out.", ChatFunctionName);
                     return this.StatusCode(StatusCodes.Status504GatewayTimeout, $"The chat {ChatFunctionName} timed out.");
                 }
-                else
+                // User cancelled - return OK with message
+                this._logger.LogInformation("The {FunctionName} operation was cancelled by user for chat {ChatId}.", ChatFunctionName, chatIdString);
+
+                return this.Ok(new AskResult
                 {
-                    // User cancelled - return OK with message
-                    this._logger.LogInformation("The {FunctionName} operation was cancelled by user for chat {ChatId}.", ChatFunctionName, chatIdString);
-                    return this.Ok(new AskResult
-                    {
-                        Value = string.Empty,
-                        Variables = Enumerable.Empty<KeyValuePair<string, object?>>()
-                    });
-                }
+                    Value = string.Empty,
+                    Variables = Enumerable.Empty<KeyValuePair<string, object?>>()
+                });
             }
 
             this._telemetryService.TrackPluginFunction(ChatPluginName, ChatFunctionName, false);
@@ -492,6 +496,38 @@ public class ChatController : ControllerBase, IDisposable
     }
 
     /// <summary>
+    /// Register the Lovdata plugin for the leader assistant only.
+    /// This provides access to Norwegian laws and regulations via the Lovdata API.
+    /// </summary>
+    /// <param name="kernel">The kernel to register the plugin with.</param>
+    /// <param name="template">The chat template (e.g., "leader").</param>
+    private void RegisterLovdataPlugin(Kernel kernel, string? template)
+    {
+        // Only register for the "leader" template
+        if (!string.Equals(template, "leader", StringComparison.OrdinalIgnoreCase))
+        {
+            this._logger.LogDebug("Lovdata plugin only available for leader template. Current template: '{Template}'", template);
+            return;
+        }
+
+        // Check if the plugin is configured and enabled
+        if (!this._lovdataPluginOptions.Enabled || !this._lovdataPluginOptions.IsConfigured)
+        {
+            this._logger.LogDebug("Lovdata plugin not enabled or not configured. Skipping registration.");
+            return;
+        }
+
+        this._logger.LogInformation("Enabling Lovdata plugin for leader assistant.");
+
+        kernel.ImportPluginFromObject(
+            new LovdataPlugin(
+                this._lovdataPluginOptions,
+                this._logger,
+                this._httpClientFactory),
+            LovdataPluginOptions.PluginName);
+    }
+
+    /// <summary>
     /// Create a Microsoft Graph service client.
     /// </summary>
     /// <param name="accessToken">The bearer token for authentication.</param>
@@ -723,6 +759,9 @@ public class ChatController : ControllerBase, IDisposable
         // Register Leiar Kontekst plugin only for the leader assistant
         this.RegisterLeiarKontekstPlugin(kernel, chat!.Template);
 
+        // Register Lovdata plugin only for the leader assistant
+        this.RegisterLovdataPlugin(kernel, chat!.Template);
+
         // Store the citation service in kernel data for plan execution
         kernel.Data["LeiarKontekstCitationService"] = this._leiarKontekstCitationService;
 
@@ -827,7 +866,7 @@ public class ChatController : ControllerBase, IDisposable
     /// <summary>
     /// Dispose of the object.
     /// </summary>
-    protected virtual void Dispose(bool disposing)
+    protected void Dispose(bool disposing)
     {
         if (disposing)
         {
@@ -851,7 +890,7 @@ public class ChatController : ControllerBase, IDisposable
 /// Retrieves authentication content (e.g. username/password, API key) via the provided delegate and
 /// applies it to HTTP requests using the "basic" authentication scheme.
 /// </summary>
-public class BasicAuthenticationProvider
+internal sealed class BasicAuthenticationProvider
 {
     private readonly Func<Task<string>> _credentialsDelegate;
 
@@ -881,7 +920,7 @@ public class BasicAuthenticationProvider
 /// Retrieves a token via the provided delegate and applies it to HTTP requests using the
 /// "bearer" authentication scheme.
 /// </summary>
-public class BearerAuthenticationProvider
+internal sealed class BearerAuthenticationProvider
 {
     private readonly Func<Task<string>> _bearerTokenDelegate;
 

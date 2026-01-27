@@ -28,11 +28,21 @@ const useClasses = makeStyles({
         minWidth: 'auto',
         padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
         fontSize: tokens.fontSizeBase200,
+        // Dark text for better contrast on light brand colors
+        color: tokens.colorNeutralForeground1,
+        ':hover': {
+            color: tokens.colorNeutralForeground1,
+        },
     },
     retryButton: {
         minWidth: 'auto',
         padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
         fontSize: tokens.fontSizeBase200,
+        // Dark text for better contrast on light brand colors
+        color: tokens.colorNeutralForeground1,
+        ':hover': {
+            color: tokens.colorNeutralForeground1,
+        },
     },
     dismissButton: {
         alignSelf: 'center',

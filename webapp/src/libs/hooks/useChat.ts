@@ -8,6 +8,7 @@ import {
     addAlert,
     setAvailableTemplates,
     setChatManagementModalOpen,
+    setServiceError,
     toggleFeatureState,
     updateTokenUsage,
 } from '../../redux/features/app/appSlice';
@@ -56,6 +57,41 @@ import { logger } from '../utils/Logger';
 
 // Timeout for bot response - if no response after this time, check connection and sync
 const BOT_RESPONSE_TIMEOUT_MS = 60000; // 60 seconds
+
+/**
+ * Checks if an error is a critical service error that should show the service unavailable overlay.
+ * Critical errors include: Azure AI service unavailability, severe backend errors, network issues.
+ */
+const isCriticalServiceError = (errorMessage: string): boolean => {
+    const criticalPatterns = [
+        // Azure AI / OpenAI service errors
+        /Azure OpenAI/i,
+        /OpenAI.*unavailable/i,
+        /OpenAI.*error/i,
+        /AI.*service.*unavailable/i,
+        /model.*not.*available/i,
+        /deployment.*not.*found/i,
+        /rate.*limit.*exceeded/i,
+        /quota.*exceeded/i,
+        // HTTP status codes indicating server issues
+        /^5\d{2}:/, // 500, 502, 503, 504, etc.
+        /502.*Bad Gateway/i,
+        /503.*Service Unavailable/i,
+        /504.*Gateway Timeout/i,
+        /500.*Internal Server Error/i,
+        // Network errors
+        /network.*error/i,
+        /failed.*to.*fetch/i,
+        /connection.*refused/i,
+        /ERR_CONNECTION/i,
+        /net::ERR/i,
+        // Backend not running
+        /backend.*running/i,
+        /backend.*accessible/i,
+    ];
+
+    return criticalPatterns.some((pattern) => pattern.test(errorMessage));
+};
 
 export interface GetResponseOptions {
     messageType: ChatMessageType;
@@ -300,6 +336,18 @@ export const useChat = () => {
 
                 if (errorDetails.includes('Failed to process plan')) {
                     // Error should already be reflected in bot response message. Skip alert.
+                    return;
+                }
+
+                // Check if this is a critical service error that warrants the overlay
+                if (isCriticalServiceError(errorDetails)) {
+                    dispatch(
+                        setServiceError({
+                            message: 'Mimir er midlertidig utilgjengeleg',
+                            details: errorDetails,
+                            timestamp: Date.now(),
+                        }),
+                    );
                     return;
                 }
 

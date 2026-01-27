@@ -1,8 +1,8 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 namespace CopilotChat.WebApi.Auth;
 
-public interface IAuthInfo
+internal interface IAuthInfo
 {
     /// <summary>
     /// The authenticated user's unique ID.

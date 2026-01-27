@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Diagnostics;
 using System.Reflection;
@@ -16,7 +16,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// Controller responsible for returning information on the service.
 /// </summary>
 [ApiController]
-public class ServiceInfoController : ControllerBase
+internal sealed class ServiceInfoController : ControllerBase
 {
     private readonly ILogger<ServiceInfoController> _logger;
     private readonly IConfiguration _configuration;

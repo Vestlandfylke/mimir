@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 namespace CopilotChat.WebApi.Options;
 
@@ -6,7 +6,7 @@ namespace CopilotChat.WebApi.Options;
 /// Configuration options for available AI models.
 /// Supports multiple model providers (Azure OpenAI, Anthropic via Azure AI Foundry, etc.)
 /// </summary>
-public class ModelsOptions
+internal sealed class ModelsOptions
 {
     public const string PropertyName = "Models";
 
@@ -24,7 +24,7 @@ public class ModelsOptions
 /// <summary>
 /// Configuration for a single AI model.
 /// </summary>
-public class ModelConfig
+internal sealed class ModelConfig
 {
     /// <summary>
     /// Unique identifier for this model configuration.
@@ -99,7 +99,7 @@ public class ModelConfig
 /// <summary>
 /// Supported model provider types.
 /// </summary>
-public enum ModelProviderType
+internal enum ModelProviderType
 {
     /// <summary>
     /// Azure OpenAI Service (GPT models).

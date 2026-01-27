@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Models.Response;
 /// Response definition to image content safety analysis requests.
 /// endpoint made by the AzureContentSafety.
 /// </summary>
-public class ImageAnalysisResponse
+internal sealed class ImageAnalysisResponse
 {
     /// <summary>
     /// Gets or sets the AnalysisResult related to hate.

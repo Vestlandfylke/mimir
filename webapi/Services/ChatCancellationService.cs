@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Collections.Concurrent;
 
@@ -8,7 +8,7 @@ namespace CopilotChat.WebApi.Services;
 /// Service for managing chat request cancellation tokens.
 /// Allows cancellation of in-progress LLM requests.
 /// </summary>
-public class ChatCancellationService
+internal sealed class ChatCancellationService
 {
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeCancellations = new();
     private readonly ILogger<ChatCancellationService> _logger;
@@ -99,4 +99,3 @@ public class ChatCancellationService
         return _activeCancellations.ContainsKey(chatId);
     }
 }
-

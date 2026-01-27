@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Reflection;
 using CopilotChat.Shared;
@@ -22,7 +22,7 @@ namespace CopilotChat.WebApi.Extensions;
 /// Extension methods for <see cref="IServiceCollection"/>.
 /// Add options and services for Chat Copilot.
 /// </summary>
-public static class CopilotChatServiceExtensions
+internal static class CopilotChatServiceExtensions
 {
     /// <summary>
     /// Parse configuration into options.
@@ -59,6 +59,9 @@ public static class CopilotChatServiceExtensions
 
         // Leiar Kontekst plugin configuration (Azure AI Search for leader assistant)
         AddOptions<LeiarKontekstPluginOptions>(LeiarKontekstPluginOptions.PropertyName);
+
+        // Lovdata plugin configuration (Norwegian laws API for leader assistant)
+        AddOptions<LovdataPluginOptions>(LovdataPluginOptions.PropertyName);
 
         // MCP configuration
         AddOptions<McpServerOptions>(McpServerOptions.PropertyName);

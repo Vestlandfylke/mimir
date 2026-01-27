@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 using CopilotChat.WebApi.Models.Request;
@@ -8,7 +8,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options for the chat
 /// </summary>
-public class PromptsOptions
+internal sealed class PromptsOptions
 {
     public const string PropertyName = "Prompts";
 

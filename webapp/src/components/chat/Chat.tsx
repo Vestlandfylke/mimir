@@ -2,15 +2,13 @@ import { Subtitle1 } from '@fluentui/react-components';
 import React from 'react';
 import { AuthHelper } from '../..//libs/auth/AuthHelper';
 import { AppState, useClasses } from '../../App';
+import dekorImage from '../../assets/decor_long2.png';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import { UserSettingsMenu } from '../header/UserSettingsMenu';
 import { PluginGallery } from '../open-api-plugins/PluginGallery';
-import { BackendProbe, ChatView, Error, LoadingOverlay } from '../views';
-
-// Colors that need white text for contrast
-const darkBrandColors = ['tealblue', 'petrol'];
+import { BackendProbe, ChatView, Error, LoadingOverlay, ServiceUnavailableOverlay } from '../views';
 
 const Chat = ({
     classes,
@@ -21,9 +19,8 @@ const Chat = ({
     appState: AppState;
     setAppState: (state: AppState) => void;
 }) => {
-    const { features, brandColor } = useAppSelector((state: RootState) => state.app);
+    const { features, serviceError } = useAppSelector((state: RootState) => state.app);
     const isDarkMode = features[FeatureKeys.DarkMode].enabled;
-    const needsWhiteText = darkBrandColors.includes(brandColor);
     const onBackendFound = React.useCallback(() => {
         setAppState(
             AuthHelper.isAuthAAD()
@@ -46,9 +43,8 @@ const Chat = ({
     return (
         <div className={classes.container} style={{ position: 'relative' }}>
             <div className={classes.header}>
-                <Subtitle1 as="h1" style={needsWhiteText ? { color: '#ffffff' } : undefined}>
-                    Mimir
-                </Subtitle1>
+                <Subtitle1 as="h1">Mimir</Subtitle1>
+                <img src={dekorImage} alt="" className={classes.headerDecor} aria-hidden="true" />
                 {appState > AppState.SettingUserInfo && (
                     <div className={classes.cornerItems}>
                         <div className={classes.cornerItems}>
@@ -77,6 +73,9 @@ const Chat = ({
                 <Error text={'Klarte ikkje å laste brukarinfo. Prøv å logge ut og inn igjen, eller oppdater sida.'} />
             )}
             {appState === AppState.ErrorLoadingChats && <Error text={'Klarte ikkje å laste samtalar.'} />}
+
+            {/* Service unavailable overlay - shown when critical backend/AI errors occur */}
+            {serviceError && <ServiceUnavailableOverlay />}
         </div>
     );
 };

@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options for the Chat Copilot service.
 /// </summary>
-public class ServiceOptions
+internal sealed class ServiceOptions
 {
     public const string PropertyName = "Service";
 

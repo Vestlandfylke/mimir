@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Storage;
 /// <summary>
 /// A storage context that stores entities on disk.
 /// </summary>
-public class FileSystemContext<T> : IStorageContext<T> where T : IStorageEntity
+internal class FileSystemContext<T> : IStorageContext<T> where T : IStorageEntity
 {
     /// <summary>
     /// Initializes a new instance of the OnDiskContext class and load the entities from disk.
@@ -166,7 +166,7 @@ public class FileSystemContext<T> : IStorageContext<T> where T : IStorageEntity
 /// <summary>
 /// Specialization of FileSystemContext<T> for CopilotChatMessage.
 /// </summary>
-public class FileSystemCopilotChatMessageContext : FileSystemContext<CopilotChatMessage>, ICopilotChatMessageStorageContext
+internal sealed class FileSystemCopilotChatMessageContext : FileSystemContext<CopilotChatMessage>, ICopilotChatMessageStorageContext
 {
     /// <summary>
     /// Initializes a new instance of the CosmosDbContext class.

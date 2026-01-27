@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Models.Request;
 /// <summary>
 /// Parameters for creating a new chat session.
 /// </summary>
-public class CreateChatParameters
+internal sealed class CreateChatParameters
 {
     /// <summary>
     /// Title of the chat.

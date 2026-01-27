@@ -5,3 +5,4 @@ export * from './Loading';
 export * from './LoadingOverlay';
 export * from './Login';
 export * from './MissingEnvVariablesError';
+export * from './ServiceUnavailableOverlay';

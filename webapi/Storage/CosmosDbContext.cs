@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Storage;
 /// <summary>
 /// A storage context that stores entities in a CosmosDB container.
 /// </summary>
-public class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : IStorageEntity
+internal class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : IStorageEntity
 {
     /// <summary>
     /// The CosmosDB client.
@@ -141,7 +141,7 @@ public class CosmosDbContext<T> : IStorageContext<T>, IDisposable where T : ISto
 /// <summary>
 /// Specialization of CosmosDbContext<T> for CopilotChatMessage.
 /// </summary>
-public class CosmosDbCopilotChatMessageContext : CosmosDbContext<CopilotChatMessage>, ICopilotChatMessageStorageContext
+internal sealed class CosmosDbCopilotChatMessageContext : CosmosDbContext<CopilotChatMessage>, ICopilotChatMessageStorageContext
 {
     /// <summary>
     /// Initializes a new instance of the CosmosDbCopilotChatMessageContext class with a connection string.

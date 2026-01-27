@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 
@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options for rate limiting to protect against spam and abuse.
 /// </summary>
-public sealed class RateLimitingOptions
+internal sealed class RateLimitingOptions
 {
     public const string PropertyName = "RateLimiting";
 

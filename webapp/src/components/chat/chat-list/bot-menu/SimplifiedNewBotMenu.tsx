@@ -77,9 +77,26 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
                 <MenuPopover>
                     <MenuList>
                         {/* Standard Mimir assistant */}
-                        <MenuItem data-testid="addNewBotMenuItem" icon={<BotRegular />} onClick={onAddChat}>
+                        <Divider style={{ margin: '8px 0' }}>
+                            <Badge appearance="outline" color="brand" size="small" style={{ fontSize: '0.65rem' }}>
+                                Generell assistent
+                            </Badge>
+                        </Divider>
+                        <MenuItem
+                            data-testid="addNewBotMenuItem"
+                            icon={<BotRegular style={{ color: tokens.colorBrandForeground1 }} />}
+                            onClick={onAddChat}
+                            style={{
+                                backgroundColor: tokens.colorNeutralBackground1Hover,
+                                borderLeft: `3px solid ${tokens.colorBrandForeground1}`,
+                                marginLeft: '4px',
+                                marginRight: '4px',
+                                borderRadius: '4px',
+                                marginBottom: '4px',
+                            }}
+                        >
                             <div>
-                                <div>Mimir</div>
+                                <div style={{ fontWeight: 600 }}>Mimir</div>
                                 <div
                                     style={{
                                         fontSize: '0.75rem',

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Diagnostics;
 using System.Text.Json;
@@ -16,7 +16,7 @@ namespace CopilotChat.WebApi;
 /// Chat Copilot Service
 /// Built with Semantic Kernel 1.68.0 for GPT-5/GPT-4o compatibility
 /// </summary>
-public sealed class Program
+internal sealed class Program
 {
     /// <summary>
     /// Entry point

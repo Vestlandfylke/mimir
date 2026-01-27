@@ -2,7 +2,7 @@ import { AuthenticatedTemplate, UnauthenticatedTemplate, useIsAuthenticated, use
 import { FluentProvider, makeStyles, shorthands, tokens } from '@fluentui/react-components';
 
 import * as React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Chat from './components/chat/Chat';
 import { LoadingOverlay, Login } from './components/views';
 import { AuthHelper } from './libs/auth/AuthHelper';
@@ -39,12 +39,26 @@ export const useClasses = makeStyles({
         '& h1': {
             paddingLeft: tokens.spacingHorizontalXL,
             display: 'flex',
+            zIndex: 1, // Keep text above decoration
         },
         height: '48px',
         minHeight: '48px', // Prevent header from shrinking
         flexShrink: 0, // Never shrink the header
         justifyContent: 'space-between',
         width: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    headerDecor: {
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        height: '100%',
+        width: '80%', // Cover right half of header
+        objectFit: 'cover',
+        objectPosition: 'right center',
+        opacity: 0.22, // Subtle decoration
+        pointerEvents: 'none', // Don't interfere with clicks
     },
     persona: {
         marginRight: tokens.spacingHorizontalXXL,
@@ -52,6 +66,7 @@ export const useClasses = makeStyles({
     cornerItems: {
         display: 'flex',
         ...shorthands.gap(tokens.spacingHorizontalS),
+        zIndex: 1, // Keep above header decoration
     },
 });
 
@@ -133,6 +148,45 @@ const App = () => {
     const handleAppStateChange = useCallback((newState: AppState) => {
         setAppState(newState);
     }, []);
+
+    // Timeout for stuck loading states (15 seconds)
+    const LOADING_TIMEOUT_MS = 15000;
+    const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Detect stuck loading states and transition to error
+    useEffect(() => {
+        const isLoadingState = appState === AppState.SettingUserInfo || appState === AppState.LoadingChats;
+
+        if (isLoadingState) {
+            // Clear any existing timeout
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+            }
+
+            // Set a new timeout
+            loadingTimeoutRef.current = setTimeout(() => {
+                logger.warn(`App stuck in loading state (${AppState[appState]}) for ${LOADING_TIMEOUT_MS / 1000}s`);
+
+                if (appState === AppState.SettingUserInfo) {
+                    handleAppStateChange(AppState.ErrorLoadingUserInfo);
+                } else {
+                    handleAppStateChange(AppState.ErrorLoadingChats);
+                }
+            }, LOADING_TIMEOUT_MS);
+        } else {
+            // Clear timeout when not in loading state
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+                loadingTimeoutRef.current = null;
+            }
+        }
+
+        return () => {
+            if (loadingTimeoutRef.current) {
+                clearTimeout(loadingTimeoutRef.current);
+            }
+        };
+    }, [appState, handleAppStateChange]);
 
     // Callback for when Teams auth succeeds in Login component
     const handleTeamsAuthSuccess = useCallback(() => {

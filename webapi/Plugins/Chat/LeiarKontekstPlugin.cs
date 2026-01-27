@@ -1,9 +1,7 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
@@ -18,7 +16,7 @@ namespace CopilotChat.WebApi.Plugins.Chat;
 /// Uses Azure AI Search to retrieve relevant documents based on the conversation context.
 /// This plugin is only registered for the "leader" chat template.
 /// </summary>
-public sealed class LeiarKontekstPlugin
+internal sealed class LeiarKontekstPlugin
 {
     private readonly ILogger _logger;
     private readonly LeiarKontekstPluginOptions _options;
@@ -328,7 +326,7 @@ public sealed class LeiarKontekstPlugin
         return value.Replace("'", "''");
     }
 
-    private class DocumentResult
+    private sealed class DocumentResult
     {
         public string Title { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;

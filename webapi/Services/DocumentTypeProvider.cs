@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Services;
 /// <summary>
 /// Defines a service that provides supported document types for import.
 /// </summary>
-public class DocumentTypeProvider
+internal sealed class DocumentTypeProvider
 {
     private readonly Dictionary<string, bool> _supportedTypes;
 

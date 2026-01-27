@@ -24,7 +24,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// This controller is responsible for contracts that are not possible to fulfill by kernel memory components.
 /// </remarks>
 [ApiController]
-public class DocumentController : ControllerBase
+internal sealed class DocumentController : ControllerBase
 {
     private const string GlobalDocumentUploadedClientCall = "GlobalDocumentUploaded";
     private const string ReceiveMessageClientCall = "ReceiveMessage";

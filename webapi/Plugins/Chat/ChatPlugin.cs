@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Globalization;
@@ -28,7 +28,7 @@ namespace CopilotChat.WebApi.Plugins.Chat;
 /// ChatPlugin offers a more coherent chat experience by using memories
 /// to extract conversation history and user intentions.
 /// </summary>
-public class ChatPlugin
+internal sealed class ChatPlugin
 {
     /// <summary>
     /// A kernel instance to create a completion function since each invocation
@@ -100,10 +100,7 @@ public class ChatPlugin
     /// Regex pattern to extract thinking/reasoning content from model responses.
     /// Matches content within &lt;thinking&gt;...&lt;/thinking&gt; tags.
     /// </summary>
-    private static readonly Regex s_thinkingTagRegex = new(@"<thinking>(.*?)</thinking>", RegexOptions.Singleline | RegexOptions.Compiled);
-
-
-
+    private static readonly Regex s_thinkingTagRegex = new("<thinking>(.*?)</thinking>", RegexOptions.Singleline | RegexOptions.Compiled);
 
     /// <summary>
     /// Create a new instance of <see cref="ChatPlugin"/>.

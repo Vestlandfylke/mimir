@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Security.Claims;
 using Azure.Identity;
@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Auth;
 /// <summary>
 /// Class which provides validated security information for use in controllers.
 /// </summary>
-public class AuthInfo : IAuthInfo
+internal sealed class AuthInfo : IAuthInfo
 {
     private record struct AuthData(
         string UserId,

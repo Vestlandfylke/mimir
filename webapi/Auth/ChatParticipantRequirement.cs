@@ -7,6 +7,6 @@ namespace CopilotChat.WebApi.Auth;
 /// <summary>
 /// Used to require the chat to be owned by the authenticated user.
 /// </summary>
-public class ChatParticipantRequirement : IAuthorizationRequirement
+internal sealed class ChatParticipantRequirement : IAuthorizationRequirement
 {
 }

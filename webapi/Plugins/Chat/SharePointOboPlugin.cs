@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Net.Http.Headers;
@@ -14,7 +14,7 @@ namespace CopilotChat.WebApi.Plugins.Chat;
 /// Semantic Kernel plugin for accessing SharePoint documents using On-Behalf-Of (OBO) authentication.
 /// This ensures users can only access documents they have SharePoint permissions for.
 /// </summary>
-public sealed class SharePointOboPlugin
+internal sealed class SharePointOboPlugin
 {
     private readonly string _bearerToken;
     private readonly ILogger _logger;
@@ -987,7 +987,7 @@ public sealed class SharePointOboPlugin
 
             if (pageId == null)
             {
-                return $"Page not found. The page may not exist, or you may need to specify the correct site URL. Tip: Use SearchAcrossSitesAsync to search across all sites first.";
+                return "Page not found. The page may not exist, or you may need to specify the correct site URL. Tip: Use SearchAcrossSitesAsync to search across all sites first.";
             }
 
             // Get page with web parts content
@@ -1199,19 +1199,19 @@ public sealed class SharePointOboPlugin
 
     #region Graph API Response Models
 
-    private class GraphSearchResponse
+    private sealed class GraphSearchResponse
     {
         [JsonPropertyName("value")]
         public List<DriveItem>? Value { get; set; }
     }
 
-    private class GraphSitesResponse
+    private sealed class GraphSitesResponse
     {
         [JsonPropertyName("value")]
         public List<SiteInfo>? Value { get; set; }
     }
 
-    private class SiteInfo
+    private sealed class SiteInfo
     {
         [JsonPropertyName("id")]
         public string? Id { get; set; }
@@ -1229,13 +1229,13 @@ public sealed class SharePointOboPlugin
         public string? Description { get; set; }
     }
 
-    private class GraphPagesResponse
+    private sealed class GraphPagesResponse
     {
         [JsonPropertyName("value")]
         public List<PageInfo>? Value { get; set; }
     }
 
-    private class PageInfo
+    private sealed class PageInfo
     {
         [JsonPropertyName("id")]
         public string? Id { get; set; }
@@ -1265,7 +1265,7 @@ public sealed class SharePointOboPlugin
         public IdentitySet? LastModifiedBy { get; set; }
     }
 
-    private class DriveItem
+    private sealed class DriveItem
     {
         [JsonPropertyName("id")]
         public string? Id { get; set; }
@@ -1301,19 +1301,19 @@ public sealed class SharePointOboPlugin
         public IdentitySet? LastModifiedBy { get; set; }
     }
 
-    private class FileInfo
+    private sealed class FileInfo
     {
         [JsonPropertyName("mimeType")]
         public string? MimeType { get; set; }
     }
 
-    private class FolderInfo
+    private sealed class FolderInfo
     {
         [JsonPropertyName("childCount")]
         public int? ChildCount { get; set; }
     }
 
-    private class ParentReference
+    private sealed class ParentReference
     {
         [JsonPropertyName("path")]
         public string? Path { get; set; }
@@ -1322,13 +1322,13 @@ public sealed class SharePointOboPlugin
         public string? DriveId { get; set; }
     }
 
-    private class IdentitySet
+    private sealed class IdentitySet
     {
         [JsonPropertyName("user")]
         public UserIdentity? User { get; set; }
     }
 
-    private class UserIdentity
+    private sealed class UserIdentity
     {
         [JsonPropertyName("displayName")]
         public string? DisplayName { get; set; }

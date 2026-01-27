@@ -40,6 +40,19 @@ export interface Alert {
     showRefresh?: boolean;
 }
 
+/**
+ * Represents a critical service error that should show the service unavailable overlay.
+ * Used for Azure AI outages, network failures, and other critical service issues.
+ */
+export interface ServiceError {
+    /** User-friendly summary of the error */
+    message: string;
+    /** Technical details of the error for debugging */
+    details?: string;
+    /** Timestamp when the error occurred */
+    timestamp: number;
+}
+
 interface Feature {
     enabled: boolean; // Whether to show the feature in the UX
     label: string;
@@ -68,6 +81,7 @@ export interface AppState {
     availableTemplates: IAvailableTemplate[]; // Specialized assistants available to the user
     isChatManagementModalOpen: boolean; // Flag to show chat management modal when at chat limit
     brandColor: BrandColorKey; // Selected brand/accent color
+    serviceError?: ServiceError; // Critical service error that shows the unavailable overlay
 }
 
 export enum FeatureKeys {
@@ -102,8 +116,6 @@ export const BrandColors = {
     mint: { hex: '#3CDBC0', name: 'Mint' },
     orange: { hex: '#FF9E1B', name: 'Oransje' },
     salmon: { hex: '#F8B5C4', name: 'Lakserosa' },
-    tealblue: { hex: '#0088A3', name: 'Havblå' },
-    petrol: { hex: '#006D8F', name: 'Petrol' },
 } as const;
 
 export type BrandColorKey = keyof typeof BrandColors;

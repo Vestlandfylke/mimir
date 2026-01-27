@@ -9,21 +9,21 @@ using Microsoft.SemanticKernel;
 // ReSharper disable MissingLinebreak
 namespace CopilotChat.WebApi.Services;
 
-public record AnalysisResult(
+internal sealed record AnalysisResult(
     [property: JsonPropertyName("category")] string Category,
     [property: JsonPropertyName("severity")] short Severity
 );
 
-public record ImageContent([property: JsonPropertyName("content")] string Content);
+internal sealed record ImageContent([property: JsonPropertyName("content")] string Content);
 
-public record ImageAnalysisRequest(
+internal sealed record ImageAnalysisRequest(
     [property: JsonPropertyName("image")] ImageContent Image
 );
 
 /// <summary>
 /// Moderator service to handle content safety.
 /// </summary>
-public sealed class AzureContentSafety : IContentSafetyService
+internal sealed class AzureContentSafety : IContentSafetyService
 {
     private const string HttpUserAgent = "Chat Copilot";
 

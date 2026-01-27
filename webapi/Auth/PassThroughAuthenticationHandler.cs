@@ -11,7 +11,7 @@ namespace CopilotChat.WebApi.Auth;
 /// <summary>
 /// Class implementing "authentication" that lets all requests pass through.
 /// </summary>
-public class PassThroughAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+internal sealed class PassThroughAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public const string AuthenticationScheme = "PassThrough";
     private const string DefaultUserId = "c05c61eb-65e4-4223-915a-fe72b0c9ece1";

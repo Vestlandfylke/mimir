@@ -24,6 +24,8 @@ interface MermaidConfig {
     securityLevel?: MermaidSecurityLevel;
     theme?: MermaidTheme;
     themeVariables?: Record<string, string>;
+    // Suppress error rendering in DOM - we handle errors ourselves
+    suppressErrorRendering?: boolean;
     flowchart?: {
         nodeSpacing?: number;
         rankSpacing?: number;
@@ -73,6 +75,9 @@ const getMermaid = async (): Promise<MermaidAPI> => {
             mermaid.initialize({
                 startOnLoad: false,
                 securityLevel: 'strict',
+                // Prevent Mermaid from injecting error SVGs directly into DOM
+                // We handle errors ourselves via the catch block
+                suppressErrorRendering: true,
                 theme: 'base',
                 themeVariables: buildVestlandThemeVariables(false), // Always light mode
                 flowchart: {
@@ -116,6 +121,8 @@ const renderForExport = async (code: string): Promise<string> => {
     mermaid.initialize({
         startOnLoad: false,
         securityLevel: 'strict',
+        // Prevent Mermaid from injecting error SVGs directly into DOM
+        suppressErrorRendering: true,
         theme: 'base',
         themeVariables: buildVestlandThemeVariables(false), // Always light mode
         flowchart: {
@@ -348,8 +355,18 @@ const useClasses = makeStyles({
     },
     error: {
         color: tokens.colorPaletteRedForeground1,
+        backgroundColor: tokens.colorPaletteRedBackground1,
+        ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
+        ...shorthands.borderRadius(tokens.borderRadiusMedium),
+        fontSize: tokens.fontSizeBase200,
+        lineHeight: tokens.lineHeightBase200,
+        // Constrain error message to prevent overflow
+        maxHeight: '120px',
+        overflowY: 'auto',
         whiteSpace: 'pre-wrap',
         overflowWrap: 'anywhere',
+        // Ensure error stays within container
+        position: 'relative',
     },
 });
 
@@ -440,9 +457,15 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code, isDark = 
                         lastRenderedCodeRef.current = normalized;
                     }
                 } catch (e) {
-                    const message = e instanceof Error ? e.message : String(e);
+                    const rawMessage = e instanceof Error ? e.message : String(e);
+                    // Clean up verbose Mermaid error messages for better readability
+                    const cleanMessage = rawMessage
+                        .replace(/ParseError:?\s*/gi, '')
+                        .replace(/Syntax error in.*?(?=\n|$)/g, '')
+                        .replace(/Expecting.*?got.*?(?=\n|$)/gi, (match) => match.slice(0, 100))
+                        .trim();
                     if (!cancelledRef.current) {
-                        setError(message);
+                        setError(cleanMessage || 'Syntaksfeil i diagramkoden');
                         // Keep previous SVG on error if we have one
                     }
                 } finally {

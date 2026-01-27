@@ -5,7 +5,7 @@ import { Constants } from '../../../Constants';
 import { IAvailableTemplate } from '../../../libs/models/ChatTemplate';
 import { ServiceInfo } from '../../../libs/models/ServiceInfo';
 import { TokenUsage, TokenUsageFunctionNameMap } from '../../../libs/models/TokenUsage';
-import { ActiveUserInfo, Alert, AppState, BrandColorKey, FeatureKeys, initialState } from './AppState';
+import { ActiveUserInfo, Alert, AppState, BrandColorKey, FeatureKeys, initialState, ServiceError } from './AppState';
 
 export const appSlice = createSlice({
     name: 'app',
@@ -110,6 +110,12 @@ export const appSlice = createSlice({
                 // localStorage might be unavailable in some contexts
             }
         },
+        setServiceError: (state: AppState, action: PayloadAction<ServiceError>) => {
+            state.serviceError = action.payload;
+        },
+        clearServiceError: (state: AppState) => {
+            state.serviceError = undefined;
+        },
     },
 });
 
@@ -129,6 +135,8 @@ export const {
     setAvailableTemplates,
     setChatManagementModalOpen,
     setBrandColor,
+    setServiceError,
+    clearServiceError,
 } = appSlice.actions;
 
 export default appSlice.reducer;

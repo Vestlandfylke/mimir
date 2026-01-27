@@ -11,7 +11,7 @@ namespace CopilotChat.WebApi.Plugins.Utils;
 /// <summary>
 /// Utility methods for token management.
 /// </summary>
-public static class TokenUtils
+internal static class TokenUtils
 {
     private static readonly GptEncoding s_tokenizer = GptEncoding.GetEncoding("cl100k_base");
 

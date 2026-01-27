@@ -15,7 +15,7 @@ namespace CopilotChat.WebApi.Plugins.Chat;
 /// <summary>
 /// This class provides the functions to query kernel memory.
 /// </summary>
-public class KernelMemoryRetriever
+internal sealed class KernelMemoryRetriever
 {
     private readonly PromptsOptions _promptOptions;
 

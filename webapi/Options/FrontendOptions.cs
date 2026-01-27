@@ -5,7 +5,7 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options to be relayed to the frontend.
 /// </summary>
-public sealed class FrontendOptions
+internal sealed class FrontendOptions
 {
     public const string PropertyName = "Frontend";
 

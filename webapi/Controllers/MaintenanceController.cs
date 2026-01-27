@@ -11,7 +11,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// Controller for reporting the status of chat migration.
 /// </summary>
 [ApiController]
-public class MaintenanceController : ControllerBase
+internal sealed class MaintenanceController : ControllerBase
 {
     internal const string GlobalSiteMaintenance = "GlobalSiteMaintenance";
 

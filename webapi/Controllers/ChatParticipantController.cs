@@ -18,7 +18,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// 3. Managing participants in a chat session.
 /// </summary>
 [ApiController]
-public class ChatParticipantController : ControllerBase
+internal sealed class ChatParticipantController : ControllerBase
 {
     private const string UserJoinedClientCall = "UserJoined";
     private readonly ILogger<ChatParticipantController> _logger;

@@ -16,7 +16,7 @@ namespace CopilotChat.WebApi.Controllers;
 /// Controller responsible for returning the service options to the client.
 /// </summary>
 [ApiController]
-public class PluginController : ControllerBase
+internal sealed class PluginController : ControllerBase
 {
     private const string PluginStateChanged = "PluginStateChanged";
     private readonly ILogger<PluginController> _logger;

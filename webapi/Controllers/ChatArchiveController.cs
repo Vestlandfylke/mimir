@@ -14,7 +14,7 @@ using Microsoft.KernelMemory;
 namespace CopilotChat.WebApi.Controllers;
 
 [ApiController]
-public class ChatArchiveController : ControllerBase
+internal sealed class ChatArchiveController : ControllerBase
 {
     private readonly ILogger<ChatArchiveController> _logger;
     private readonly IKernelMemory _memoryClient;

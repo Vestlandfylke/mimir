@@ -7,7 +7,7 @@ namespace CopilotChat.WebApi.Storage;
 /// <summary>
 /// Defines the basic CRUD operations for a storage context.
 /// </summary>
-public interface IStorageContext<T> where T : IStorageEntity
+internal interface IStorageContext<T> where T : IStorageEntity
 {
     /// <summary>
     /// Query entities in the storage context.
@@ -45,7 +45,7 @@ public interface IStorageContext<T> where T : IStorageEntity
 /// <summary>
 /// Specialization of IStorageContext<T> for CopilotChatMessage.
 /// </summary>
-public interface ICopilotChatMessageStorageContext : IStorageContext<CopilotChatMessage>
+internal interface ICopilotChatMessageStorageContext : IStorageContext<CopilotChatMessage>
 {
     /// <summary>
     /// Query entities in the storage context.

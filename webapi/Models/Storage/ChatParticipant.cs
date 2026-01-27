@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Models.Storage;
 /// A chat participant is a user that is part of a chat.
 /// A user can be part of multiple chats, thus a user can have multiple chat participants.
 /// </summary>
-public class ChatParticipant : IStorageEntity
+internal sealed class ChatParticipant : IStorageEntity
 {
     /// <summary>
     /// Participant ID that is persistent and unique.

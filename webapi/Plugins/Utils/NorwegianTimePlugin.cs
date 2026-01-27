@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Globalization;
@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Plugins.Utils;
 /// <summary>
 /// Time plugin that returns dates and times in Norwegian format and timezone.
 /// </summary>
-public class NorwegianTimePlugin
+internal sealed class NorwegianTimePlugin
 {
     private static readonly TimeZoneInfo NorwegianTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
     private static readonly CultureInfo NorwegianCulture = new("nb-NO");
@@ -133,4 +133,3 @@ public class NorwegianTimePlugin
         return offset.Hours >= 0 ? $"+{offset.Hours:00}:00" : $"{offset.Hours:00}:00";
     }
 }
-

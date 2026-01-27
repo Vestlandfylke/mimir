@@ -8,7 +8,7 @@ namespace CopilotChat.WebApi.Models.Response;
 /// <summary>
 /// Configuration to be used by the frontend client to this service.
 /// </summary>
-public class FrontendAuthConfig
+internal sealed class FrontendAuthConfig
 {
     /// <summary>
     /// Type of auth to use.

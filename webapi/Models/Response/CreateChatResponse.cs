@@ -10,7 +10,7 @@ namespace CopilotChat.WebApi.Models.Response;
 /// This groups the initial bot message with the chat session
 /// to avoid making two requests.
 /// </summary>
-public class CreateChatResponse
+internal sealed class CreateChatResponse
 {
     /// <summary>
     /// The chat session that was created.

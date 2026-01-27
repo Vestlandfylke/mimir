@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 
@@ -7,11 +7,11 @@ namespace CopilotChat.WebApi.Options;
 /// <summary>
 /// Configuration options for authenticating to the service.
 /// </summary>
-public class ChatAuthenticationOptions
+internal sealed class ChatAuthenticationOptions
 {
     public const string PropertyName = "Authentication";
 
-    public enum AuthenticationType
+    internal enum AuthenticationType
     {
         None,
         AzureAd
@@ -32,7 +32,7 @@ public class ChatAuthenticationOptions
     /// <summary>
     /// Configuration options for Azure Active Directory (AAD) authorization.
     /// </summary>
-    public class AzureAdOptions
+    internal sealed class AzureAdOptions
     {
         /// <summary>
         /// AAD instance url, i.e., https://login.microsoftonline.com

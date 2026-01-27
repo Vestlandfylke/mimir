@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace CopilotChat.WebApi.Controllers;
 
 [ApiController]
-public class SpeechTokenController : ControllerBase
+internal sealed class SpeechTokenController : ControllerBase
 {
     private sealed class TokenResult
     {

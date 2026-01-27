@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Globalization;
 using System.Text.Json;
@@ -11,14 +11,14 @@ namespace CopilotChat.WebApi.Models.Storage;
 /// <summary>
 /// Information about a single chat message.
 /// </summary>
-public class CopilotChatMessage : IStorageEntity
+internal sealed class CopilotChatMessage : IStorageEntity
 {
     private static readonly JsonSerializerOptions s_serializerSettings = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     /// <summary>
     /// Role of the author of a chat message.
     /// </summary>
-    public enum AuthorRoles
+    internal enum AuthorRoles
     {
         /// <summary>
         /// The current user of the chat.
@@ -34,7 +34,7 @@ public class CopilotChatMessage : IStorageEntity
     /// <summary>
     /// Type of the chat message.
     /// </summary>
-    public enum ChatMessageType
+    internal enum ChatMessageType
     {
         /// <summary>
         /// A standard message
