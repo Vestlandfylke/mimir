@@ -4,6 +4,16 @@ A conversational AI assistant built on Microsoft [Semantic Kernel](https://githu
 
 The application provides multi-model chat capabilities with document analysis, long-term memory, and extensibility through the Model Context Protocol (MCP).
 
+**Key Features:**
+- Multi-model selection (GPT-4o, GPT-4, o1, o3-mini, etc.)
+- Assistant templates with role-based access control
+- SharePoint document search with On-Behalf-Of authentication
+- Norwegian law lookup via Lovdata integration
+- File generation (Word, Excel, PowerPoint, PDF)
+- Microsoft Teams SSO support
+- Mermaid diagram rendering
+- LaTeX/KaTeX math formulas
+
 > **Note:** Each chat interaction will call Azure OpenAI/OpenAI which will use tokens that you may be billed for.
 
 ## Components
@@ -192,6 +202,86 @@ For detailed Azure AD setup instructions, see the [original chat-copilot documen
 
 The application supports extending capabilities through Model Context Protocol servers. See [webapi/MCP_INTEGRATION_GUIDE.md](./webapi/MCP_INTEGRATION_GUIDE.md) and [mcp-bridge/README.md](./mcp-bridge/README.md).
 
+### Built-in Plugins
+
+The application includes several native plugins that extend AI capabilities:
+
+| Plugin | Purpose | Configuration |
+|--------|---------|---------------|
+| **SharePointObo** | Search and access SharePoint documents using On-Behalf-Of authentication. Users can only access content they have SharePoint permissions for. | `SharePointObo` section in appsettings.json |
+| **Lovdata** | Look up Norwegian laws and regulations directly from Lovdata's API. | `Lovdata` section (requires API key) |
+| **LeiarKontekst** | Access strategic documents for leaders via Azure AI Search. | `LeiarKontekst` section |
+| **FileGeneration** | Generate downloadable files (Word, Excel, PowerPoint, PDF, text). | `Cosmos:GeneratedFilesContainer` |
+
+#### SharePoint OBO Configuration
+
+```json
+"SharePointObo": {
+  "Enabled": true,
+  "Authority": "https://login.microsoftonline.com",
+  "TenantId": "YOUR_TENANT_ID",
+  "ClientId": "YOUR_CLIENT_ID",
+  "ClientSecret": "YOUR_SECRET",
+  "SiteUrl": "https://yourtenant.sharepoint.com/sites/YourSite",
+  "AllowedSites": [
+    "https://yourtenant.sharepoint.com/sites/Site1",
+    "https://yourtenant.sharepoint.com/sites/Site2"
+  ],
+  "DefaultScopes": "https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All"
+}
+```
+
+### Assistant Templates (Personas)
+
+Create specialized AI assistants with custom system prompts and access control:
+
+```json
+"Prompts": {
+  "Templates": {
+    "my-assistant": {
+      "DisplayName": "My Assistant",
+      "Description": "Description shown in the UI",
+      "Icon": "icon-name",
+      "Enabled": true,
+      "AllowedGroups": ["group-id-1", "group-id-2"],
+      "AllowedUsers": ["user-id-1", "user-id-2"],
+      "SystemDescription": "Custom system prompt...",
+      "InitialBotMessage": "Welcome message shown when starting a new chat"
+    }
+  }
+}
+```
+
+**Access Control:**
+- `AllowedGroups`: Azure AD group IDs that can access the assistant
+- `AllowedUsers`: Azure AD user IDs that can access the assistant
+- If both are empty, the assistant is available to all users
+
+**Azure Web App Environment Variables:**
+```
+Prompts_Templates__my-assistant__Enabled=true
+Prompts_Templates__my-assistant__AllowedUsers__0=user-id-1
+Prompts_Templates__my-assistant__AllowedUsers__1=user-id-2
+```
+
+### Microsoft Teams Integration
+
+The application supports Microsoft Teams SSO authentication:
+
+1. Register your app in Azure AD with Teams SSO configuration
+2. Set the Application ID URI (e.g., `api://your-app-id`)
+3. Configure the backend:
+
+```json
+"Authentication": {
+  "AzureAd": {
+    "Audience": "api://your-app-id"
+  }
+}
+```
+
+For detailed Teams deployment, see the [Teams documentation](https://learn.microsoft.com/en-us/microsoftteams/platform/tabs/how-to/authentication/tab-sso-overview).
+
 ---
 
 ## Deployment
@@ -255,6 +345,13 @@ Ensure Docker Desktop is running before starting the containers.
 ### Azure OpenAI: 401 Unauthorized
 
 Verify your API key and endpoint in the `.env` file or user secrets.
+
+### SharePoint plugin: BadRequest error
+
+Ensure that:
+1. `AllowedSites` is configured with valid SharePoint site URLs
+2. The app registration has the required Graph API permissions (`Sites.Read.All`, `Files.Read.All`)
+3. The `DefaultScopes` matches the permissions granted to the app
 
 ---
 
