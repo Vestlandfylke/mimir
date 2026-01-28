@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Net.Http.Headers;
@@ -575,7 +575,7 @@ internal sealed class SharePointOboPlugin
                 {
                     new
                     {
-                        entityTypes = new[] { "driveItem", "listItem", "site", "message" },
+                        entityTypes = new[] { "driveItem", "listItem", "site" },
                         query = new { queryString = queryString },
                         from = 0,
                         size = maxResults,
