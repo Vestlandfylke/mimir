@@ -158,43 +158,15 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
 
 const startSignalRConnection = (hubConnection: signalR.HubConnection, store: StoreMiddlewareAPI) => {
     registerCommonSignalConnectionEvents(hubConnection, store);
-    hubConnection
-        .start()
-        .then(() => {
-            logger.debug('SignalR connection established');
-        })
-        .catch((err) => {
-            logger.error('SignalR Connection Error: ', err);
-            setTimeout(() => {
-                startSignalRConnection(hubConnection, store);
-            }, 5000);
-        });
-};
-
-// Add connection state monitoring for debugging (only in development)
-const monitorConnectionState = (hubConnection: signalR.HubConnection) => {
-    // Log connection state every 10 seconds during active requests
-    setInterval(() => {
-        const state = hubConnection.state;
-        const stateNames = {
-            [signalR.HubConnectionState.Disconnected]: 'Disconnected',
-            [signalR.HubConnectionState.Connecting]: 'Connecting',
-            [signalR.HubConnectionState.Connected]: 'Connected',
-            [signalR.HubConnectionState.Disconnecting]: 'Disconnecting',
-            [signalR.HubConnectionState.Reconnecting]: 'Reconnecting',
-        };
-
-        if (state !== signalR.HubConnectionState.Connected) {
-            logger.warn(`⚠️ SignalR connection state: ${stateNames[state] || state}`);
-        } else {
-            logger.debug(`✓ SignalR connection: ${stateNames[state]}`);
-        }
-    }, 10000); // Check every 10 seconds
+    hubConnection.start().catch((err) => {
+        logger.error('SignalR Connection Error: ', err);
+        setTimeout(() => {
+            startSignalRConnection(hubConnection, store);
+        }, 5000);
+    });
 };
 
 const registerSignalREvents = (hubConnection: signalR.HubConnection, store: StoreMiddlewareAPI) => {
-    // Start monitoring connection state
-    monitorConnectionState(hubConnection);
     hubConnection.on(
         SignalRCallbackMethods.ReceiveMessage,
         (chatId: string, senderId: string, message: IChatMessage) => {

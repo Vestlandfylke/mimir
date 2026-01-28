@@ -8,7 +8,7 @@ Logs_from_test_1/
 Logs_from_test*/
 docs/
 leiar documents/
-
+tools/leiar-kontekst-index/
 # Teams manifest (contains deployment-specific configuration)
 teams-manifest/
 

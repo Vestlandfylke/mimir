@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Diagnostics;
 using System.Text.Json;
@@ -98,6 +98,11 @@ internal sealed class Program
             .AddSwaggerGen()
             .AddCorsPolicy(builder.Configuration)
             .AddControllers()
+            .ConfigureApplicationPartManager(manager =>
+            {
+                // Add custom feature provider to discover internal controllers
+                manager.FeatureProviders.Add(new Extensions.InternalControllerFeatureProvider());
+            })
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;

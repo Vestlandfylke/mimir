@@ -6,7 +6,6 @@ import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
 import { useConnectionSync } from '../../libs/hooks/useConnectionSync';
 import { AuthorRoles } from '../../libs/models/ChatMessage';
-import { logger } from '../../libs/utils/Logger';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys, Features } from '../../redux/features/app/AppState';
@@ -113,16 +112,10 @@ export const ChatRoom: React.FC = () => {
     const messages = conversation.messages;
     const botResponseStatus = conversation.botResponseStatus;
 
-    // Debug logging for message updates
-    React.useEffect(() => {
-        logger.debug(`📋 ChatRoom: messages updated, count: ${messages.length}`);
-    }, [messages.length]);
-
     // Trigger lazy loading of messages when conversation changes and messages aren't loaded
     React.useEffect(() => {
         const conv = conversation as typeof conversation | undefined;
         if (conv && !conv.userDataLoaded && conv.messages.length === 0) {
-            logger.debug(`📋 ChatRoom: Triggering lazy load for chat ${selectedId}`);
             void chat.loadChatMessages(selectedId);
         }
     }, [selectedId, conversation, chat]);
@@ -203,7 +196,6 @@ export const ChatRoom: React.FC = () => {
             const lastBotMessage = botMessages[botMessages.length - 1] as HTMLElement;
             // Scroll so the bot message is at the top of the viewport (with some padding)
             lastBotMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            logger.debug('📋 ChatRoom: Scrolled to start of bot response');
         } else {
             // Fallback to bottom if no bot message found
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
@@ -219,7 +211,6 @@ export const ChatRoom: React.FC = () => {
 
         // When Mimir starts typing, scroll to show the typing indicator
         if (wasNotTyping && isNowTyping) {
-            logger.debug('📋 ChatRoom: Mimir started typing');
             // Scroll to bottom initially to show typing indicator
             const container = scrollViewTargetRef.current;
             if (container) {

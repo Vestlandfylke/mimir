@@ -1,18 +1,18 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import {
+    Accordion,
+    AccordionHeader,
+    AccordionItem,
+    AccordionPanel,
     Body1,
     Button,
     makeStyles,
     shorthands,
     Spinner,
     tokens,
-    Accordion,
-    AccordionItem,
-    AccordionHeader,
-    AccordionPanel,
 } from '@fluentui/react-components';
-import { ArrowSync20Regular, ErrorCircle24Regular, ChevronDown20Regular } from '@fluentui/react-icons';
+import { ArrowSync20Regular, ChevronDown20Regular, ErrorCircle24Regular } from '@fluentui/react-icons';
 import { FC, useState } from 'react';
 import { refreshPage } from '../../assets/strings';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';

@@ -1,7 +1,8 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Models.Response;
 using CopilotChat.WebApi.Options;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -36,6 +37,7 @@ internal sealed class MaintenanceController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [AllowAnonymous]
     public ActionResult<MaintenanceResult?> GetMaintenanceStatusAsync(
         CancellationToken cancellationToken = default)
     {

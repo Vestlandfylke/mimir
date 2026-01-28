@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Helper utilities for detecting and handling embedded app contexts (Teams, SharePoint, iframes, etc.)
 
-import { logger } from './Logger';
-
 /**
  * Detects if the app is running inside an iframe
  * This covers Teams, SharePoint, Power Apps, and any other embedded scenario
@@ -65,12 +63,10 @@ export const isInSharePoint = (): boolean => {
 export const getRecommendedAuthMethod = (): 'popup' | 'redirect' => {
     // Use popup in any iframe context to avoid navigation issues
     if (isInIframe()) {
-        logger.debug('Embedded context detected - using popup authentication');
         return 'popup';
     }
 
     // Use redirect in normal browser context (better UX)
-    logger.debug('Browser context detected - using redirect authentication');
     return 'redirect';
 };
 

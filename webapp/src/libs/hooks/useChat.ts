@@ -46,11 +46,7 @@ import botIcon6 from '../../assets/bot-icons/bot-icon-6.png';
 import botIcon7 from '../../assets/bot-icons/bot-icon-7.png'; // Leader assistant specific icon
 import { getErrorDetails } from '../../components/utils/TextUtils';
 import { FeatureKeys } from '../../redux/features/app/AppState';
-import {
-    ensureConnected,
-    getConnectionState,
-    triggerMessageSync,
-} from '../../redux/features/message-relay/signalRHubConnection';
+import { ensureConnected, triggerMessageSync } from '../../redux/features/message-relay/signalRHubConnection';
 import { PlanState } from '../models/Plan';
 import { ContextVariable } from '../semantic-kernel/model/AskResult';
 import { logger } from '../utils/Logger';
@@ -242,13 +238,11 @@ export const useChat = () => {
             }
 
             // Check SignalR connection before sending - verify it's actually alive
-            logger.debug(`📡 Checking SignalR connection before sending (state: ${getConnectionState()})`);
             dispatch(updateBotResponseStatus({ chatId, status: 'Sjekkar tilkopling...' }));
 
             try {
                 // This will ping the server to verify the connection is actually working
                 await ensureConnected();
-                logger.log('✅ SignalR connection verified, proceeding with request');
             } catch (reconnectError) {
                 logger.error('❌ Failed to verify/reconnect SignalR before sending:', reconnectError);
                 dispatch(
@@ -275,7 +269,6 @@ export const useChat = () => {
                     const lastMessage = currentChat.messages[currentChat.messages.length - 1];
                     if (lastMessage.authorRole === AuthorRoles.Bot) {
                         // Response was received, just clear spinner
-                        logger.log('✓ Bot response found in chat - clearing spinner');
                         dispatch(updateBotResponseStatus({ chatId, status: undefined }));
                         return;
                     }

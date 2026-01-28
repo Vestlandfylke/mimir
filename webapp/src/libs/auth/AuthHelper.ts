@@ -1,19 +1,19 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import {
+    AccountInfo,
     Configuration,
     EndSessionRequest,
     IPublicClientApplication,
     InteractionStatus,
     LogLevel,
-    AccountInfo,
 } from '@azure/msal-browser';
 import debug from 'debug';
 import { Constants } from '../../Constants';
 import { store } from '../../redux/app/store';
-import { TokenHelper } from './TokenHelper';
 import { EmbeddedAppHelper } from '../utils/EmbeddedAppHelper';
 import { teamsAuthHelper } from './TeamsAuthHelper';
+import { TokenHelper } from './TokenHelper';
 
 const log = debug(Constants.debug.root).extend('authHelper');
 
@@ -42,23 +42,20 @@ const getMsalConfig = (authConfig: AuthConfig): Configuration => ({
                 if (containsPii) {
                     return;
                 }
+                // Only log errors and warnings to reduce console noise
                 switch (level) {
                     case LogLevel.Error:
                         log('error:', message);
-                        return;
-                    case LogLevel.Info:
-                        log('info:', message);
-                        return;
-                    case LogLevel.Verbose:
-                        log('verbose:', message);
                         return;
                     case LogLevel.Warning:
                         log('warn:', message);
                         return;
                     default:
-                        log(message);
+                        // Suppress Info and Verbose logs
+                        return;
                 }
             },
+            logLevel: LogLevel.Warning, // Only log Warning and above
         },
         windowHashTimeout: 15000, // Applies just to popup calls - In milliseconds
         iframeHashTimeout: 15000, // Applies just to silent calls - In milliseconds
@@ -301,12 +298,7 @@ const isTokenExpired = (token: string): boolean => {
 
 // SKaaS = Semantic Kernel as a Service
 // Gets token with scopes to authorize SKaaS specifically
-// @param silentOnly - If true, won't trigger interactive auth (popup/redirect) on failure
-const getSKaaSAccessToken = async (
-    instance: IPublicClientApplication,
-    inProgress: InteractionStatus,
-    silentOnly = false,
-) => {
+const getSKaaSAccessToken = async (instance: IPublicClientApplication, inProgress: InteractionStatus) => {
     if (!isAuthAAD()) {
         return '';
     }
@@ -343,7 +335,7 @@ const getSKaaSAccessToken = async (
     }
 
     // Fall back to MSAL token
-    return await TokenHelper.getAccessTokenUsingMsal(inProgress, instance, getMsalScopes(), undefined, silentOnly);
+    return await TokenHelper.getAccessTokenUsingMsal(inProgress, instance, getMsalScopes());
 };
 
 export const AuthHelper = {
