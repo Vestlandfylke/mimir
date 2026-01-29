@@ -174,6 +174,8 @@ jobs:
               SharePointObo__TenantId="5b14945b-0f87-40dd-acf3-5e5e21e6eb36" \
               SharePointObo__ClientId="db0932b4-3bb7-4b89-a398-85be5940e84f" \
               SharePointObo__SiteUrl="https://vlfksky.sharepoint.com/sites/HR-kvalitet-HMS" \
+              SharePointObo__AllowedSites__0="https://vlfksky.sharepoint.com/sites/HR-kvalitet-HMS" \
+              SharePointObo__AllowedSites__1="https://vlfksky.sharepoint.com/sites/Omoss" \
               SharePointObo__DefaultScopes="https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All" \
               SharePointObo__MaxContentLength="50000" \
               SharePointObo__RequireApproval="false" \

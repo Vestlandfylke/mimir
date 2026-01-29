@@ -19,17 +19,17 @@ import {
 } from '@fluentui/react-components';
 import {
     ChatMultiple20Regular,
-    Settings24Regular,
     Info20Regular,
     QuestionCircle20Regular,
+    Settings24Regular,
 } from '@fluentui/react-icons';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState, resetState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import { setChatManagementModalOpen } from '../../redux/features/app/appSlice';
-import { SettingsDialog } from './settings-dialog/SettingsDialog';
 import { useTour } from '../tour';
+import { SettingsDialog } from './settings-dialog/SettingsDialog';
 
 export const useClasses = makeStyles({
     root: {
