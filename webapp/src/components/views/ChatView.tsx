@@ -144,6 +144,7 @@ export const ChatView: FC = () => {
 
             {/* Chat list sidebar */}
             <div
+                data-tour="chat-list"
                 className={`${classes.chatListWrapper} ${
                     isMobile ? (isMobileMenuOpen ? classes.chatListVisible : classes.chatListHidden) : ''
                 }`}
@@ -166,7 +167,9 @@ export const ChatView: FC = () => {
             </div>
 
             {/* Chat window */}
-            <div className={classes.chatWindowWrapper}>{selectedId !== '' && <ChatWindow />}</div>
+            <div data-tour="chat-area" className={classes.chatWindowWrapper}>
+                {selectedId !== '' && <ChatWindow />}
+            </div>
 
             {/* Chat management modal */}
             <ChatManagementModal

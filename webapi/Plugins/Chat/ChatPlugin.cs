@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Globalization;
@@ -312,6 +312,13 @@ internal sealed class ChatPlugin
         }
 
         metaPrompt.AddSystemMessage(userIntent);
+
+        // Add plugin hint if available - this guides the LLM to use appropriate plugins proactively
+        if (chatContext.TryGetValue("pluginHint", out var pluginHintValue) && pluginHintValue is string pluginHint && !string.IsNullOrEmpty(pluginHint))
+        {
+            this._logger.LogDebug("Adding plugin hint to prompt: {PluginHint}", pluginHint);
+            metaPrompt.AddSystemMessage(pluginHint);
+        }
 
         // Calculate max amount of tokens to use for memories
         int maxRequestTokenBudget = this.GetMaxRequestTokenBudget();

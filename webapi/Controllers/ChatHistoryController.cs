@@ -339,6 +339,38 @@ internal sealed class ChatHistoryController : ControllerBase
     }
 
     /// <summary>
+    /// Delete a single chat message.
+    /// </summary>
+    /// <param name="chatId">The chat id.</param>
+    /// <param name="messageId">The message id to delete.</param>
+    [HttpDelete]
+    [Route("chats/{chatId:guid}/messages/{messageId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [Authorize(Policy = AuthPolicyName.RequireChatParticipant)]
+    public async Task<IActionResult> DeleteChatMessageAsync(
+        [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
+        [FromRoute] Guid chatId,
+        [FromRoute] Guid messageId)
+    {
+        CopilotChatMessage? message = null;
+        if (!await this._messageRepository.TryFindByIdAsync(messageId.ToString(), chatId.ToString(), callback: v => message = v))
+        {
+            return this.NotFound($"No message found for message id '{messageId}' in chat '{chatId}'.");
+        }
+
+        await this._messageRepository.DeleteAsync(message!);
+
+        // Notify clients about the deleted message
+        await messageRelayHubContext.Clients.Group(chatId.ToString()).SendAsync("MessageDeleted", chatId.ToString(), messageId.ToString());
+
+        this._logger.LogDebug("Deleted message {0} from chat {1}.", messageId, chatId);
+
+        return this.NoContent();
+    }
+
+    /// <summary>
     /// Delete a chat session.
     /// </summary>
     /// <param name="chatId">The chat id.</param>

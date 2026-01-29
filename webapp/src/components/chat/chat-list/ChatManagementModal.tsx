@@ -130,9 +130,10 @@ const useClasses = makeStyles({
     },
     deleteButton: {
         backgroundColor: tokens.colorPaletteRedBackground3,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         '&:hover': {
             backgroundColor: tokens.colorPaletteRedForeground1,
+            color: '#1a1a1a',
         },
     },
     selectAllContainer: {

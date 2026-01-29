@@ -27,7 +27,7 @@ const useClasses = makeStyles({
     text: {
         fontSize: '14px',
         color: tokens.colorNeutralForeground2,
-        fontWeight: '500',
+        fontWeight: '600',
     },
 });
 

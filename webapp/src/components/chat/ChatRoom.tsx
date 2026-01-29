@@ -74,6 +74,7 @@ const useClasses = makeStyles({
     loadingText: {
         color: tokens.colorNeutralForeground3,
         fontSize: tokens.fontSizeBase300,
+        fontWeight: '600',
     },
     scrollToBottomButton: {
         position: 'absolute',

@@ -1,164 +1,171 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mimir - Authentication Complete</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .container {
-            text-align: center;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-        .success-icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-        }
-        h2 {
-            margin: 0 0 10px 0;
-        }
-        p {
-            margin: 5px 0;
-            opacity: 0.9;
-        }
-        .error {
-            color: #ff6b6b;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="success-icon">✓</div>
-        <h2>Innlogging vellykket!</h2>
-        <p>Du kan nå lukke dette vinduet.</p>
-    </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Mimir - Authentication Complete</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+            .container {
+                text-align: center;
+                padding: 40px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                backdrop-filter: blur(10px);
+            }
+            .success-icon {
+                font-size: 60px;
+                margin-bottom: 20px;
+            }
+            h2 {
+                margin: 0 0 10px 0;
+            }
+            p {
+                margin: 5px 0;
+                opacity: 0.9;
+            }
+            .error {
+                color: #ff6b6b;
+                background: white;
+                padding: 15px;
+                border-radius: 5px;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="success-icon">✓</div>
+            <h2>Innlogging vellykket!</h2>
+            <p>Du kan nå lukke dette vinduet.</p>
+        </div>
 
-    <script src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js" 
-            crossorigin="anonymous"></script>
-    
-    <script>
-        // Production-safe logging - only log in development (localhost)
-        const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const logger = {
-            log: isDev ? console.log.bind(console) : () => {},
-            error: console.error.bind(console) // Always log errors
-        };
+        <script
+            src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js"
+            crossorigin="anonymous"
+        ></script>
 
-        (async () => {
-            try {
-                logger.log('Auth end page loaded');
-                logger.log('Current URL:', window.location.href);
-                logger.log('Hash:', window.location.hash);
+        <script>
+            // Production-safe logging - only log in development (localhost)
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const logger = {
+                log: isDev ? console.log.bind(console) : () => {},
+                error: console.error.bind(console), // Always log errors
+            };
 
-                // Check if we have an error in the URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                
-                const error = urlParams.get('error') || hashParams.get('error');
-                const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
-                
-                if (error) {
-                    throw new Error(errorDescription || error);
-                }
+            (async () => {
+                try {
+                    logger.log('Auth end page loaded');
+                    logger.log('Current URL:', window.location.href);
+                    logger.log('Hash:', window.location.hash);
 
-                // Get the authorization code or access token
-                const code = urlParams.get('code') || hashParams.get('code');
-                const accessToken = hashParams.get('access_token');
-                const idToken = hashParams.get('id_token');
+                    // Check if we have an error in the URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-                logger.log('Code:', code ? 'Present' : 'Not found');
-                logger.log('Access Token:', accessToken ? 'Present' : 'Not found');
-                logger.log('ID Token:', idToken ? 'Present' : 'Not found');
+                    const error = urlParams.get('error') || hashParams.get('error');
+                    const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
 
-                // Determine the best token to return
-                // Priority: access_token > id_token > code
-                const tokenResult = accessToken || idToken || code;
-                
-                if (!tokenResult) {
-                    throw new Error('No token received from authentication');
-                }
+                    if (error) {
+                        throw new Error(errorDescription || error);
+                    }
 
-                // Initialize Teams SDK if in Teams context
-                if (window.parent !== window.self) {
-                    logger.log('Running in iframe, attempting Teams SDK initialization...');
-                    
-                    // Import microsoftTeams from CDN (loaded above)
-                    if (typeof microsoftTeams !== 'undefined') {
-                        await microsoftTeams.app.initialize();
-                        logger.log('Teams SDK initialized');
-                        
-                        // Notify Teams of successful authentication with the token
-                        logger.log('Notifying Teams of success with token');
-                        microsoftTeams.authentication.notifySuccess(tokenResult);
+                    // Get the authorization code or access token
+                    const code = urlParams.get('code') || hashParams.get('code');
+                    const accessToken = hashParams.get('access_token');
+                    const idToken = hashParams.get('id_token');
+
+                    logger.log('Code:', code ? 'Present' : 'Not found');
+                    logger.log('Access Token:', accessToken ? 'Present' : 'Not found');
+                    logger.log('ID Token:', idToken ? 'Present' : 'Not found');
+
+                    // Determine the best token to return
+                    // Priority: access_token > id_token > code
+                    const tokenResult = accessToken || idToken || code;
+
+                    if (!tokenResult) {
+                        throw new Error('No token received from authentication');
+                    }
+
+                    // Initialize Teams SDK if in Teams context
+                    if (window.parent !== window.self) {
+                        logger.log('Running in iframe, attempting Teams SDK initialization...');
+
+                        // Import microsoftTeams from CDN (loaded above)
+                        if (typeof microsoftTeams !== 'undefined') {
+                            await microsoftTeams.app.initialize();
+                            logger.log('Teams SDK initialized');
+
+                            // Notify Teams of successful authentication with the token
+                            logger.log('Notifying Teams of success with token');
+                            microsoftTeams.authentication.notifySuccess(tokenResult);
+                        } else {
+                            logger.log('Teams SDK not available, likely in browser popup');
+                            // For browser popup, pass the result to opener
+                            if (window.opener) {
+                                window.opener.postMessage(
+                                    {
+                                        type: 'auth-success',
+                                        hash: window.location.hash,
+                                        search: window.location.search,
+                                    },
+                                    window.location.origin,
+                                );
+                                window.close();
+                            }
+                        }
                     } else {
-                        logger.log('Teams SDK not available, likely in browser popup');
+                        logger.log('Not in iframe, likely in browser popup');
                         // For browser popup, pass the result to opener
                         if (window.opener) {
-                            window.opener.postMessage({
-                                type: 'auth-success',
-                                hash: window.location.hash,
-                                search: window.location.search
-                            }, window.location.origin);
-                            window.close();
+                            window.opener.postMessage(
+                                {
+                                    type: 'auth-success',
+                                    hash: window.location.hash,
+                                    search: window.location.search,
+                                },
+                                window.location.origin,
+                            );
+                            setTimeout(() => window.close(), 1000);
+                        } else {
+                            // Redirect back to main app
+                            logger.log('No opener found, redirecting to main app');
+                            setTimeout(() => {
+                                window.location.href = window.location.origin;
+                            }, 2000);
                         }
                     }
-                } else {
-                    logger.log('Not in iframe, likely in browser popup');
-                    // For browser popup, pass the result to opener
-                    if (window.opener) {
-                        window.opener.postMessage({
-                            type: 'auth-success',
-                            hash: window.location.hash,
-                            search: window.location.search
-                        }, window.location.origin);
-                        setTimeout(() => window.close(), 1000);
-                    } else {
-                        // Redirect back to main app
-                        logger.log('No opener found, redirecting to main app');
-                        setTimeout(() => {
-                            window.location.href = window.location.origin;
-                        }, 2000);
-                    }
-                }
-            } catch (error) {
-                logger.error('Auth end error:', error);
-                
-                // Show error in UI
-                document.querySelector('.container').innerHTML = `
+                } catch (error) {
+                    logger.error('Auth end error:', error);
+
+                    // Show error in UI
+                    document.querySelector('.container').innerHTML = `
                     <div class="error">
                         <h2>Feil ved innlogging</h2>
                         <p>${error.message}</p>
                     </div>
                 `;
 
-                // Notify Teams of failure if in Teams context
-                if (typeof microsoftTeams !== 'undefined') {
-                    try {
-                        await microsoftTeams.app.initialize();
-                        microsoftTeams.authentication.notifyFailure(error.message);
-                    } catch (teamsError) {
-                        logger.error('Failed to notify Teams:', teamsError);
+                    // Notify Teams of failure if in Teams context
+                    if (typeof microsoftTeams !== 'undefined') {
+                        try {
+                            await microsoftTeams.app.initialize();
+                            microsoftTeams.authentication.notifyFailure(error.message);
+                        } catch (teamsError) {
+                            logger.error('Failed to notify Teams:', teamsError);
+                        }
                     }
                 }
-            }
-        })();
-    </script>
-</body>
+            })();
+        </script>
+    </body>
 </html>
-

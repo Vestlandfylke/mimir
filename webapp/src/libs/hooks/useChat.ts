@@ -18,6 +18,7 @@ import {
     addConversation,
     addMessageToConversationFromUser,
     deleteConversation,
+    deleteMessageFromConversation,
     setConversationMessages,
     setConversations,
     setSelectedConversation,
@@ -697,6 +698,31 @@ export const useChat = () => {
             });
     };
 
+    const deleteMessage = async (chatId: string, messageId: string) => {
+        try {
+            await chatService.deleteMessageAsync(
+                chatId,
+                messageId,
+                await AuthHelper.getSKaaSAccessToken(instance, inProgress),
+            );
+            dispatch(deleteMessageFromConversation({ chatId, messageId }));
+            dispatch(
+                addAlert({
+                    message: 'Meldinga er sletta.',
+                    type: AlertType.Success,
+                }),
+            );
+        } catch (e: any) {
+            const errorMessage = (e as Error).message;
+            dispatch(
+                addAlert({
+                    message: `Kunne ikkje slette meldinga. ${errorMessage}`,
+                    type: AlertType.Error,
+                }),
+            );
+        }
+    };
+
     const processPlan = async (chatId: string, planState: PlanState, serializedPlan: string, planGoal?: string) => {
         const kernelArguments: ContextVariable[] = [
             {
@@ -768,6 +794,7 @@ export const useChat = () => {
         editChat,
         getServiceInfo,
         deleteChat,
+        deleteMessage,
         processPlan,
         updateMessage,
         loadAvailableTemplates,

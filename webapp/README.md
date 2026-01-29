@@ -5,6 +5,7 @@ React-basert webgrensesnitt for Mimir, bygd med Fluent UI React Components.
 ## Oversikt
 
 Frontend-en tilbyr:
+
 - 💬 Chat-grensesnitt med streaming-respons
 - 📄 Dokumentopplasting og -administrasjon
 - 📌 Festa dokument (pinned documents)
@@ -19,20 +20,22 @@ Frontend-en tilbyr:
 ## Kjøre lokalt
 
 ### Krav
+
 - [Node.js 18+](https://nodejs.org/)
 - [Yarn](https://yarnpkg.com/)
 
 ### Setup
 
 1. **Installer dependencies**
-   ```bash
-   yarn install
-   ```
+
+    ```bash
+    yarn install
+    ```
 
 2. **Start utviklingsserver**
-   ```bash
-   yarn start
-   ```
+    ```bash
+    yarn start
+    ```
 
 Frontend køyrer no på `http://localhost:3000`
 
@@ -59,6 +62,7 @@ Frontend hentar konfigurasjon frå backend via `/authConfig` endpoint.
 ### Miljøvariablar (valgfritt)
 
 Opprett `.env.local`:
+
 ```env
 REACT_APP_BACKEND_URI=https://localhost:40443
 ```
@@ -98,6 +102,7 @@ webapp/
 ### Autentisering
 
 Frontend støttar både redirect og popup auth:
+
 - **Redirect** - Standard for nettlesar
 - **Popup** - For Teams og andre iframe-miljø
 
@@ -106,15 +111,17 @@ Sjå `libs/utils/EmbeddedAppHelper.ts` for implementasjon.
 ### Chat-streaming
 
 Meldingar streamast i sanntid via SignalR:
+
 ```typescript
 connection.on('ReceiveMessage', (message) => {
-  // Håndter streaming-melding
+    // Håndter streaming-melding
 });
 ```
 
 ### Dokumentopplasting
 
 Støttar:
+
 - PDF, DOCX, TXT, MD
 - Bilete (PNG, JPG, TIFF) med OCR
 - Drag-and-drop
@@ -122,6 +129,7 @@ Støttar:
 ### Matematikk-rendering
 
 Bruker KaTeX for LaTeX-syntaks:
+
 ```typescript
 import 'katex/dist/katex.min.css';
 import remarkMath from 'remark-math';
@@ -131,6 +139,7 @@ import rehypeKatex from 'rehype-katex';
 ### Mermaid-diagram
 
 Støttar rendering av Mermaid-diagram direkte i chatten:
+
 - Flowcharts, sekvensdiagram, ER-diagram, Gantt-diagram, osv.
 - Last ned diagram som JPG med éin klikk
 - Bruk `\`\`\`mermaid` code blocks
@@ -138,6 +147,7 @@ Støttar rendering av Mermaid-diagram direkte i chatten:
 ### Kodeblokker
 
 Avansert kode-visning med:
+
 - **Syntax highlighting** via prism-react-renderer
 - **Linjenummer** for enkel navigering
 - **Kopier-knapp** for rask kopiering
@@ -148,6 +158,7 @@ Avansert kode-visning med:
 ### VS Code
 
 Anbefalt extensions:
+
 - ESLint
 - Prettier
 - TypeScript and JavaScript Language Features
@@ -197,6 +208,7 @@ Sjå [tests/README.md](tests/README.md) for meir info.
 Frontend deployast som statiske filer til Azure App Service (hosted av backend) via GitHub Actions.
 
 Build-prosess:
+
 1. `yarn install --frozen-lockfile`
 2. `yarn build`
 3. Output går til `build/`

@@ -223,11 +223,24 @@ export const ChatWindow: React.FC = () => {
                             <ModelIndicator />
                         </div>
                     )}
-                    <TabList selectedValue={selectedTab} onTabSelect={onTabSelect} className={classes.tabList}>
-                        <Tab data-testid="chatTab" id="chat" value="chat" aria-label="Chat-fane" title="Chat-fane">
+                    <TabList
+                        data-tour="tab-view"
+                        selectedValue={selectedTab}
+                        onTabSelect={onTabSelect}
+                        className={classes.tabList}
+                    >
+                        <Tab
+                            data-tour="tab-chat"
+                            data-testid="chatTab"
+                            id="chat"
+                            value="chat"
+                            aria-label="Chat-fane"
+                            title="Chat-fane"
+                        >
                             Chat
                         </Tab>
                         <Tab
+                            data-tour="tab-documents"
                             data-testid="documentsTab"
                             id="documents"
                             value="documents"
@@ -237,6 +250,7 @@ export const ChatWindow: React.FC = () => {
                             Dokument
                         </Tab>
                         <Tab
+                            data-tour="tab-persona"
                             data-testid="personaTab"
                             id="persona"
                             value="persona"

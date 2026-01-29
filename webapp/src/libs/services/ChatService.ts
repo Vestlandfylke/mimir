@@ -166,6 +166,16 @@ export class ChatService extends BaseService {
         return result;
     };
 
+    public deleteMessageAsync = async (chatId: string, messageId: string, accessToken: string): Promise<void> => {
+        await this.getResponseAsync<undefined>(
+            {
+                commandPath: `chats/${chatId}/messages/${messageId}`,
+                method: 'DELETE',
+            },
+            accessToken,
+        );
+    };
+
     public getBotResponseAsync = async (
         ask: IAsk,
         accessToken: string,

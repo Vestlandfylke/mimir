@@ -32,6 +32,7 @@ const enum SignalRCallbackMethods {
     GlobalDocumentUploaded = 'GlobalDocumentUploaded',
     ChatEdited = 'ChatEdited',
     ChatDeleted = 'ChatDeleted',
+    MessageDeleted = 'MessageDeleted',
     GlobalSiteMaintenance = 'GlobalSiteMaintenance',
     PluginStateChanged = 'PluginStateChanged',
 }
@@ -417,6 +418,20 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
                 });
             }
         }
+    });
+
+    hubConnection.on(SignalRCallbackMethods.MessageDeleted, (chatId: string, messageId: string) => {
+        const conversations = store.getState().conversations.conversations;
+        if (!(chatId in conversations)) {
+            logger.warn(`MessageDeleted: Chat ${chatId} not found in store.`);
+            return;
+        }
+        // Dispatch action to remove message from the conversation
+        store.dispatch({
+            type: 'conversations/deleteMessageFromConversation',
+            payload: { chatId, messageId },
+        });
+        logger.debug(`MessageDeleted: Removed message ${messageId} from chat ${chatId}`);
     });
 
     hubConnection.on(SignalRCallbackMethods.GlobalSiteMaintenance, () => {

@@ -7,8 +7,12 @@ import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { teamsAuthHelper } from '../../libs/auth/TeamsAuthHelper';
 import { EmbeddedAppHelper } from '../../libs/utils/EmbeddedAppHelper';
 import { logger } from '../../libs/utils/Logger';
+import { useAppSelector } from '../../redux/app/hooks';
+import { RootState } from '../../redux/app/store';
+import { FeatureKeys } from '../../redux/features/app/AppState';
 import { getErrorDetails } from '../utils/TextUtils';
 import logo from '../../assets/sidestilt-logo-vlfk.svg';
+import logoDark from '../../assets/sidestilt-logo-kvit-skrift-vlfk.svg';
 
 interface LoginProps {
     onTeamsAuthSuccess?: () => void;
@@ -48,18 +52,18 @@ const useClasses = makeStyles({
         padding: tokens.spacingHorizontalXXL,
     },
     logo: {
-        width: '120px',
+        width: '180px',
         height: 'auto',
         marginBottom: tokens.spacingVerticalL,
     },
     title: {
-        fontSize: '28px',
+        fontSize: '32px',
         fontWeight: '600',
         color: tokens.colorNeutralForeground1,
         marginBottom: tokens.spacingVerticalS,
     },
     subtitle: {
-        fontSize: '14px',
+        fontSize: '18px',
         color: tokens.colorNeutralForeground3,
         marginBottom: tokens.spacingVerticalXXL,
         lineHeight: '1.5',
@@ -73,16 +77,18 @@ const useClasses = makeStyles({
     loadingText: {
         fontSize: '13px',
         color: tokens.colorNeutralForeground3,
+        fontWeight: '600',
     },
     loginButton: {
         backgroundColor: tokens.colorBrandBackground,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXXL}`,
         fontSize: '15px',
         fontWeight: '500',
         borderRadius: tokens.borderRadiusMedium,
         ':hover': {
             backgroundColor: tokens.colorBrandBackgroundHover,
+            color: '#1a1a1a',
         },
     },
     embeddedNote: {
@@ -97,6 +103,9 @@ export const Login: React.FC<LoginProps> = ({ onTeamsAuthSuccess }) => {
     const classes = useClasses();
     const [silentAuthInProgress, setSilentAuthInProgress] = useState(true);
     const [silentAuthMessage, setSilentAuthMessage] = useState('Logger inn...');
+    const { features } = useAppSelector((state: RootState) => state.app);
+    const isDarkMode = features[FeatureKeys.DarkMode].enabled;
+    const currentLogo = isDarkMode ? logoDark : logo;
 
     // Attempt silent authentication when component mounts
     useEffect(() => {
@@ -193,7 +202,7 @@ export const Login: React.FC<LoginProps> = ({ onTeamsAuthSuccess }) => {
         <div className={classes.container}>
             <div className={classes.backgroundPattern} />
             <div className={classes.content}>
-                <img src={logo} alt="Vestland fylkeskommune" className={classes.logo} />
+                <img src={currentLogo} alt="Vestland fylkeskommune" className={classes.logo} />
                 <h1 className={classes.title}>Mimir</h1>
                 <p className={classes.subtitle}>KI-assistent for Vestland fylkeskommune</p>
 

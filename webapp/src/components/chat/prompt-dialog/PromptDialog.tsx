@@ -33,7 +33,7 @@ import { StepwiseThoughtProcessView } from './stepwise-planner/StepwiseThoughtPr
 /**
  * Extracts user-friendly parts of the system persona, hiding technical instructions.
  * Shows only:
- * 1. The introduction paragraph
+ * 1. The Mimir identity introduction
  * 2. User's custom instructions (if any)
  */
 const extractUserFriendlySystemPersona = (fullPersona: string): string => {
@@ -52,19 +52,41 @@ const extractUserFriendlySystemPersona = (fullPersona: string): string => {
         'RESPONS-REGLAR:',
         'FILFORMAT-STØTTE:',
         'FORMAT-INSTRUKSJONAR:',
+        'KODE OG DIAGRAM:',
+        'VERKTØY OG FUNKSJONAR:',
+        'FILGENERERING:',
+        '=== KRITISK:',
+        '=== MIMIR KUNNSKAP',
+        'Kunnskapsstopp:',
     ];
 
-    // Find the earliest technical marker
-    let cutoffIndex = fullPersona.length;
-    for (const marker of technicalMarkers) {
-        const index = fullPersona.indexOf(marker);
-        if (index !== -1 && index < cutoffIndex) {
-            cutoffIndex = index;
-        }
-    }
+    // Look for the Mimir identity text (from SystemDescription)
+    const mimirIdentityStart = 'Dette er ein samtale mellom ein intelligent AI-assistent';
+    const mimirIdentityIndex = fullPersona.indexOf(mimirIdentityStart);
 
-    // Extract the introduction part
-    let userFriendlyPart = fullPersona.substring(0, cutoffIndex).trim();
+    let userFriendlyPart = '';
+
+    if (mimirIdentityIndex !== -1) {
+        // Find where the Mimir identity section ends (at first technical marker after it)
+        let mimirEndIndex = fullPersona.length;
+        for (const marker of technicalMarkers) {
+            const markerIndex = fullPersona.indexOf(marker, mimirIdentityIndex);
+            if (markerIndex !== -1 && markerIndex < mimirEndIndex) {
+                mimirEndIndex = markerIndex;
+            }
+        }
+        userFriendlyPart = fullPersona.substring(mimirIdentityIndex, mimirEndIndex).trim();
+    } else {
+        // Fallback: use the first part before technical markers
+        let cutoffIndex = fullPersona.length;
+        for (const marker of technicalMarkers) {
+            const index = fullPersona.indexOf(marker);
+            if (index !== -1 && index < cutoffIndex) {
+                cutoffIndex = index;
+            }
+        }
+        userFriendlyPart = fullPersona.substring(0, cutoffIndex).trim();
+    }
 
     // Look for user's custom instructions (usually after "BRUKARINSTRUKSJONAR:" or similar)
     const customInstructionsMarkers = [

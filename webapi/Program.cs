@@ -76,6 +76,9 @@ internal sealed class Program
         // Add chat cancellation service for stopping LLM requests
         builder.Services.AddSingleton<ChatCancellationService>();
 
+        // Add plugin hint service for proactive plugin usage
+        builder.Services.AddSingleton<PluginHintService>();
+
         TelemetryDebugWriter.IsTracingDisabled = Debugger.IsAttached;
 
         // Add named HTTP clients for IHttpClientFactory
@@ -95,7 +98,44 @@ internal sealed class Program
         builder.Services
             .AddMaintenanceServices()
             .AddEndpointsApiExplorer()
-            .AddSwaggerGen()
+            .AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Mimir API",
+                    Version = "1.0.0",
+                    Description = "API for Mimir - Vestland fylkeskommune sin KI-assistent"
+                });
+
+                // Resolve conflicting actions by taking the first one
+                options.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
+
+                // Add Bearer token authentication for Swagger UI
+                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Enter your token in the text input below.",
+                    Name = "Authorization",
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT"
+                });
+
+                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+                {
+                    {
+                        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                        {
+                            Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                            {
+                                Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
+            })
             .AddCorsPolicy(builder.Configuration)
             .AddControllers()
             .ConfigureApplicationPartManager(manager =>
@@ -160,13 +200,72 @@ internal sealed class Program
             return context.Response.WriteAsync("Mimir API is running. Frontend not deployed.");
         });
 
-        // Enable Swagger for development environments.
+        // Enable Swagger for all environments with authorization
+        // In development: open access
+        // In production: requires authentication and specific Azure AD group/user membership
+        var swaggerAuthorizedGroups = builder.Configuration.GetSection("Swagger:AuthorizedGroups").Get<string[]>() ?? Array.Empty<string>();
+        var swaggerAuthorizedUsers = builder.Configuration.GetSection("Swagger:AuthorizedUsers").Get<string[]>() ?? Array.Empty<string>();
+        var swaggerEnabled = builder.Configuration.GetValue<bool>("Swagger:Enabled", true);
+        var hasSwaggerRestrictions = swaggerAuthorizedGroups.Length > 0 || swaggerAuthorizedUsers.Length > 0;
+
+        if (swaggerEnabled)
+        {
+            // Middleware to protect Swagger endpoints in non-development environments
+            if (!app.Environment.IsDevelopment() && hasSwaggerRestrictions)
+            {
+                app.UseWhen(
+                    context => context.Request.Path.StartsWithSegments("/swagger"),
+                    appBuilder =>
+                    {
+                        appBuilder.Use(async (context, next) =>
+                        {
+                            // Check if user is authenticated
+                            if (!context.User.Identity?.IsAuthenticated ?? true)
+                            {
+                                context.Response.StatusCode = 401;
+                                await context.Response.WriteAsync("Unauthorized: Authentication required for Swagger access.");
+                                return;
+                            }
+
+                            // Check if user's Object ID is in the authorized users list
+                            var userObjectId = context.User.Claims
+                                .FirstOrDefault(c => c.Type == "oid" || c.Type == "http://schemas.microsoft.com/identity/claims/objectidentifier")
+                                ?.Value;
+
+                            var isUserAuthorized = userObjectId != null &&
+                                swaggerAuthorizedUsers.Contains(userObjectId, StringComparer.OrdinalIgnoreCase);
+
+                            // Check if user is in any of the authorized groups
+                            var userGroups = context.User.Claims
+                                .Where(c => c.Type == "groups" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups")
+                                .Select(c => c.Value)
+                                .ToList();
+
+                            var isGroupAuthorized = swaggerAuthorizedGroups.Any(authorizedGroup =>
+                                userGroups.Contains(authorizedGroup, StringComparer.OrdinalIgnoreCase));
+
+                            if (!isUserAuthorized && !isGroupAuthorized)
+                            {
+                                context.Response.StatusCode = 403;
+                                await context.Response.WriteAsync("Forbidden: You do not have permission to access Swagger. Contact your administrator.");
+                                return;
+                            }
+
+                            await next();
+                        });
+                    });
+            }
+
+            app.UseSwagger();
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "Mimir API v1");
+            });
+        }
+
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-
-            // Redirect root URL to Swagger UI URL
+            // Redirect root URL to Swagger UI URL in development
             app.MapWhen(
                 context => context.Request.Path == "/",
                 appBuilder =>

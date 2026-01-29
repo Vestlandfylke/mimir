@@ -398,7 +398,7 @@ const useClasses = makeStyles({
         height: '24px',
         ...shorthands.borderRadius('50%'),
         backgroundColor: tokens.colorBrandBackground,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

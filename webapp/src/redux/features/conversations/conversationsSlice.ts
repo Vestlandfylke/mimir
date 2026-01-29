@@ -123,6 +123,16 @@ export const conversationsSlice = createSlice({
             const { message, chatId } = action.payload;
             updateConversation(state, chatId, message);
         },
+        deleteMessageFromConversation: (
+            state: ConversationsState,
+            action: PayloadAction<{ chatId: string; messageId: string }>,
+        ) => {
+            const { chatId, messageId } = action.payload;
+            const conversation = state.conversations[chatId] as (typeof state.conversations)[string] | undefined;
+            if (conversation) {
+                conversation.messages = conversation.messages.filter((msg) => msg.id !== messageId);
+            }
+        },
         /*
          * updateUserIsTyping() and updateUserIsTypingFromServer() both update a user's typing state.
          * However they are for different purposes. The former action is for updating an user's typing state from
@@ -355,6 +365,7 @@ export const {
     setImportingDocumentsToConversation,
     addMessageToConversationFromUser,
     addMessageToConversationFromServer,
+    deleteMessageFromConversation,
     updateMessageProperty,
     updateUserIsTyping,
     updateUserIsTypingFromServer,

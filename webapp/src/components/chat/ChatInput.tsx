@@ -487,7 +487,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                 </div>
             )}
             <div className={classes.content}>
-                <div className={classes.inputWrapper}>
+                <div className={classes.inputWrapper} data-tour="chat-input">
                     <Textarea
                         title="Chat-input"
                         aria-label="Chat-input felt. Klikk enter for å sende inn input. Du kan òg lime inn skjermbilete."
@@ -568,6 +568,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isDraggingOver, onDragLeav
                                 }}
                             />
                             <Button
+                                data-tour="attachment-button"
                                 disabled={
                                     conversations[selectedId].disabled ||
                                     dragging ||

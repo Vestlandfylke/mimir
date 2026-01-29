@@ -35,10 +35,10 @@ const useClasses = makeStyles({
     },
     selectedButton: {
         backgroundColor: tokens.colorBrandBackground,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         ':hover': {
             backgroundColor: tokens.colorBrandBackgroundHover,
-            color: tokens.colorNeutralForegroundOnBrand,
+            color: '#1a1a1a',
         },
     },
     surface: {
@@ -116,7 +116,7 @@ const useClasses = makeStyles({
         ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalS),
         ...shorthands.borderRadius(tokens.borderRadiusMedium),
         backgroundColor: tokens.colorBrandBackground,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         maxWidth: '100%',
         minWidth: 0, // Allow flex item to shrink below content size
         overflow: 'hidden',
@@ -124,14 +124,14 @@ const useClasses = makeStyles({
     selectedName: {
         fontSize: tokens.fontSizeBase300,
         fontWeight: tokens.fontWeightSemibold,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         flexShrink: 0, // Don't shrink the name
         whiteSpace: 'nowrap',
     },
     selectedDivider: {
         width: '1px',
         height: '16px',
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
         flexShrink: 0,
         '@media (max-width: 480px)': {
             display: 'none', // Hide divider on mobile
@@ -139,7 +139,7 @@ const useClasses = makeStyles({
     },
     selectedDescription: {
         fontSize: tokens.fontSizeBase200,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         opacity: 0.9,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -153,10 +153,10 @@ const useClasses = makeStyles({
         minWidth: 'auto',
         ...shorthands.padding('2px'),
         flexShrink: 0,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         ':hover': {
-            color: tokens.colorNeutralForegroundOnBrand,
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            color: '#1a1a1a',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
         },
     },
 });

@@ -1,4 +1,4 @@
-﻿﻿# Copilot Chat Web App Scenario Tests
+﻿# Copilot Chat Web App Scenario Tests
 
 ## How to set up the tests to run locally
 

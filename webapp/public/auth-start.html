@@ -1,122 +1,131 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mimir - Logging in...</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .container {
-            text-align: center;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            /* Safari support */
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-        }
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        h2 {
-            margin: 0 0 10px 0;
-        }
-        p {
-            margin: 5px 0;
-            opacity: 0.9;
-        }
-        .error {
-            color: #ff6b6b;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Mimir</h2>
-        <div class="spinner"></div>
-        <p>Logger inn...</p>
-        <p style="font-size: 0.9em;">Vennligst vent mens vi autentiserer deg.</p>
-        <div class="error" id="error-message"></div>
-    </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Mimir - Logging in...</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+            .container {
+                text-align: center;
+                padding: 40px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                /* Safari support */
+                -webkit-backdrop-filter: blur(10px);
+                backdrop-filter: blur(10px);
+            }
+            .spinner {
+                border: 4px solid rgba(255, 255, 255, 0.3);
+                border-top: 4px solid white;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+                margin: 20px auto;
+            }
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+            h2 {
+                margin: 0 0 10px 0;
+            }
+            p {
+                margin: 5px 0;
+                opacity: 0.9;
+            }
+            .error {
+                color: #ff6b6b;
+                background: white;
+                padding: 15px;
+                border-radius: 5px;
+                margin-top: 20px;
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Mimir</h2>
+            <div class="spinner"></div>
+            <p>Logger inn...</p>
+            <p style="font-size: 0.9em">Vennligst vent mens vi autentiserer deg.</p>
+            <div class="error" id="error-message"></div>
+        </div>
 
-    <script src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js" 
-            crossorigin="anonymous"></script>
-    
-    <script>
-        // Production-safe logging - only log in development (localhost)
-        const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const logger = {
-            log: isDev ? console.log.bind(console) : () => {},
-            error: console.error.bind(console) // Always log errors
-        };
+        <script
+            src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js"
+            crossorigin="anonymous"
+        ></script>
 
-        // Parse query parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const clientId = urlParams.get('clientId');
-        const authority = urlParams.get('authority');
-        // For implicit flow, offline_access is not supported
-        // Make sure we request the API scope for the backend
-        let scope = urlParams.get('scope') || 'openid profile';
-        // Remove offline_access if present (not supported in implicit flow)
-        scope = scope.split(' ').filter(s => s !== 'offline_access').join(' ');
-        const redirectUri = urlParams.get('redirectUri') || window.location.origin + '/auth-end.html';
+        <script>
+            // Production-safe logging - only log in development (localhost)
+            const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const logger = {
+                log: isDev ? console.log.bind(console) : () => {},
+                error: console.error.bind(console), // Always log errors
+            };
 
-        logger.log('Auth start page loaded');
-        logger.log('Client ID:', clientId);
-        logger.log('Authority:', authority);
-        logger.log('Scope:', scope);
+            // Parse query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const clientId = urlParams.get('clientId');
+            const authority = urlParams.get('authority');
+            // For implicit flow, offline_access is not supported
+            // Make sure we request the API scope for the backend
+            let scope = urlParams.get('scope') || 'openid profile';
+            // Remove offline_access if present (not supported in implicit flow)
+            scope = scope
+                .split(' ')
+                .filter((s) => s !== 'offline_access')
+                .join(' ');
+            const redirectUri = urlParams.get('redirectUri') || window.location.origin + '/auth-end.html';
 
-        // Build the authorization URL
-        // Use implicit flow (token) for Teams popup authentication
-        // This returns the access token directly without needing a backend token exchange
-        const authUrl = `${authority}/oauth2/v2.0/authorize?` +
-            `client_id=${encodeURIComponent(clientId)}` +
-            `&response_type=token` +
-            `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-            `&scope=${encodeURIComponent(scope)}` +
-            `&response_mode=fragment` +
-            `&prompt=select_account` +
-            `&nonce=${Date.now()}`;
+            logger.log('Auth start page loaded');
+            logger.log('Client ID:', clientId);
+            logger.log('Authority:', authority);
+            logger.log('Scope:', scope);
 
-        logger.log('Redirecting to auth URL:', authUrl);
+            // Build the authorization URL
+            // Use implicit flow (token) for Teams popup authentication
+            // This returns the access token directly without needing a backend token exchange
+            const authUrl =
+                `${authority}/oauth2/v2.0/authorize?` +
+                `client_id=${encodeURIComponent(clientId)}` +
+                `&response_type=token` +
+                `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+                `&scope=${encodeURIComponent(scope)}` +
+                `&response_mode=fragment` +
+                `&prompt=select_account` +
+                `&nonce=${Date.now()}`;
 
-        // Redirect to Microsoft login
-        setTimeout(() => {
-            window.location.href = authUrl;
-        }, 1000);
+            logger.log('Redirecting to auth URL:', authUrl);
 
-        // Error handling
-        window.addEventListener('error', (event) => {
-            logger.error('Auth start error:', event.error);
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = 'Feil ved innlogging: ' + event.error.message;
-            errorDiv.style.display = 'block';
-        });
-    </script>
-</body>
+            // Redirect to Microsoft login
+            setTimeout(() => {
+                window.location.href = authUrl;
+            }, 1000);
+
+            // Error handling
+            window.addEventListener('error', (event) => {
+                logger.error('Auth start error:', event.error);
+                const errorDiv = document.getElementById('error-message');
+                errorDiv.textContent = 'Feil ved innlogging: ' + event.error.message;
+                errorDiv.style.display = 'block';
+            });
+        </script>
+    </body>
 </html>
-

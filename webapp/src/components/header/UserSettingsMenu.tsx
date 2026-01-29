@@ -17,13 +17,19 @@ import {
     shorthands,
     tokens,
 } from '@fluentui/react-components';
-import { ChatMultiple20Regular, Settings24Regular } from '@fluentui/react-icons';
+import {
+    ChatMultiple20Regular,
+    Settings24Regular,
+    Info20Regular,
+    QuestionCircle20Regular,
+} from '@fluentui/react-icons';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState, resetState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import { setChatManagementModalOpen } from '../../redux/features/app/appSlice';
 import { SettingsDialog } from './settings-dialog/SettingsDialog';
+import { useTour } from '../tour';
 
 export const useClasses = makeStyles({
     root: {
@@ -43,6 +49,7 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
     const classes = useClasses();
     const dispatch = useAppDispatch();
     const { instance } = useMsal();
+    const { startTour, setTourCompleted } = useTour();
 
     const { activeUserInfo, features } = useAppSelector((state: RootState) => state.app);
     const isDarkMode = features[FeatureKeys.DarkMode].enabled;
@@ -58,6 +65,11 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
     const onManageChats = useCallback(() => {
         dispatch(setChatManagementModalOpen(true));
     }, [dispatch]);
+
+    const onStartTour = useCallback(() => {
+        setTourCompleted(false); // Reset completion status
+        startTour();
+    }, [startTour, setTourCompleted]);
 
     return (
         <>
@@ -104,13 +116,6 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                             />
                             <MenuDivider />
                             <MenuItem
-                                data-testid="manageChatsMenuItem"
-                                icon={<ChatMultiple20Regular />}
-                                onClick={onManageChats}
-                            >
-                                Administrer samtalar
-                            </MenuItem>
-                            <MenuItem
                                 data-testid="settingsMenuItem"
                                 onClick={() => {
                                     setOpenSettingsDialog(true);
@@ -118,6 +123,26 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                             >
                                 Innstillingar
                             </MenuItem>
+                            <MenuItem
+                                data-testid="manageChatsMenuItem"
+                                icon={<ChatMultiple20Regular />}
+                                onClick={onManageChats}
+                            >
+                                Administrer samtalar
+                            </MenuItem>
+                            <MenuItem data-testid="startTourMenuItem" icon={<Info20Regular />} onClick={onStartTour}>
+                                Lær å bruke Mimir
+                            </MenuItem>
+                            <MenuItem
+                                data-testid="helpMenuItem"
+                                icon={<QuestionCircle20Regular />}
+                                onClick={() => {
+                                    window.open('https://hjelp.vlfk.no/', '_blank', 'noopener,noreferrer');
+                                }}
+                            >
+                                Hjelp og support
+                            </MenuItem>
+                            <MenuDivider />
                             <MenuItem data-testid="logOutMenuButton" onClick={onLogout}>
                                 Logg ut
                             </MenuItem>

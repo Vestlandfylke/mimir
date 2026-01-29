@@ -280,6 +280,7 @@ export const DocumentsTab: React.FC = () => {
                 />
                 <Tooltip content="Last opp fil til chatøkta" relationship="label">
                     <Button
+                        data-tour="documents-upload"
                         data-testid="addNewLocalDoc"
                         className={classes.uploadButton}
                         icon={<DocumentArrowUp20Regular />}
@@ -294,7 +295,7 @@ export const DocumentsTab: React.FC = () => {
                 {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
             </div>
             {/* Desktop: Table view */}
-            <div className={classes.tableContainer}>
+            <div className={classes.tableContainer} data-tour="documents-table">
                 <Table aria-label="Ekstern ressurs tabell" className={classes.table}>
                     <TableHeader>
                         <TableRow>{columns.map((column) => column.renderHeaderCell())}</TableRow>

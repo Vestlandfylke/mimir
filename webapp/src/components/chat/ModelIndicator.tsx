@@ -45,6 +45,7 @@ export const ModelIndicator: React.FC = () => {
     return (
         <Tooltip content={modelInfo.description || modelInfo.displayName} relationship="label">
             <Badge
+                data-tour="model-indicator"
                 className={classes.badge}
                 appearance="outline"
                 color={isAnthropic ? 'important' : 'informative'}

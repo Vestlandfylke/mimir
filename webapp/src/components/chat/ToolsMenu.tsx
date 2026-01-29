@@ -22,10 +22,10 @@ const useClasses = makeStyles({
     },
     selectedButton: {
         backgroundColor: tokens.colorBrandBackground,
-        color: tokens.colorNeutralForegroundOnBrand,
+        color: '#1a1a1a',
         ':hover': {
             backgroundColor: tokens.colorBrandBackgroundHover,
-            color: tokens.colorNeutralForegroundOnBrand,
+            color: '#1a1a1a',
         },
     },
     menuItem: {
@@ -111,6 +111,7 @@ export const ToolsMenu: React.FC<ToolsMenuProps> = ({
                         relationship="label"
                     >
                         <Button
+                            data-tour="diagram-button"
                             appearance="transparent"
                             size="large"
                             icon={hasSelectedDiagram ? <DiagramRegular /> : <Wrench20Regular />}

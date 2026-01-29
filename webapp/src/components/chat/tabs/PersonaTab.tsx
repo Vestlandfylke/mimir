@@ -452,7 +452,7 @@ export const PersonaTab: React.FC = () => {
     return (
         <TabView title="Tilpassing">
             {/* Model Selector Section */}
-            <div className={classes.section}>
+            <div data-tour="persona-model" className={classes.section}>
                 <h3 className={classes.sectionTitle}>KI-modell</h3>
                 <p className={classes.description}>
                     Vel kva KI-modell du vil bruke for denne samtalen. Ulike modellar har ulike styrkar.
@@ -549,7 +549,7 @@ export const PersonaTab: React.FC = () => {
             </div>
 
             {/* Custom Instructions Section */}
-            <div className={classes.section}>
+            <div data-tour="persona-instructions" className={classes.section}>
                 <h3 className={classes.sectionTitle}>Eigne instruksjonar</h3>
                 <p className={classes.description}>
                     Skriv eventuelle spesielle instruksjonar til Mimir. Til dømes: &quot;Svar alltid på bokmål&quot;

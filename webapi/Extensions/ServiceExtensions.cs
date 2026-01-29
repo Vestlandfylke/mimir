@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Reflection;
 using CopilotChat.Shared;
@@ -62,6 +62,9 @@ internal static class CopilotChatServiceExtensions
 
         // Lovdata plugin configuration (Norwegian laws API for leader assistant)
         AddOptions<LovdataPluginOptions>(LovdataPluginOptions.PropertyName);
+
+        // Mimir Knowledge plugin configuration (self-knowledge about Mimir)
+        AddOptions<MimirKnowledgePluginOptions>(MimirKnowledgePluginOptions.PropertyName);
 
         // MCP configuration
         AddOptions<McpServerOptions>(McpServerOptions.PropertyName);

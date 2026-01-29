@@ -43,6 +43,42 @@ async function initializeAndRenderApp() {
     renderApp();
 }
 
+/**
+ * Clear MSAL cache from localStorage and sessionStorage.
+ * This helps recover from corrupted auth state.
+ */
+function clearMsalCache() {
+    // Clear all MSAL-related items from storage
+    const keysToRemove: string[] = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (
+            key &&
+            (key.startsWith('msal.') || key.includes('login.windows.net') || key.includes('login.microsoftonline.com'))
+        ) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach((key) => {
+        localStorage.removeItem(key);
+    });
+
+    const sessionKeysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (
+            key &&
+            (key.startsWith('msal.') || key.includes('login.windows.net') || key.includes('login.microsoftonline.com'))
+        ) {
+            sessionKeysToRemove.push(key);
+        }
+    }
+    sessionKeysToRemove.forEach((key) => {
+        sessionStorage.removeItem(key);
+    });
+}
+
 export function renderApp() {
     fetch(new URL('authConfig', BackendServiceUrl))
         .then((response) => (response.ok ? (response.json() as Promise<AuthConfig>) : Promise.reject()))
@@ -50,30 +86,71 @@ export function renderApp() {
             store.dispatch(setAuthConfig(authConfig));
 
             if (AuthHelper.isAuthAAD()) {
-                msalInstance = new PublicClientApplication(AuthHelper.getMsalConfig(authConfig));
-                await msalInstance.initialize();
+                try {
+                    msalInstance = new PublicClientApplication(AuthHelper.getMsalConfig(authConfig));
+                    await msalInstance.initialize();
 
-                // Handle redirect promise (for redirect-based auth)
-                void msalInstance.handleRedirectPromise().then((response) => {
-                    if (response) {
-                        msalInstance.setActiveAccount(response.account);
+                    // Handle redirect promise (for redirect-based auth)
+                    void msalInstance
+                        .handleRedirectPromise()
+                        .then((response) => {
+                            if (response) {
+                                msalInstance.setActiveAccount(response.account);
+                            }
+                        })
+                        .catch((error) => {
+                            // If redirect handling fails, clear cache and let user re-authenticate
+                            console.warn('MSAL redirect handling failed, clearing cache:', error);
+                            clearMsalCache();
+                        });
+
+                    // Attempt silent SSO on startup
+                    await AuthHelper.initializeAndAttemptSso(msalInstance);
+
+                    // render with the MsalProvider if AAD is enabled
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    root!.render(
+                        <React.StrictMode>
+                            <ReduxProvider store={store}>
+                                <MsalProvider instance={msalInstance}>
+                                    <App />
+                                </MsalProvider>
+                            </ReduxProvider>
+                        </React.StrictMode>,
+                    );
+                } catch (error) {
+                    // MSAL initialization failed - likely corrupted cache
+                    console.error('MSAL initialization failed, clearing cache and retrying:', error);
+                    clearMsalCache();
+
+                    // Retry initialization after clearing cache
+                    try {
+                        msalInstance = new PublicClientApplication(AuthHelper.getMsalConfig(authConfig));
+                        await msalInstance.initialize();
+
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                        root!.render(
+                            <React.StrictMode>
+                                <ReduxProvider store={store}>
+                                    <MsalProvider instance={msalInstance}>
+                                        <App />
+                                    </MsalProvider>
+                                </ReduxProvider>
+                            </React.StrictMode>,
+                        );
+                    } catch (retryError) {
+                        console.error('MSAL initialization failed after retry:', retryError);
+                        // Render without MSAL - user will need to log in again
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                        root!.render(
+                            <React.StrictMode>
+                                <ReduxProvider store={store}>
+                                    <App />
+                                </ReduxProvider>
+                            </React.StrictMode>,
+                        );
                     }
-                });
-
-                // Attempt silent SSO on startup
-                await AuthHelper.initializeAndAttemptSso(msalInstance);
-
-                // render with the MsalProvider if AAD is enabled
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                root!.render(
-                    <React.StrictMode>
-                        <ReduxProvider store={store}>
-                            <MsalProvider instance={msalInstance}>
-                                <App />
-                            </MsalProvider>
-                        </ReduxProvider>
-                    </React.StrictMode>,
-                );
+                }
             }
         })
         .catch(() => {

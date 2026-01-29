@@ -71,7 +71,12 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
             <Menu>
                 <MenuTrigger disableButtonEnhancement>
                     <Tooltip content="Legg til ei samtaleøkt" relationship="label">
-                        <Button data-testid="createNewConversationButton" icon={<Add20 />} appearance="transparent" />
+                        <Button
+                            data-tour="new-chat-button"
+                            data-testid="createNewConversationButton"
+                            icon={<Add20 />}
+                            appearance="transparent"
+                        />
                     </Tooltip>
                 </MenuTrigger>
                 <MenuPopover>

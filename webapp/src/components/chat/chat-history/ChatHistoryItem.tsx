@@ -3,6 +3,13 @@
 import {
     AvatarProps,
     Button,
+    Dialog,
+    DialogActions,
+    DialogBody,
+    DialogContent,
+    DialogSurface,
+    DialogTitle,
+    DialogTrigger,
     Menu,
     MenuItem,
     MenuList,
@@ -21,6 +28,7 @@ import {
     ChevronUp20Regular,
     Clipboard20Regular,
     ClipboardTask20Regular,
+    Delete20Regular,
     Image20Regular,
     ThumbDislikeFilled,
     ThumbLikeFilled,
@@ -145,6 +153,17 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
 
     const [messagedCopied, setMessageCopied] = useState(false);
     const [imageCopied, setImageCopied] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteMessage = async () => {
+        if (!message.id) return;
+        setIsDeleting(true);
+        try {
+            await chat.deleteMessage(selectedId, message.id);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const copyTextOnClick = async () => {
         await navigator.clipboard.writeText(message.content).then(() => {
@@ -273,8 +292,11 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                 <div className={classes.header}>
                     {!isMe && <Text weight="semibold">{fullName}</Text>}
                     <Text className={classes.time}>{timestampToDateString(message.timestamp, true)}</Text>
-                    {isBot && <PromptDialog message={message} />}
-                    {isBot && (
+                    <span
+                        data-tour={isBot ? 'message-actions' : undefined}
+                        style={{ display: 'inline-flex', gap: '4px', marginLeft: 'auto' }}
+                    >
+                        {isBot && <PromptDialog message={message} />}
                         <Menu>
                             <MenuTrigger disableButtonEnhancement>
                                 <Tooltip
@@ -316,7 +338,44 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                                 </MenuList>
                             </MenuPopover>
                         </Menu>
-                    )}
+                        {/* Don't show delete button for the initial bot message */}
+                        {messageIndex > 0 && (
+                            <Dialog>
+                                <DialogTrigger disableButtonEnhancement>
+                                    <Tooltip content="Slett melding" relationship="label">
+                                        <Button
+                                            icon={<Delete20Regular />}
+                                            appearance="transparent"
+                                            disabled={isDeleting}
+                                        />
+                                    </Tooltip>
+                                </DialogTrigger>
+                                <DialogSurface>
+                                    <DialogBody>
+                                        <DialogTitle>Slett melding</DialogTitle>
+                                        <DialogContent>
+                                            Er du sikker på at du vil slette denne meldinga? Dette kan ikkje angrast.
+                                        </DialogContent>
+                                        <DialogActions>
+                                            <DialogTrigger disableButtonEnhancement>
+                                                <Button appearance="secondary">Avbryt</Button>
+                                            </DialogTrigger>
+                                            <DialogTrigger disableButtonEnhancement>
+                                                <Button
+                                                    appearance="primary"
+                                                    onClick={() => {
+                                                        void handleDeleteMessage();
+                                                    }}
+                                                >
+                                                    Slett
+                                                </Button>
+                                            </DialogTrigger>
+                                        </DialogActions>
+                                    </DialogBody>
+                                </DialogSurface>
+                            </Dialog>
+                        )}
+                    </span>
                 </div>
                 {content}
                 {showExtra && (

@@ -45,7 +45,9 @@ internal sealed class ChatController : ControllerBase, IDisposable
     private readonly SharePointOboPluginOptions _sharePointOboPluginOptions;
     private readonly LeiarKontekstPluginOptions _leiarKontekstPluginOptions;
     private readonly LovdataPluginOptions _lovdataPluginOptions;
+    private readonly MimirKnowledgePluginOptions _mimirKnowledgePluginOptions;
     private readonly LeiarKontekstCitationService _leiarKontekstCitationService;
+    private readonly PluginHintService _pluginHintService;
     private readonly PromptsOptions _promptsOptions;
     private readonly IDictionary<string, Plugin> _plugins;
     private readonly ChatCancellationService _cancellationService;
@@ -64,7 +66,9 @@ internal sealed class ChatController : ControllerBase, IDisposable
         IOptions<SharePointOboPluginOptions> sharePointOboPluginOptions,
         IOptions<LeiarKontekstPluginOptions> leiarKontekstPluginOptions,
         IOptions<LovdataPluginOptions> lovdataPluginOptions,
+        IOptions<MimirKnowledgePluginOptions> mimirKnowledgePluginOptions,
         LeiarKontekstCitationService leiarKontekstCitationService,
+        PluginHintService pluginHintService,
         IOptions<PromptsOptions> promptsOptions,
         IDictionary<string, Plugin> plugins,
         ChatCancellationService cancellationService,
@@ -79,7 +83,9 @@ internal sealed class ChatController : ControllerBase, IDisposable
         this._sharePointOboPluginOptions = sharePointOboPluginOptions.Value;
         this._leiarKontekstPluginOptions = leiarKontekstPluginOptions.Value;
         this._lovdataPluginOptions = lovdataPluginOptions.Value;
+        this._mimirKnowledgePluginOptions = mimirKnowledgePluginOptions.Value;
         this._leiarKontekstCitationService = leiarKontekstCitationService;
+        this._pluginHintService = pluginHintService;
         this._promptsOptions = promptsOptions.Value;
         this._plugins = plugins;
         this._cancellationService = cancellationService;
@@ -166,6 +172,10 @@ internal sealed class ChatController : ControllerBase, IDisposable
         // Register Lovdata plugin only for the leader assistant
         // This provides access to Norwegian laws and regulations
         this.RegisterLovdataPlugin(kernel, chat!.Template);
+
+        // Register Mimir Knowledge plugin globally (all templates)
+        // This allows Mimir to answer questions about itself
+        this.RegisterMimirKnowledgePlugin(kernel);
 
         // Store the citation service in kernel data so ChatPlugin can access it
         // This ensures the correct scoped instance is used regardless of kernel lifetime
@@ -528,6 +538,29 @@ internal sealed class ChatController : ControllerBase, IDisposable
     }
 
     /// <summary>
+    /// Register the Mimir Knowledge plugin globally.
+    /// This allows Mimir to answer questions about itself - its history, features, UI, and best practices.
+    /// </summary>
+    /// <param name="kernel">The kernel to register the plugin with.</param>
+    private void RegisterMimirKnowledgePlugin(Kernel kernel)
+    {
+        // Check if the plugin is configured and enabled
+        if (!this._mimirKnowledgePluginOptions.Enabled || !this._mimirKnowledgePluginOptions.IsConfigured)
+        {
+            this._logger.LogDebug("Mimir Knowledge plugin not enabled or not configured. Skipping registration.");
+            return;
+        }
+
+        this._logger.LogInformation("Enabling Mimir Knowledge plugin for self-knowledge.");
+
+        kernel.ImportPluginFromObject(
+            new MimirKnowledgePlugin(
+                this._mimirKnowledgePluginOptions,
+                this._logger),
+            MimirKnowledgePluginOptions.PluginName);
+    }
+
+    /// <summary>
     /// Create a Microsoft Graph service client.
     /// </summary>
     /// <param name="accessToken">The bearer token for authentication.</param>
@@ -631,12 +664,13 @@ internal sealed class ChatController : ControllerBase, IDisposable
         return Task.CompletedTask;
     }
 
-    private static KernelArguments GetContextVariables(Ask ask, IAuthInfo authInfo, string chatId)
+    private KernelArguments GetContextVariables(Ask ask, IAuthInfo authInfo, string chatId)
     {
         const string UserIdKey = "userId";
         const string UserNameKey = "userName";
         const string ChatIdKey = "chatId";
         const string MessageKey = "message";
+        const string PluginHintKey = "pluginHint";
 
         var contextVariables = new KernelArguments();
         foreach (var variable in ask.Variables)
@@ -648,6 +682,13 @@ internal sealed class ChatController : ControllerBase, IDisposable
         contextVariables[UserNameKey] = authInfo.Name;
         contextVariables[ChatIdKey] = chatId;
         contextVariables[MessageKey] = ask.Input;
+
+        // Generate plugin hint based on user message
+        var pluginHint = this._pluginHintService.GetPluginHint(ask.Input);
+        if (!string.IsNullOrEmpty(pluginHint))
+        {
+            contextVariables[PluginHintKey] = pluginHint;
+        }
 
         return contextVariables;
     }
@@ -761,6 +802,9 @@ internal sealed class ChatController : ControllerBase, IDisposable
 
         // Register Lovdata plugin only for the leader assistant
         this.RegisterLovdataPlugin(kernel, chat!.Template);
+
+        // Register Mimir Knowledge plugin globally
+        this.RegisterMimirKnowledgePlugin(kernel);
 
         // Store the citation service in kernel data for plan execution
         kernel.Data["LeiarKontekstCitationService"] = this._leiarKontekstCitationService;

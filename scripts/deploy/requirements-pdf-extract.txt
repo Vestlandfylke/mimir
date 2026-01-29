@@ -1,0 +1,13 @@
+# Requirements for PDF extraction
+# Install with: pip install -r requirements-pdf-extract.txt
+
+# PyMuPDF - Fast local PDF text extraction
+pymupdf>=1.23.0
+
+# Azure Document Intelligence - For complex PDFs, images, tables, OCR
+# Provides better extraction for:
+# - Scanned documents
+# - PDFs with images containing text
+# - Complex table layouts
+# - Forms and structured documents
+azure-ai-documentintelligence>=1.0.0b1

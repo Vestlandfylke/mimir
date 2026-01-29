@@ -4,6 +4,7 @@ import { FluentProvider, makeStyles, shorthands, tokens } from '@fluentui/react-
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Chat from './components/chat/Chat';
+import { TourProvider, AppTour } from './components/tour';
 import { LoadingOverlay, Login } from './components/views';
 import { AuthHelper } from './libs/auth/AuthHelper';
 import { teamsAuthHelper } from './libs/auth/TeamsAuthHelper';
@@ -362,7 +363,10 @@ const App = () => {
 
     return (
         <FluentProvider className="app-container" theme={theme}>
-            {renderContent()}
+            <TourProvider>
+                {renderContent()}
+                <AppTour />
+            </TourProvider>
         </FluentProvider>
     );
 };

@@ -78,6 +78,7 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
                 <MenuTrigger disableButtonEnhancement>
                     <Tooltip content="Opprett ny samtale" relationship="label">
                         <Button
+                            data-tour="new-chat-button"
                             data-testid="createNewConversationButton"
                             icon={<BotAdd20 />}
                             appearance="transparent"
