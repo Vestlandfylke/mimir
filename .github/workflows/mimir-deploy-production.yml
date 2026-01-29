@@ -83,25 +83,122 @@ jobs:
       ENVIRONMENT: production
     secrets: inherit
 
-  # Update WebAPI with MCP Bridge URL
+  # Configure WebAPI plugins and settings
   configure-webapi:
-    needs: [deploy-backend, deploy-mcp-bridge]
+    needs: [deploy-backend]
     runs-on: ubuntu-latest
-    if: ${{ needs.deploy-mcp-bridge.result == 'success' }}
+    if: ${{ needs.deploy-backend.result == 'success' }}
     steps:
       - name: Azure login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Update WebAPI Configuration
+      - name: Configure API Keys (from secrets)
         run: |
-          # Use hardcoded WebAPI name (existing resource)
           WEBAPP_NAME="app-copichat-4kt5uxo2hrzri-webapi"
 
-          # Update MCP Server URL
-          MCP_URL="${{needs.deploy-mcp-bridge.outputs.mcp-bridge-url}}"
+          echo "🔐 Configuring API keys from GitHub Secrets..."
+          
+          # Only set if the secret exists and is not empty
+          SETTINGS=""
+          
+          if [ -n "${{ secrets.AZURE_AI_SEARCH_API_KEY }}" ]; then
+            SETTINGS="$SETTINGS LeiarKontekst__ApiKey=${{ secrets.AZURE_AI_SEARCH_API_KEY }}"
+            SETTINGS="$SETTINGS MimirKnowledge__ApiKey=${{ secrets.AZURE_AI_SEARCH_API_KEY }}"
+            echo "  ✓ Azure AI Search API key configured"
+          fi
+          
+          if [ -n "${{ secrets.SHAREPOINT_CLIENT_SECRET }}" ]; then
+            SETTINGS="$SETTINGS SharePointObo__ClientSecret=${{ secrets.SHAREPOINT_CLIENT_SECRET }}"
+            echo "  ✓ SharePoint client secret configured"
+          fi
+          
+          if [ -n "$SETTINGS" ]; then
+            az webapp config appsettings set \
+              --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+              --name $WEBAPP_NAME \
+              --settings $SETTINGS \
+              --output none
+            echo "✅ API keys configured"
+          else
+            echo "⚠️ No API key secrets found - configure manually in Azure Portal"
+          fi
 
+      - name: Configure Plugin Settings
+        run: |
+          WEBAPP_NAME="app-copichat-4kt5uxo2hrzri-webapi"
+
+          echo "📦 Configuring LeiarKontekst plugin..."
+          az webapp config appsettings set \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --name $WEBAPP_NAME \
+            --settings \
+              LeiarKontekst__Enabled="true" \
+              LeiarKontekst__Endpoint="https://acs-copichat-4kt5uxo2hrzri.search.windows.net" \
+              LeiarKontekst__IndexName="leiar-dokumenter" \
+              LeiarKontekst__SemanticConfigurationName="leiar-semantic-config" \
+              LeiarKontekst__MaxResults="5" \
+              LeiarKontekst__MaxContentLength="30000" \
+              LeiarKontekst__ContentFieldName="content" \
+              LeiarKontekst__TitleFieldName="title" \
+              LeiarKontekst__SourceFieldName="source" \
+              LeiarKontekst__RequireApproval="false" \
+            --output none
+
+          echo "📦 Configuring MimirKnowledge plugin..."
+          az webapp config appsettings set \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --name $WEBAPP_NAME \
+            --settings \
+              MimirKnowledge__Enabled="true" \
+              MimirKnowledge__Endpoint="https://acs-copichat-4kt5uxo2hrzri.search.windows.net" \
+              MimirKnowledge__IndexName="mimir-knowledge" \
+              MimirKnowledge__SemanticConfigurationName="mimir-semantic-config" \
+              MimirKnowledge__MaxResults="5" \
+              MimirKnowledge__MaxContentLength="15000" \
+              MimirKnowledge__ContentFieldName="content" \
+              MimirKnowledge__TitleFieldName="title" \
+              MimirKnowledge__SourceFieldName="source" \
+              MimirKnowledge__CategoryFieldName="category" \
+              MimirKnowledge__RequireApproval="false" \
+            --output none
+
+          echo "📦 Configuring SharePointObo plugin..."
+          az webapp config appsettings set \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --name $WEBAPP_NAME \
+            --settings \
+              SharePointObo__Enabled="true" \
+              SharePointObo__Authority="https://login.microsoftonline.com" \
+              SharePointObo__TenantId="5b14945b-0f87-40dd-acf3-5e5e21e6eb36" \
+              SharePointObo__ClientId="db0932b4-3bb7-4b89-a398-85be5940e84f" \
+              SharePointObo__SiteUrl="https://vlfksky.sharepoint.com/sites/HR-kvalitet-HMS" \
+              SharePointObo__DefaultScopes="https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All" \
+              SharePointObo__MaxContentLength="50000" \
+              SharePointObo__RequireApproval="false" \
+            --output none
+
+          echo "📦 Configuring Lovdata plugin..."
+          az webapp config appsettings set \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --name $WEBAPP_NAME \
+            --settings \
+              Lovdata__Enabled="true" \
+              Lovdata__BaseUrl="https://api.lovdata.no" \
+              Lovdata__MaxContentLength="50000" \
+              Lovdata__MaxResults="20" \
+              Lovdata__TimeoutSeconds="30" \
+              Lovdata__RequireApproval="false" \
+            --output none
+
+          echo "✅ Plugin settings configured"
+
+      - name: Configure Core Settings
+        run: |
+          WEBAPP_NAME="app-copichat-4kt5uxo2hrzri-webapi"
+
+          echo "⚙️ Configuring core settings..."
           az webapp config appsettings set \
             --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
             --name $WEBAPP_NAME \
@@ -110,6 +207,41 @@ jobs:
               FastModel__Deployment="gpt-4o-mini" \
               Service__SemanticPluginsDirectory="./Plugins/SemanticPlugins" \
               Service__NativePluginsDirectory="./Plugins/NativePlugins" \
+              DocumentMemory__DocumentLineSplitMaxTokens="72" \
+              DocumentMemory__DocumentChunkMaxTokens="512" \
+              DocumentMemory__FileSizeLimit="10000000" \
+              DocumentMemory__FileCountLimit="20" \
+              RateLimiting__Enabled="true" \
+              RateLimiting__MessagesPerMinute="20" \
+              RateLimiting__MessagesPerHour="200" \
+              RateLimiting__ConcurrentRequestsPerUser="5" \
+              RateLimiting__GlobalRequestsPerMinute="1000" \
+              Models__DefaultModelId="gpt-5.2-chat" \
+            --output none
+
+          echo "✅ Core settings configured"
+
+  # Configure MCP Bridge URL (only if MCP bridge is deployed)
+  configure-mcp:
+    needs: [configure-webapi, deploy-mcp-bridge]
+    runs-on: ubuntu-latest
+    if: ${{ needs.deploy-mcp-bridge.result == 'success' }}
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Configure MCP Bridge
+        run: |
+          WEBAPP_NAME="app-copichat-4kt5uxo2hrzri-webapi"
+          MCP_URL="${{needs.deploy-mcp-bridge.outputs.mcp-bridge-url}}"
+
+          echo "🔌 Configuring MCP Bridge at ${MCP_URL}..."
+          az webapp config appsettings set \
+            --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \
+            --name $WEBAPP_NAME \
+            --settings \
               McpServers__PlanApprovalMode="PerServer" \
               McpServers__Servers__0__Url="${MCP_URL}/mcp" \
               McpServers__Servers__0__Name="CustomMcpServer" \
@@ -118,13 +250,9 @@ jobs:
               McpServers__Servers__0__RequireApproval="true" \
               McpServers__Servers__0__Description="Klarspråk MCP server - provides text analysis and simplification tools" \
               McpServers__Servers__0__Templates__0="klarsprak" \
-              DocumentMemory__DocumentLineSplitMaxTokens="72" \
-              DocumentMemory__DocumentChunkMaxTokens="512" \
-              DocumentMemory__FileSizeLimit="10000000" \
-              DocumentMemory__FileCountLimit="20" \
             --output none
 
-          echo "✅ WebAPI configured to use MCP Bridge at ${MCP_URL}"
+          echo "✅ MCP Bridge configured"
 
       - name: Restart WebAPI
         run: |
@@ -144,6 +272,7 @@ jobs:
         deploy-memorypipeline,
         deploy-mcp-bridge,
         configure-webapi,
+        configure-mcp,
       ]
     runs-on: ubuntu-latest
     if: always()
@@ -157,7 +286,16 @@ jobs:
           echo "| Backend | ${{ needs.deploy-backend.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Memorypipeline | ${{ needs.deploy-memorypipeline.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| MCP Bridge | ${{ needs.deploy-mcp-bridge.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Configuration | ${{ needs.configure-webapi.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plugin Config | ${{ needs.configure-webapi.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| MCP Config | ${{ needs.configure-mcp.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Resource Group**: ${{ vars.CC_DEPLOYMENT_GROUP_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "**MCP Bridge URL**: ${{ needs.deploy-mcp-bridge.outputs.mcp-bridge-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔌 Configured Plugins" >> $GITHUB_STEP_SUMMARY
+          echo "- LeiarKontekst (Azure AI Search)" >> $GITHUB_STEP_SUMMARY
+          echo "- MimirKnowledge (Azure AI Search)" >> $GITHUB_STEP_SUMMARY
+          echo "- SharePointObo (Microsoft Graph)" >> $GITHUB_STEP_SUMMARY
+          echo "- Lovdata (Norwegian Laws API)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Note:** API keys must be configured separately in Azure Portal or via secrets." >> $GITHUB_STEP_SUMMARY
