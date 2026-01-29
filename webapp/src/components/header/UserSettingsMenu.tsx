@@ -137,7 +137,11 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                                 data-testid="helpMenuItem"
                                 icon={<QuestionCircle20Regular />}
                                 onClick={() => {
-                                    window.open('https://hjelp.vlfk.no/', '_blank', 'noopener,noreferrer');
+                                    window.open(
+                                        'https://hjelp.vlfk.no/tas/public/ssp/content/serviceflow?unid=faf1006c-a321-41c1-9351-b5152954267f',
+                                        '_blank',
+                                        'noopener,noreferrer',
+                                    );
                                 }}
                             >
                                 Hjelp og support
