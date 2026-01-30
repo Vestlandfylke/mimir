@@ -15,8 +15,48 @@ import { logger } from './libs/utils/Logger';
 import { useAppDispatch, useAppSelector } from './redux/app/hooks';
 import { RootState } from './redux/app/store';
 import { BrandColors, FeatureKeys } from './redux/features/app/AppState';
+import { IAvailableTemplate } from './libs/models/ChatTemplate';
 import { addAlert, setActiveUserInfo, setServiceInfo } from './redux/features/app/appSlice';
 import { createCustomDarkTheme, createCustomLightTheme } from './styles';
+
+/**
+ * Get template parameter from URL and store in sessionStorage.
+ * This survives HMR and re-renders in development mode.
+ */
+const getAndStoreTemplateParam = (): string | null => {
+    const STORAGE_KEY = 'mimir_pending_template';
+
+    // Check if we already have a pending template from a previous call
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+        return stored;
+    }
+
+    // Check URL for template parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const template = urlParams.get('template');
+
+    if (template) {
+        // Store in sessionStorage before clearing URL
+        sessionStorage.setItem(STORAGE_KEY, template);
+
+        // Remove the parameter from URL without reloading the page
+        urlParams.delete('template');
+        const newUrl = urlParams.toString()
+            ? `${window.location.pathname}?${urlParams.toString()}`
+            : window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+    }
+
+    return template;
+};
+
+/**
+ * Clear the pending template from sessionStorage after processing
+ */
+const clearStoredTemplate = (): void => {
+    sessionStorage.removeItem('mimir_pending_template');
+};
 
 export const useClasses = makeStyles({
     container: {
@@ -93,6 +133,19 @@ const App = () => {
 
     const chat = useChat();
     const file = useFile();
+
+    // Track pending template from URL parameter
+    const pendingTemplateRef = useRef<string | null>(getAndStoreTemplateParam());
+    const templateProcessedRef = useRef(false);
+    const { availableTemplates } = useAppSelector((state: RootState) => state.app);
+
+    // Update ref if stored template exists (handles HMR/re-renders)
+    useEffect(() => {
+        const stored = sessionStorage.getItem('mimir_pending_template');
+        if (stored && !pendingTemplateRef.current) {
+            pendingTemplateRef.current = stored;
+        }
+    }, []);
 
     // Check for existing Teams token on mount
     useEffect(() => {
@@ -325,6 +378,43 @@ const App = () => {
             ]);
         } // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [instance, isAuthenticated, isMsalAuthenticated, isTeamsAuthenticated, appState, isMaintenance]);
+
+    // Handle deep link: auto-create chat with template from URL parameter
+    useEffect(() => {
+        const pendingTemplate = pendingTemplateRef.current;
+
+        // Only process once, when app is ready and templates are loaded
+        if (
+            !templateProcessedRef.current &&
+            pendingTemplate &&
+            appState === AppState.Chat &&
+            availableTemplates.length > 0
+        ) {
+            templateProcessedRef.current = true;
+
+            // Find the template in available templates
+            const template = availableTemplates.find(
+                (t: IAvailableTemplate) => t.id.toLowerCase() === pendingTemplate.toLowerCase(),
+            );
+
+            if (template) {
+                logger.info(`Auto-creating chat with template: ${template.id}`);
+                void chat.createChat(template.id, template.displayName);
+            } else {
+                logger.warn(`Template "${pendingTemplate}" not found or user does not have access`);
+                dispatch(
+                    addAlert({
+                        message: `Assistenten "${pendingTemplate}" finst ikkje eller du har ikkje tilgang til den.`,
+                        type: AlertType.Warning,
+                    }),
+                );
+            }
+
+            // Clear the pending template from both ref and storage
+            pendingTemplateRef.current = null;
+            clearStoredTemplate();
+        }
+    }, [appState, availableTemplates, chat, dispatch]);
 
     const brandHex = BrandColors[brandColor].hex;
     const theme = features[FeatureKeys.DarkMode].enabled

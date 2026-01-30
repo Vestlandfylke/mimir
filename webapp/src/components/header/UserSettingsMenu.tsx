@@ -21,6 +21,7 @@ import {
     ChatMultiple20Regular,
     Info20Regular,
     QuestionCircle20Regular,
+    Settings20Regular,
     Settings24Regular,
 } from '@fluentui/react-icons';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
@@ -117,6 +118,7 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                             <MenuDivider />
                             <MenuItem
                                 data-testid="settingsMenuItem"
+                                icon={<Settings20Regular />}
                                 onClick={() => {
                                     setOpenSettingsDialog(true);
                                 }}

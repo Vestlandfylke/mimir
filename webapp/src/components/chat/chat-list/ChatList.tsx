@@ -9,20 +9,15 @@ import {
     Subtitle2Stronger,
     tokens,
 } from '@fluentui/react-components';
-import { FC, useCallback, useEffect, useRef, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import logoLight from '../../../assets/sidestilt-logo-vlfk.svg';
 import logoDark from '../../../assets/sidestilt-logo-kvit-skrift-vlfk.svg';
-import { useChat, useFile } from '../../../libs/hooks';
 import { getFriendlyChatName } from '../../../libs/hooks/useChat';
-import { AlertType } from '../../../libs/models/AlertType';
-import { ChatArchive } from '../../../libs/models/ChatArchive';
-import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
+import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
-import { addAlert } from '../../../redux/features/app/appSlice';
 import { FeatureKeys } from '../../../redux/features/app/AppState';
 import { Conversations } from '../../../redux/features/conversations/ConversationsState';
 import { Breakpoints } from '../../../styles';
-import { FileUploader } from '../../FileUploader';
 import { Dismiss20, Filter20 } from '../../shared/BundledIcons';
 import { isToday } from '../../utils/TextUtils';
 import { NewBotMenu } from './bot-menu/NewBotMenu';
@@ -134,10 +129,6 @@ export const ChatList: FC = () => {
         latestConversations: conversations,
     });
 
-    const chat = useChat();
-    const fileHandler = useFile();
-    const dispatch = useAppDispatch();
-
     const sortConversations = (conversations: Conversations): ConversationsView => {
         const getTimestamp = (id: string) => {
             const convo = conversations[id];
@@ -201,41 +192,18 @@ export const ChatList: FC = () => {
         setFilterText(data.value);
     };
 
-    const fileUploaderRef = useRef<HTMLInputElement>(null);
-    const onUpload = useCallback(
-        (file: File) => {
-            fileHandler.loadFile<ChatArchive>(file, chat.uploadBot).catch((error) =>
-                dispatch(
-                    addAlert({
-                        message: `Kunne ikkje lese opplasta fil. ${error instanceof Error ? error.message : ''}`,
-                        type: AlertType.Error,
-                    }),
-                ),
-            );
-        },
-        [fileHandler, chat, dispatch],
-    );
-
     return (
         <div className={classes.root}>
             <div className={classes.header}>
                 {features[FeatureKeys.SimplifiedExperience].enabled ? (
-                    <>
-                        <SimplifiedNewBotMenu onFileUpload={() => fileUploaderRef.current?.click()} />
-                        <FileUploader ref={fileUploaderRef} acceptedExtensions={['.json']} onSelectedFile={onUpload} />
-                    </>
+                    <SimplifiedNewBotMenu />
                 ) : (
                     <>
                         {!isFiltering && (
                             <>
                                 <Subtitle2Stronger className={classes.title}>Samtaler</Subtitle2Stronger>
                                 <Button icon={<Filter20 />} appearance="transparent" onClick={onFilterClick} />
-                                <NewBotMenu onFileUpload={() => fileUploaderRef.current?.click()} />
-                                <FileUploader
-                                    ref={fileUploaderRef}
-                                    acceptedExtensions={['.json']}
-                                    onSelectedFile={onUpload}
-                                />
+                                <NewBotMenu />
                             </>
                         )}
                         {isFiltering && (

@@ -209,7 +209,7 @@ export const ChatWindow: React.FC = () => {
                                     </Tooltip>
                                 </PopoverTrigger>
                                 <PopoverSurface className={classes.popover}>
-                                    <h3 className={classes.popoverHeader}>Botnamn</h3>
+                                    <h3 className={classes.popoverHeader}>Samtalenamn</h3>
                                     <EditChatName
                                         name={chatName}
                                         chatId={selectedId}

@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Package CopilotChat's plugins for deployment to Azure
 #>
@@ -10,7 +10,7 @@ param(
     
     [string]
     # .NET framework to publish.
-    $DotNetFramework = "net8.0",
+    $DotNetFramework = "net10.0",
     
     [string]
     # Output directory for published assets.

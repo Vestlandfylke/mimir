@@ -33,7 +33,7 @@ export const tourSteps: Step[] = [
     {
         target: '[data-tour="new-chat-button"]',
         content:
-            'Klikk her for å starte ein ny samtale. Du kan velje mellom ulike assistentar avhengig av kva du treng hjelp med.\n\nDu kan også bli med i delte samtaleøkter eller laste opp ein bot frå andre.',
+            'Klikk her for å starte ein ny samtale. Du kan velje mellom ulike assistentar avhengig av kva du treng hjelp med.\n\nDu kan også bli med i delte samtaleøkter.',
         placement: 'right',
         disableBeacon: true,
     },
@@ -58,7 +58,8 @@ export const tourSteps: Step[] = [
     // Attachment button
     {
         target: '[data-tour="attachment-button"]',
-        content: 'Last opp dokument (Word, PDF, bilete) som Mimir kan analysere og svare på spørsmål om.',
+        content:
+            'Last opp filer som Mimir kan analysere og svare på spørsmål om.\n\nStøtta filtypar:\n• Office: Word, Excel, PowerPoint, PDF\n• Tekst: TXT, HTML, Markdown, CSV, JSON\n• Bilete: JPG, PNG, GIF, WEBP, TIFF',
         placement: 'top',
         disableBeacon: true,
     },
@@ -71,10 +72,20 @@ export const tourSteps: Step[] = [
         disableBeacon: true,
     },
 
+    // Share button
+    {
+        target: '[data-tour="share-button"]',
+        content:
+            'Del samtalen med kollegaer! Her kan du:\n\n• Invitere andre til å delta i samtalen i sanntid\n• Laste ned heile samtalehistorikken',
+        placement: 'bottom',
+        disableBeacon: true,
+    },
+
     // Tabs overview
     {
         target: '[data-tour="tab-view"]',
-        content: 'Her kan du bytte mellom faner. Lat oss ta ein titt på kvar av dei.',
+        content:
+            'Her kan du bytte mellom faner for denne samtalen.\n\nMerk: Dokument og tilpassingar du legg til her gjeld berre for denne samtalen – ikkje dei andre samtalane dine.',
         placement: 'bottom',
         disableBeacon: true,
     },
@@ -91,7 +102,8 @@ export const tourSteps: Step[] = [
     // Documents upload button
     {
         target: '[data-tour="documents-upload"]',
-        content: 'Her kan du laste opp dokument (Word, PDF, bilete) som Mimir kan analysere og svare på spørsmål om.',
+        content:
+            'Her kan du laste opp filer som Mimir kan analysere.\n\nStøtta filtypar: Word, Excel, PowerPoint, PDF, TXT, HTML, Markdown, CSV, JSON, og bilete (JPG, PNG, GIF, m.m.)',
         placement: 'bottom',
         disableBeacon: true,
         data: { activeTab: 'documents' },

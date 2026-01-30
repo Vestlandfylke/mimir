@@ -37,7 +37,12 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
             <Menu>
                 <MenuTrigger disableButtonEnhancement>
                     <Tooltip content="Del" relationship="label">
-                        <Button data-testid="shareButton" icon={<ShareRegular />} appearance="transparent" />
+                        <Button
+                            data-tour="share-button"
+                            data-testid="shareButton"
+                            icon={<ShareRegular />}
+                            appearance="transparent"
+                        />
                     </Tooltip>
                 </MenuTrigger>
                 <MenuPopover>
@@ -48,7 +53,7 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
                             onClick={onDownloadBotClick}
                             disabled={!features[FeatureKeys.BotAsDocs].enabled}
                         >
-                            Last ned botten din
+                            Last ned samtale historikken
                         </MenuItem>
 
                         <MenuItem
@@ -59,7 +64,7 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
                             }}
                             disabled={!features[FeatureKeys.MultiUserChat].enabled}
                         >
-                            Inviter andre til botten din
+                            Inviter andre til samtalen
                         </MenuItem>
                     </MenuList>
                 </MenuPopover>

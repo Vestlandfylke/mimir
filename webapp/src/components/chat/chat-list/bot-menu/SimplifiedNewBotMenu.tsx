@@ -22,9 +22,8 @@ import { FeatureKeys } from '../../../../redux/features/app/AppState';
 import { Add20 } from '../../../shared/BundledIcons';
 import { InvitationJoinDialog } from '../../invitation-dialog/InvitationJoinDialog';
 
-interface SimplifiedNewBotMenuProps {
-    onFileUpload: () => void;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface SimplifiedNewBotMenuProps {}
 
 /**
  * Get an icon for a template based on its icon identifier.
@@ -40,7 +39,7 @@ const getTemplateIcon = (icon?: string) => {
     }
 };
 
-export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUpload }) => {
+export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = () => {
     const chat = useChat();
     const { features, availableTemplates } = useAppSelector((state: RootState) => state.app);
 
@@ -170,13 +169,6 @@ export const SimplifiedNewBotMenu: FC<SimplifiedNewBotMenuProps> = ({ onFileUplo
                             onClick={onJoinClick}
                         >
                             Bli med i delt samtaleøkt
-                        </MenuItem>
-                        <MenuItem
-                            data-testid="uploadABotMenuItem"
-                            disabled={!features[FeatureKeys.BotAsDocs].enabled}
-                            onClick={onFileUpload}
-                        >
-                            Last opp ein bot
                         </MenuItem>
                     </MenuList>
                 </MenuPopover>

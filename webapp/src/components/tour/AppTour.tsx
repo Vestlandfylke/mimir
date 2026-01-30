@@ -14,20 +14,21 @@ import logoDark from '../../assets/sidestilt-logo-kvit-skrift-vlfk.svg';
  * Custom welcome content with Vestland logo
  */
 const WelcomeContent = ({ isDark }: { isDark: boolean }) => (
-    <div style={{ textAlign: 'center', padding: '8px 0' }}>
+    <div style={{ textAlign: 'left', padding: '8px 0' }}>
         <img
             src={isDark ? logoDark : logoLight}
             alt="Vestland fylkeskommune"
             style={{ height: '48px', marginBottom: '16px' }}
         />
-        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.5rem', fontWeight: 600 }}>Velkomen til Mimir</h2>
+        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.5rem', fontWeight: 600 }}>Velkomen til Mimir</h2>
         <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.6 }}>
-            Mímir var vaktaren av visdomskjelda under Yggdrasil i norrøn mytologi. Odin ofra auga sitt for å drikke frå
-            kjelda, og Mímir vart sidan den klokaste rådgivaren hans.
-            <br />
-            <br />
-            <b>Lat meg vise deg rundt!</b>
+            Mimir gir deg tilgang til KI-teknologi tilpassa Vestland fylkeskommune.
         </p>
+        <p style={{ margin: '12px 0', fontSize: '1rem', lineHeight: 1.6 }}>
+            Anten du treng hjelp med skriving, analyse eller kreativt arbeid – Mimir er her for å gjere arbeidsdagen
+            lettare.
+        </p>
+        <p style={{ margin: 0, fontSize: '1rem', fontWeight: 500 }}>Lat meg vise deg rundt!</p>
     </div>
 );
 
@@ -35,17 +36,15 @@ const WelcomeContent = ({ isDark }: { isDark: boolean }) => (
  * Custom final step content with Vestland logo
  */
 const FinalContent = ({ isDark }: { isDark: boolean }) => (
-    <div style={{ textAlign: 'center', padding: '8px 0' }}>
+    <div style={{ textAlign: 'left', padding: '8px 0' }}>
         <img
             src={isDark ? logoDark : logoLight}
             alt="Vestland fylkeskommune"
             style={{ height: '48px', marginBottom: '16px' }}
         />
-        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.5rem', fontWeight: 600 }}>No er du klar!</h2>
+        <h2 style={{ margin: '0 0 12px 0', fontSize: '1.5rem', fontWeight: 600 }}>No er du klar!</h2>
         <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.6 }}>
-            Tips: Spør gjerne Mimir
-            <br />
-            «Korleis brukar eg deg?» for meir hjelp.
+            Tips: Spør gjerne Mimir «Korleis brukar eg deg?» for meir hjelp.
         </p>
         <p style={{ margin: '12px 0 0 0', fontSize: '1rem', fontWeight: 500 }}>Lykke til!</p>
     </div>
@@ -204,7 +203,8 @@ export const AppTour = () => {
         [stopTour, setTourCompleted, navigateToTab, steps],
     );
 
-    // Custom styles for the tour
+    // Custom styles for the tour - responsive for smaller screens
+    const isSmallScreen = window.innerWidth < 600;
     const joyrideStyles = {
         options: {
             zIndex: 10000,
@@ -216,14 +216,17 @@ export const AppTour = () => {
         },
         tooltip: {
             borderRadius: '12px',
-            padding: '24px 28px',
-            maxWidth: '480px',
+            padding: isSmallScreen ? '16px 20px' : '24px 28px',
+            maxWidth: isSmallScreen ? 'calc(100vw - 40px)' : '480px',
         },
         tooltipContent: {
             padding: '8px 0',
-            fontSize: '15px',
+            fontSize: isSmallScreen ? '14px' : '15px',
             lineHeight: '1.6',
             whiteSpace: 'pre-line' as const,
+            textAlign: 'left' as const,
+            maxHeight: isSmallScreen ? 'calc(60vh - 120px)' : 'none',
+            overflowY: isSmallScreen ? ('auto' as const) : ('visible' as const),
         },
         tooltipTitle: {
             fontSize: '16px',
@@ -285,7 +288,10 @@ export const AppTour = () => {
             hideCloseButton={false}
             disableScrolling={false}
             disableOverlayClose={true}
+            disableScrollParentFix={true} // Scroll window instead of parent containers
             spotlightClicks={false}
+            scrollOffset={80} // Account for 48px header + extra padding
+            scrollToFirstStep={true}
             callback={handleJoyrideCallback}
             styles={joyrideStyles}
             locale={{
@@ -294,6 +300,7 @@ export const AppTour = () => {
             }}
             floaterProps={{
                 disableAnimation: true,
+                hideArrow: false,
             }}
         />
     );

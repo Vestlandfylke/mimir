@@ -14,13 +14,7 @@ import {
     tokens,
     Tooltip,
 } from '@fluentui/react-components';
-import {
-    ArrowUploadRegular,
-    BotRegular,
-    PeopleTeamAddRegular,
-    PersonRegular,
-    SparkleRegular,
-} from '@fluentui/react-icons';
+import { BotRegular, PeopleTeamAddRegular, PersonRegular, SparkleRegular } from '@fluentui/react-icons';
 import { useChat } from '../../../../libs/hooks';
 import { useAppSelector } from '../../../../redux/app/hooks';
 import { RootState } from '../../../../redux/app/store';
@@ -28,9 +22,8 @@ import { FeatureKeys } from '../../../../redux/features/app/AppState';
 import { BotAdd20 } from '../../../shared/BundledIcons';
 import { InvitationJoinDialog } from '../../invitation-dialog/InvitationJoinDialog';
 
-interface NewBotMenuProps {
-    onFileUpload: () => void;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface NewBotMenuProps {}
 
 /**
  * Get an icon for a template based on its icon identifier.
@@ -46,7 +39,7 @@ const getTemplateIcon = (icon?: string) => {
     }
 };
 
-export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
+export const NewBotMenu: FC<NewBotMenuProps> = () => {
     const chat = useChat();
     const { features, availableTemplates } = useAppSelector((state: RootState) => state.app);
 
@@ -154,20 +147,12 @@ export const NewBotMenu: FC<NewBotMenuProps> = ({ onFileUpload }) => {
 
                         <Divider style={{ margin: '8px 0' }} />
                         <MenuItem
-                            data-testid="uploadABotMenuItem"
-                            disabled={!features[FeatureKeys.BotAsDocs].enabled}
-                            icon={<ArrowUploadRegular />}
-                            onClick={onFileUpload}
-                        >
-                            Last opp ein bot
-                        </MenuItem>
-                        <MenuItem
                             data-testid="joinABotMenuItem"
                             disabled={!features[FeatureKeys.MultiUserChat].enabled}
                             icon={<PeopleTeamAddRegular />}
                             onClick={onJoinClick}
                         >
-                            Bli med i ein bot
+                            Bli med i delt samtale
                         </MenuItem>
                     </MenuList>
                 </MenuPopover>

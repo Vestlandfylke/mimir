@@ -47,7 +47,7 @@ export const InvitationCreateDialog: React.FC<InvitationCreateDialogProps> = ({ 
         <div>
             <DialogSurface>
                 <DialogBody>
-                    <DialogTitle>Inviter andre til botten din</DialogTitle>
+                    <DialogTitle>Inviter andre til samtalen</DialogTitle>
                     <DialogContent className={classes.content}>
                         <Label>
                             Vennligst oppgi følgjande Chat ID til vennene dine slik at dei kan bli med i chatten.

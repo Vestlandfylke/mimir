@@ -99,21 +99,21 @@ jobs:
           WEBAPP_NAME="app-copichat-4kt5uxo2hrzri-webapi"
 
           echo "🔐 Configuring API keys from GitHub Secrets..."
-          
+
           # Only set if the secret exists and is not empty
           SETTINGS=""
-          
+
           if [ -n "${{ secrets.AZURE_AI_SEARCH_API_KEY }}" ]; then
             SETTINGS="$SETTINGS LeiarKontekst__ApiKey=${{ secrets.AZURE_AI_SEARCH_API_KEY }}"
             SETTINGS="$SETTINGS MimirKnowledge__ApiKey=${{ secrets.AZURE_AI_SEARCH_API_KEY }}"
             echo "  ✓ Azure AI Search API key configured"
           fi
-          
+
           if [ -n "${{ secrets.SHAREPOINT_CLIENT_SECRET }}" ]; then
             SETTINGS="$SETTINGS SharePointObo__ClientSecret=${{ secrets.SHAREPOINT_CLIENT_SECRET }}"
             echo "  ✓ SharePoint client secret configured"
           fi
-          
+
           if [ -n "$SETTINGS" ]; then
             az webapp config appsettings set \
               --resource-group ${{vars.CC_DEPLOYMENT_GROUP_NAME}} \

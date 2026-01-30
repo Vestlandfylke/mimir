@@ -60,7 +60,7 @@ export const InvitationJoinDialog: React.FC<InvitationJoinDialogProps> = ({ onCl
             <DialogSurface>
                 <form onSubmit={handleSubmit}>
                     <DialogBody>
-                        <DialogTitle>Bli med i ein bot</DialogTitle>
+                        <DialogTitle>Bli med i delt samtale</DialogTitle>
                         <DialogContent className={classes.content}>
                             <Label data-testid="enterChatIDLabel" required htmlFor="chat-id-input">
                                 Vennlegst skriv inn chatte-ID-en til chatten du ønsker å bli med i
