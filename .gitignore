@@ -9,6 +9,7 @@ Logs_from_test*/
 docs/
 leiar documents/
 tools/leiar-kontekst-index/
+scripts/ignore
 # Teams manifest (contains deployment-specific configuration)
 teams-manifest/
 extracted-content/

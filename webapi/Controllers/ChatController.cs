@@ -142,6 +142,16 @@ internal sealed class ChatController : ControllerBase, IDisposable
             return this.Forbid("User does not have access to the chatId specified in variables.");
         }
 
+        // Generate plugin hint based on user message and chat template
+        // This must happen after chat session is retrieved to access the template
+        const string PluginHintKey = "pluginHint";
+        var pluginHint = this._pluginHintService.GetPluginHint(ask.Input, chat!.Template);
+        if (!string.IsNullOrEmpty(pluginHint))
+        {
+            contextVariables[PluginHintKey] = pluginHint;
+            this._logger.LogDebug("Added plugin hint for template '{Template}': {Hint}", chat.Template, pluginHint);
+        }
+
         // Create kernel for the selected model (or default if not specified)
         Kernel kernel;
         if (!string.IsNullOrEmpty(chat!.ModelId))
@@ -664,13 +674,12 @@ internal sealed class ChatController : ControllerBase, IDisposable
         return Task.CompletedTask;
     }
 
-    private KernelArguments GetContextVariables(Ask ask, IAuthInfo authInfo, string chatId)
+    private static KernelArguments GetContextVariables(Ask ask, IAuthInfo authInfo, string chatId)
     {
         const string UserIdKey = "userId";
         const string UserNameKey = "userName";
         const string ChatIdKey = "chatId";
         const string MessageKey = "message";
-        const string PluginHintKey = "pluginHint";
 
         var contextVariables = new KernelArguments();
         foreach (var variable in ask.Variables)
@@ -683,12 +692,8 @@ internal sealed class ChatController : ControllerBase, IDisposable
         contextVariables[ChatIdKey] = chatId;
         contextVariables[MessageKey] = ask.Input;
 
-        // Generate plugin hint based on user message
-        var pluginHint = this._pluginHintService.GetPluginHint(ask.Input);
-        if (!string.IsNullOrEmpty(pluginHint))
-        {
-            contextVariables[PluginHintKey] = pluginHint;
-        }
+        // Note: Plugin hints are generated after chat session is retrieved in ChatAsync
+        // to support template-specific hints (e.g., LeiarKontekst for leader template)
 
         return contextVariables;
     }

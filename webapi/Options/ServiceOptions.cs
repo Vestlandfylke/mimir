@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 
@@ -37,4 +37,11 @@ internal sealed class ServiceOptions
     /// Setting indicating if the site is undergoing maintenance.
     /// </summary>
     public bool InMaintenance { get; set; }
+
+    /// <summary>
+    /// Enable streaming of bot responses to the client.
+    /// When false, responses are collected fully before sending (reduces UI flickering).
+    /// When true, responses are streamed in real-time (more responsive but may appear laggy).
+    /// </summary>
+    public bool EnableResponseStreaming { get; set; } = false;
 }

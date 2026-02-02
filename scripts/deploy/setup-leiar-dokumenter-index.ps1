@@ -192,13 +192,13 @@ $documentMeta = @{
         id = "stottedokument-medarbeidarsamtale"
         title = "Støttedokument til medarbeidarsamtale for leiarar og medarbeidarar"
         category = "medarbeidarsamtale"
-        description = "Støttedokument med rettleiing for gjennomføring av medarbeidarsamtalar. Inneheld spørsmål og tema for samtalen mellom leiar og medarbeidar."
+        description = "Støttedokument med rettleiing for gjennomføring av medarbeidarsamtalar. Inneheld spørsmål og tema for samtalen mellom leiar og medarbeidar. Korleis førebu, gjennomføre og følgje opp medarbeidarsamtalen. Kompetanseutvikling, trivsel, arbeidsmiljø, mål og forventningar."
     }
     "Arbeidsreglement.pdf" = @{
         id = "arbeidsreglement"
         title = "Arbeidsreglement for Vestland fylkeskommune"
         category = "reglement"
-        description = "Arbeidsreglement som gjeld for alle tilsette i Vestland fylkeskommune. Inneheld reglar om arbeidstid, fråvær, permisjonar og plikter."
+        description = "Arbeidsreglement som gjeld for alle tilsette i Vestland fylkeskommune. Inneheld reglar om arbeidstid, fleksitid, fråvær, permisjonar og plikter. Kjernetid, pausar, overtid, avspasering. Tilsettingsvilkår, prøvetid, oppseiing."
     }
     "Endelig organisasjonsstrategi VLFK 24 (1).pdf" = @{
         id = "organisasjonsstrategi"
@@ -222,13 +222,13 @@ $documentMeta = @{
         id = "handsaming-personalsaker"
         title = "Handsaming av personalsaker"
         category = "personal"
-        description = "Retningslinjer for handsaming av personalsaker. Prosedyrar for advarslar, oppseiing, avskjed og andre personalsaker."
+        description = "Retningslinjer for handsaming av personalsaker. Prosedyrar for advarslar, skriftleg åtvaring, oppseiing, avskjed og andre personalsaker. Drøftingsmøte, dokumentasjon, arbeidsgjevar sitt ansvar. HR-støtte, juridisk rettleiing."
     }
     "Hovedtariffavtalen-2024-2026-interactive-120924.pdf" = @{
         id = "hovedtariffavtalen"
         title = "Hovedtariffavtalen 2024-2026"
         category = "tariff"
-        description = "Hovedtariffavtalen for kommunal og fylkeskommunal sektor. Lønns- og arbeidsvilkår, ferierettar og andre tariffbestemmelsar."
+        description = "Hovedtariffavtalen (HTA) for kommunal og fylkeskommunal sektor 2024-2026. Lønns- og arbeidsvilkår, ferierettar, stillingskoder, lønnstabell, lønnsforhandling, tariffoppgjer. Overtid, tillegg, arbeidstid, permisjon, pensjon. KS-området."
     }
     "Kompetansestrategi.pdf" = @{
         id = "kompetansestrategi"
@@ -240,7 +240,7 @@ $documentMeta = @{
         id = "konflikthandtering"
         title = "Konflikthandtering"
         category = "arbeidsmiljo"
-        description = "Retningslinjer og metodar for handtering av konfliktar på arbeidsplassen. Førebygging, varsling og løysing av konfliktar."
+        description = "Retningslinjer og metodar for handtering av konfliktar på arbeidsplassen. Førebygging, varsling og løysing av konfliktar. Samarbeidsproblem, mobbing, trakassering. Mekling, dialog, arbeidsmiljøutval (AMU). Leiar sitt ansvar ved konflikt."
     }
     "Medarbeidarsamtalen.txt" = @{
         id = "medarbeidarsamtalen"
@@ -264,7 +264,7 @@ $documentMeta = @{
         id = "heimekontor-retningslinjer"
         title = "Retningslinjer om heimekontor og arbeid utført i arbeidstakars heim"
         category = "arbeidstid"
-        description = "Retningslinjer for heimekontor og fjernarbeid. Vilkår, avtalar og praktisk gjennomføring av arbeid heimefrå."
+        description = "Retningslinjer for heimekontor og fjernarbeid. Vilkår, avtalar og praktisk gjennomføring av arbeid heimefrå. Heimekontorforskrift, arbeidsmiljø heime, utstyr, forsikring. Søknad om heimekontor, avtale med arbeidsgjevar."
     }
     "Rutine for handsaming av klage på skriftleg åtvaring.pdf" = @{
         id = "klage-atvaring-rutine"
@@ -282,7 +282,169 @@ $documentMeta = @{
         id = "varslingsrutinen"
         title = "Varslingsrutinen"
         category = "varsling"
-        description = "Rutine for varsling av kritikkverdige forhold på arbeidsplassen. Korleis varsle, kven ein kan varsle til og vern av varslarar."
+        description = "Rutine for varsling av kritikkverdige forhold på arbeidsplassen. Korleis varsle, kven ein kan varsle til og vern av varslarar. Varslingskanal, anonymitet, gjengjeldelse. Arbeidsmiljølova kapittel 2A. Saksgang ved varsling, oppfølging av varslar."
+    }
+    "Handbok porteføljeløypa (1).pdf" = @{
+        id = "handbok-portefoljeloypa"
+        title = "Handbok for porteføljeløypa"
+        category = "prosjekt"
+        description = "Handbok for porteføljestyring og prosjektgjennomføring i Vestland fylkeskommune. Rettleiing for prosjektleiarar, prosjekteigarar og porteføljestyring. Idéfase, konseptfase, gjennomføringsfase, gevinstrealisering. Porteføljeråd, porteføljekontoret, PMO, innmelding av prosjekt."
+    }
+    "Innhaldsstrategi og rettleiar for vestlandfylke.no_September 2022.pdf" = @{
+        id = "innhaldsstrategi-nettstad"
+        title = "Innhaldsstrategi og rettleiar for vestlandfylke.no"
+        category = "kommunikasjon"
+        description = "Innhaldsstrategi og rettleiing for publisering på vestlandfylke.no. Korleis skrive godt innhald for nettsida."
+    }
+    "Kommunikasjonsstrategi for Vestland fylkeskommune.txt" = @{
+        id = "kommunikasjonsstrategi"
+        title = "Kommunikasjonsstrategi for Vestland fylkeskommune"
+        category = "kommunikasjon"
+        description = "Overordna kommunikasjonsstrategi for Vestland fylkeskommune. Prinsipp og retningslinjer for intern og ekstern kommunikasjon."
+    }
+    "Overordna kommunikasjonsstrategi  for Vestland fylkeskommune_September 2022.pdf" = @{
+        id = "overordna-kommunikasjonsstrategi"
+        title = "Overordna kommunikasjonsstrategi for Vestland fylkeskommune"
+        category = "kommunikasjon"
+        description = "Overordna kommunikasjonsstrategi vedtatt september 2022. Visjon, mål og strategiske prinsipp for kommunikasjonsarbeidet."
+    }
+    "Overordna retningslinjer for språkbruk i Vestland fylkeskommune, 3. utg.pdf" = @{
+        id = "retningslinjer-spraakbruk"
+        title = "Overordna retningslinjer for språkbruk i Vestland fylkeskommune"
+        category = "sprak"
+        description = "Retningslinjer for språkbruk og språkval i Vestland fylkeskommune. Nynorsk som hovudmål og krav til språkleg kvalitet."
+    }
+    "Rettleiar-for-korleis-skrive-ei-politisk-sak-pdf.pdf" = @{
+        id = "rettleiar-politisk-sak"
+        title = "Rettleiar for korleis skrive ei politisk sak"
+        category = "sakshandsaming"
+        description = "Rettleiing for korleis ein skriv ei god politisk sak. Struktur, innhald og krav til saksdokument til politisk handsaming."
+    }
+    "Språkprofil 2024_revidert des.pdf" = @{
+        id = "spraakprofil"
+        title = "Språkprofil for Vestland fylkeskommune 2024"
+        category = "sprak"
+        description = "Språkprofil for Vestland fylkeskommune. Rettleiing for klarspråk, tone og stil i skriftleg kommunikasjon."
+    }
+    "Dette kan porteføljekontoret hjelpe med.txt" = @{
+        id = "portefoljekontoret-hjelp"
+        title = "Dette kan porteføljekontoret hjelpe med"
+        category = "prosjekt"
+        description = "Oversikt over kva porteføljekontoret (PMO) kan hjelpe med. Inneheld lenke til innmeldingsskjema i PowerApps, informasjonsside på SharePoint. Beskriv korleis melde inn ei sak, prosjekt eller tiltak til porteføljekontoret. Porteføljestyring, prosjektinnmelding, prosjektidé, konseptfase, porteføljeråd, kontaktperson."
+    }
+    "Ordliste norsk-engelsk navn på avdelingar, seksjonar og stillingar på engelsk.txt" = @{
+        id = "ordliste-norsk-engelsk"
+        title = "Ordliste norsk-engelsk for avdelingar, seksjonar og stillingar"
+        category = "sprak"
+        description = "Ordliste med norske og engelske namn på avdelingar, seksjonar og stillingar i Vestland fylkeskommune."
+    }
+    "Rutine for krav om skriftleg kommunikasjon frå staten og andre fylkeskommunar på nynorsk.txt" = @{
+        id = "rutine-nynorsk-krav"
+        title = "Rutine for krav om skriftleg kommunikasjon på nynorsk"
+        category = "sprak"
+        description = "Rutine for å krevje skriftleg kommunikasjon på nynorsk frå staten og andre fylkeskommunar. Mållova og språkrettar."
+    }
+    "om-tillitsreformen.pdf" = @{
+        id = "om-tillitsreformen"
+        title = "Om tillitsreformen"
+        category = "leiing"
+        description = "Informasjon om tillitsreformen i offentleg sektor. Mål, prinsipp og bakgrunn for tillitsbasert styring og leiing. Korleis tillitsreformen påverkar kommunal og fylkeskommunal verksemd."
+    }
+    "Tillitsarbeid i praksis _ Statens arbeidsgiverportal.pdf" = @{
+        id = "tillitsarbeid-praksis"
+        title = "Tillitsarbeid i praksis"
+        category = "leiing"
+        description = "Praktisk rettleiing for tillitsarbeid i offentleg sektor frå Statens arbeidsgiverportal. Korleis implementere tillitsbasert styring, metodar og verktøy. Erfaringar og døme på tillitsarbeid."
+    }
+    "Tillitsbasert ledelse og selvledelse _ Statens arbeidsgiverportal.pdf" = @{
+        id = "tillitsbasert-leiing-selvleiing"
+        title = "Tillitsbasert ledelse og selvledelse"
+        category = "leiing"
+        description = "Rettleiing om tillitsbasert leiing og selvleiing frå Statens arbeidsgiverportal. Prinsipp for autonomi, ansvar og tillit i leiing. Korleis fremje selvleiing og medarbeidarskap."
+    }
+    "Lenke til kurs i klart språk.txt" = @{
+        id = "kurs-klart-spraak"
+        title = "Lenke til kurs i klart språk"
+        category = "sprak"
+        description = "Lenke til kurs om klart språk og klarspråk. Opplæring i korleis skrive tydeleg og forståeleg. Kurs i god skriving for offentleg sektor."
+    }
+    "Lenke til kurs skrive politisk sak.txt" = @{
+        id = "kurs-politisk-sak"
+        title = "Lenke til kurs i å skrive politisk sak"
+        category = "sakshandsaming"
+        description = "Lenke til kurs om korleis skrive politiske saker. Opplæring i saksframlegg, saksutgreiing og politisk sakshandsaming."
+    }
+    "Politisk-saksbehandling-i-Elements.pdf" = @{
+        id = "politisk-saksbehandling-elements"
+        title = "Politisk saksbehandling i Elements"
+        category = "sakshandsaming"
+        description = "Rettleiing for politisk saksbehandling i Elements sak- og arkivsystem. Korleis opprette, handsame og arkivere politiske saker. Arbeidsflyt og rutinar i Elements."
+    }
+    "Rettleiar-for-korleis-skrive-ei-politisk-sak.pdf" = @{
+        id = "rettleiar-politisk-sak-v2"
+        title = "Rettleiar for korleis skrive ei politisk sak"
+        category = "sakshandsaming"
+        description = "Rettleiing for korleis ein skriv ei god politisk sak. Struktur, innhald og krav til saksdokument til politisk handsaming. Saksframlegg, bakgrunn, vurdering og tilråding."
+    }
+    "Utforming av politiske vedtak i Vestland fylkeskommune.pdf" = @{
+        id = "utforming-politiske-vedtak"
+        title = "Utforming av politiske vedtak i Vestland fylkeskommune"
+        category = "sakshandsaming"
+        description = "Rettleiing for utforming av politiske vedtak. Korleis skrive gode vedtakstekstar, formulere vedtak og sikre juridisk korrekte vedtak. Vedtaksformulering, tilrådingsvedtak, endringsframlegg."
+    }
+    "Rettleiing for forbetringsforslag-skjema.md" = @{
+        id = "forbetringsforslag-skjema"
+        title = "Rettleiing for forbetringsforslag-skjema"
+        category = "prosjekt"
+        description = "Rettleiing for korleis fylle ut forbetringsforslag-skjemaet i Vestland fylkeskommune. Forklaring av alle felt: type forslag, tittel, behov og problem, gevinstar, systemeigar, systemforvaltar, interessentar, finansiering, startdato. Hjelp til å førebu innmelding av idé, behov eller forbetringsforslag til porteføljekontoret."
+    }
+    "Lenke til Innmeldingsskjema Porteføljestyring.txt" = @{
+        id = "lenke-innmeldingsskjema-portefolje"
+        title = "Lenke til innmeldingsskjema for porteføljestyring"
+        category = "prosjekt"
+        description = "Direktelenke til innmeldingsskjema for porteføljestyring. Bruk denne lenka for å melde inn prosjekt, idear eller forbetringsforslag til porteføljekontoret (PMO). Forbetringsforslag, prosjektinnmelding, idéfase."
+    }
+    "Lenke til Porteføljestyring og strategi.txt" = @{
+        id = "lenke-portefoljestyring-strategi"
+        title = "Lenke til porteføljestyring og strategi"
+        category = "prosjekt"
+        description = "Lenke til informasjonsside om porteføljestyring og strategi i Vestland fylkeskommune. Informasjon om porteføljekontoret, prosjektstyring, porteføljeløypa og strategisk planlegging."
+    }
+    "Gevinst definisjonar, og og utrykk.txt" = @{
+        id = "gevinst-definisjonar"
+        title = "Gevinst - definisjonar og uttrykk"
+        category = "prosjekt"
+        description = "Definisjonar og forklaringar av omgrep knytt til gevinstrealisering. Kva er ein gevinst, gevinstrealisering, gevinstplan, KPI, måleindikator. Ordliste for gevinstarbeid i prosjekt."
+    }
+    "Gevinstansvarleg.txt" = @{
+        id = "gevinstansvarleg"
+        title = "Gevinstansvarleg - rolle og ansvar"
+        category = "prosjekt"
+        description = "Informasjon om rolla som gevinstansvarleg i prosjekt. Ansvar, oppgåver og forventningar til gevinstansvarleg. Korleis sikre at gevinstar blir realiserte etter prosjektslutt."
+    }
+    "Gevinstarbeid i ulike faser av prosjekt.txt" = @{
+        id = "gevinstarbeid-fasar"
+        title = "Gevinstarbeid i ulike faser av prosjekt"
+        category = "prosjekt"
+        description = "Rettleiing for gevinstarbeid gjennom heile prosjektløpet. Idéfase, konseptfase, gjennomføringsfase, avslutning og gevinstrealisering. Når og korleis jobbe med gevinstar i kvar fase."
+    }
+    "Gevinstverktøy.pdf" = @{
+        id = "gevinstverktoey"
+        title = "Gevinstverktøy"
+        category = "prosjekt"
+        description = "Verktøy og malar for gevinstarbeid i prosjekt. Gevinstplan, gevinstkart, gevinstoppfølging, måling og rapportering av gevinstar. Praktiske hjelpemiddel for gevinstrealisering."
+    }
+    "Lenke til gevinst side sharepoint.txt" = @{
+        id = "lenke-gevinst-sharepoint"
+        title = "Lenke til gevinstside på SharePoint"
+        category = "prosjekt"
+        description = "Direktelenke til informasjonsside om gevinstrealisering på SharePoint. Ressursar, malar og rettleiing for gevinstarbeid i Vestland fylkeskommune."
+    }
+    "Lenke til prosjektportalen.txt" = @{
+        id = "lenke-prosjektportalen"
+        title = "Lenke til prosjektportalen"
+        category = "prosjekt"
+        description = "Direktelenke til prosjektportalen i Vestland fylkeskommune. Oversikt over prosjekt, status, framdrift og porteføljestyring. Innlogging og tilgang til prosjektinformasjon."
     }
 }
 

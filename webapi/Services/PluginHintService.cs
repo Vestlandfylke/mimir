@@ -6,8 +6,7 @@ namespace CopilotChat.WebApi.Services;
 /// Service that analyzes user messages and provides hints about which plugins should be used.
 /// This helps the LLM make better decisions about when to use tools proactively.
 /// 
-/// NOTE: This service only provides hints for GLOBALLY available plugins.
-/// Template-specific plugins (SharePoint, Lovdata) are handled by template-specific system prompts.
+/// Supports both global plugins (MimirKnowledge) and template-specific plugins (LeiarKontekst).
 /// </summary>
 public sealed class PluginHintService
 {
@@ -17,21 +16,20 @@ public sealed class PluginHintService
     private static readonly string[] MimirKeywords = new[]
     {
         // Direct mentions
-        "mimir", "chatbot", "assistenten", "ki-assistent", "kunnskapsbase", "kunnskapsbasen",
+        "mimir", "chatbot", "assistenten", "ki-assistent",
         // Questions about self
         "kva er du", "kven er du", "fortel om deg", "om deg sjølv", "kva veit du om deg",
         // What can you do / capabilities
-        "kva kan du", "kva kan eg", "kva du kan", "tilgang til", "har du tilgang",
+        "kva kan du", "kva du kan",
         // History/development
-        "historia", "historie", "tidslinje", "tidslinja", "prosjekt", "copilot", "utvikl",
+        "historia", "historie", "tidslinje", "tidslinja", "copilot", "utvikl",
         "korleis vart", "korleis blei", "oppstart", "bakgrunn",
         // Features
         "funksjon", "evne", "moglegheit", "dokument du har",
         // UI
         "grensesnitt", "brukargrensesnitt", "knapp", "meny", "innstilling",
-        "korleis brukar", "korleis gjer", "korleis finn", "kor finn",
         // Policy
-        "ki-policy", "policy", "retningslinje", "personvern", "kva er lov", "lov å bruke",
+        "ki-policy", "personvern", "kva er lov", "lov å bruke",
         "kan eg bruke", "trygt å", "sensitive",
         // Tips
         "betre svar", "gode spørsmål", "prompt", "tips",
@@ -39,9 +37,53 @@ public sealed class PluginHintService
         "virkar ikkje", "feil", "problem", "bug"
     };
 
-    // NOTE: SharePoint and Lovdata plugins are ONLY available in the leader template.
-    // Hints for those plugins are NOT generated here - they are handled by the 
-    // leader template's specific system prompt in appsettings.json.
+    // Keywords that should trigger LeiarKontekst plugin (ONLY for leader template)
+    // These are leadership/HR/organizational topics covered by the knowledge base
+    private static readonly string[] LeiarKontekstKeywords = new[]
+    {
+        // HR and Personnel
+        "hr", "personal", "tilsett", "rekruttering", "tilsetting", "oppseiing", "permisjon",
+        "sjukemelding", "sjukefråvær", "fråvær", "åtvaring", "advarsel",
+        // Policies and Guidelines
+        "retningslinje", "reglement", "arbeidsreglement", "rutine", "prosedyre",
+        // Tariff and Salary
+        "tariff", "hovudtariffavtalen", "hta", "lønn", "stillingskode", "lønnsforhandling",
+        // Employee Conversations
+        "medarbeidarsamtale", "medarbeidarsamtalen", "samtalemal", "støttedokument",
+        // Strategy
+        "strategi", "organisasjonsstrategi", "kompetansestrategi", "digitalstrategi",
+        "kompetanseplan", "kompetanseutvikling",
+        // Ethics and Compliance
+        "etisk", "etiske retningslinjer", "integritet", "gåver", "gåve", "korrupsjon",
+        // Work Environment
+        "arbeidsmiljø", "hms", "konflikt", "konflikthåndtering", "konflikthandtering",
+        "varsling", "varslingsrutine", "varslar",
+        // Work Arrangements
+        "heimekontor", "fjernarbeid", "heimekontorordning",
+        // Equality and Diversity
+        "likestilling", "mangfald", "diskriminering",
+        // Communication
+        "kommunikasjonsstrategi", "språkprofil", "klarspråk", "nynorsk", "språkbruk",
+        "innhaldsstrategi", "rettleiar",
+        // Projects and Portfolio
+        "portefølje", "porteføljekontor", "porteføljekontoret", "prosjektinnmelding",
+        "prosjektstyring", "porteføljestyring", "innmelding", "pmo",
+        "forbetringsforslag", "forbetring", "systemeigar", "systemforvaltar",
+        "gevinst", "gevinstar", "gevinstrealisering", "gevinstplan", "gevinstansvarleg",
+        "interessent", "interessentar", "finansiering", "prosjektportal",
+        // Political Cases and Document Handling
+        "politisk sak", "sakshandsaming", "saksdokument", "saksframlegg",
+        "vedtak", "vedtakstekst", "tilråding", "elements", "arkiv",
+        // Organizational
+        "organisasjon", "avdeling", "seksjon", "stillingsomtale",
+        // Trust Reform and Leadership
+        "tillit", "tillitsreform", "tillitsreformen", "tillitsbasert", "tillitsarbeid",
+        "selvleiing", "selvledelse", "autonomi", "medarbeidarskap",
+        // Training and Courses
+        "kurs", "opplæring", "e-læring",
+        // Specific document triggers
+        "handbok", "overordna plan", "handlingsplan"
+    };
 
     public PluginHintService(ILogger<PluginHintService> logger)
     {
@@ -49,13 +91,13 @@ public sealed class PluginHintService
     }
 
     /// <summary>
-    /// Analyzes the user message and returns hints about which GLOBAL plugins should be used.
-    /// Only hints for globally available plugins (MimirKnowledge) are generated.
-    /// Template-specific plugins (SharePoint, Lovdata) are handled by their template's system prompt.
+    /// Analyzes the user message and returns hints about which plugins should be used.
+    /// Supports both global plugins (MimirKnowledge) and template-specific plugins (LeiarKontekst).
     /// </summary>
     /// <param name="userMessage">The user's message</param>
+    /// <param name="template">Optional chat template (e.g., "leader") for template-specific hints</param>
     /// <returns>A hint string to prepend to context, or null if no hint needed</returns>
-    public string? GetPluginHint(string userMessage)
+    public string? GetPluginHint(string userMessage, string? template = null)
     {
         if (string.IsNullOrWhiteSpace(userMessage))
         {
@@ -63,6 +105,24 @@ public sealed class PluginHintService
         }
 
         var lowerMessage = userMessage.ToLowerInvariant();
+        var hints = new List<string>();
+
+        // Check for LeiarKontekst triggers (ONLY for leader template)
+        if (string.Equals(template, "leader", StringComparison.OrdinalIgnoreCase))
+        {
+            var leiarScore = CountKeywordMatches(lowerMessage, LeiarKontekstKeywords);
+            if (leiarScore > 0)
+            {
+                this._logger.LogDebug("PluginHint: Detected LeiarKontekst-related query (score: {Score})", leiarScore);
+                
+                var leiarHint = "[VERKTØY-HINT: Dette spørsmålet kan handla om leiar-relaterte emne. " +
+                    "SØK I LEIAR-KUNNSKAPSBASEN FØRST med SearchStrategicDocumentsAsync før du svarar. " +
+                    "Kunnskapsbasen inneheld strategiske dokument, retningslinjer, malar og prosedyrar for leiarar i Vestland fylkeskommune.]";
+                hints.Add(leiarHint);
+                
+                this._logger.LogInformation("PluginHint: Generated LeiarKontekst hint for query");
+            }
+        }
 
         // Check for Mimir Knowledge triggers (GLOBAL plugin - available to all)
         var mimirScore = CountKeywordMatches(lowerMessage, MimirKeywords);
@@ -72,13 +132,18 @@ public sealed class PluginHintService
             
             // Determine which specific function to recommend
             var function = DetermineMimirFunction(lowerMessage);
-            var hint = $"[VERKTØY-HINT: Dette spørsmålet handlar om Mimir. BRUK {function} for å hente korrekt informasjon FØR du svarar.]";
+            var mimirHint = $"[VERKTØY-HINT: Dette spørsmålet handlar om Mimir. BRUK {function} for å hente korrekt informasjon FØR du svarar.]";
+            hints.Add(mimirHint);
             
-            this._logger.LogInformation("PluginHint: Generated hint for query: {Hint}", hint);
-            return hint;
+            this._logger.LogInformation("PluginHint: Generated Mimir hint for query");
         }
 
-        return null;
+        if (hints.Count == 0)
+        {
+            return null;
+        }
+
+        return string.Join("\n", hints);
     }
 
     /// <summary>

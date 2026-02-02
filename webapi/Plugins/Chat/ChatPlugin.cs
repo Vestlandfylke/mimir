@@ -97,6 +97,12 @@ internal sealed class ChatPlugin
     private readonly LeiarKontekstCitationService? _leiarKontekstCitationService;
 
     /// <summary>
+    /// Whether to stream responses to the client in real-time.
+    /// When false, responses are collected fully before sending.
+    /// </summary>
+    private readonly bool _enableResponseStreaming;
+
+    /// <summary>
     /// Regex pattern to extract thinking/reasoning content from model responses.
     /// Matches content within &lt;thinking&gt;...&lt;/thinking&gt; tags.
     /// </summary>
@@ -114,6 +120,7 @@ internal sealed class ChatPlugin
         IHubContext<MessageRelayHub> messageRelayHubContext,
         IOptions<PromptsOptions> promptOptions,
         IOptions<DocumentMemoryOptions> documentImportOptions,
+        IOptions<ServiceOptions> serviceOptions,
         ILogger logger,
         AzureContentSafety? contentSafety = null,
         McpPlanService? mcpPlanService = null,
@@ -137,6 +144,7 @@ internal sealed class ChatPlugin
         this._telemetryService = telemetryService;
         this._modelKernelFactory = modelKernelFactory;
         this._leiarKontekstCitationService = leiarKontekstCitationService;
+        this._enableResponseStreaming = serviceOptions.Value.EnableResponseStreaming;
     }
 
     /// <summary>
@@ -1322,14 +1330,17 @@ internal sealed class ChatPlugin
                         var reasoningText = item.ToString() ?? string.Empty;
                         reasoningBuffer.Append(reasoningText);
 
-                        // Send reasoning update (throttled)
-                        var now = DateTime.UtcNow;
-                        if (now - lastUpdateTime >= updateInterval && reasoningBuffer.Length > lastReasoningLength + 10)
+                        // Send reasoning update (throttled) - only if streaming is enabled
+                        if (this._enableResponseStreaming)
                         {
-                            chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
-                            await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
-                            lastReasoningLength = reasoningBuffer.Length;
-                            lastUpdateTime = now;
+                            var now = DateTime.UtcNow;
+                            if (now - lastUpdateTime >= updateInterval && reasoningBuffer.Length > lastReasoningLength + 10)
+                            {
+                                chatMessage.Reasoning = reasoningBuffer.ToString().Trim();
+                                await this.UpdateReasoningOnClientAsync(chatId, chatMessage.Id, chatMessage.Reasoning, cancellationToken);
+                                lastReasoningLength = reasoningBuffer.Length;
+                                lastUpdateTime = now;
+                            }
                         }
                     }
                     else if (itemType.Contains("Text", StringComparison.OrdinalIgnoreCase))
@@ -1346,13 +1357,16 @@ internal sealed class ChatPlugin
             {
                 contentBuffer.Append(chunkText);
 
-                // Update message content (throttled)
-                var now = DateTime.UtcNow;
-                if (now - lastUpdateTime >= updateInterval)
+                // Update message content (throttled) - only if streaming is enabled
+                if (this._enableResponseStreaming)
                 {
-                    chatMessage.Content = contentBuffer.ToString().Trim();
-                    await this.UpdateMessageOnClient(chatMessage, cancellationToken);
-                    lastUpdateTime = now;
+                    var now = DateTime.UtcNow;
+                    if (now - lastUpdateTime >= updateInterval)
+                    {
+                        chatMessage.Content = contentBuffer.ToString().Trim();
+                        await this.UpdateMessageOnClient(chatMessage, cancellationToken);
+                        lastUpdateTime = now;
+                    }
                 }
             }
         }
@@ -1427,8 +1441,8 @@ internal sealed class ChatPlugin
                 }
                 else
                 {
-                    // No tag found - stream content (batched)
-                    if (updateCounter % UpdateFrequency == 0)
+                    // No tag found - stream content (batched) - only if streaming is enabled
+                    if (this._enableResponseStreaming && updateCounter % UpdateFrequency == 0)
                     {
                         chatMessage.Content = raw;
                         await this.UpdateMessageOnClient(chatMessage, cancellationToken);
@@ -1464,13 +1478,13 @@ internal sealed class ChatPlugin
                 }
             }
 
-            // After thinking - stream content (batched)
+            // After thinking - stream content (batched) - only if streaming is enabled
             if (thinkingComplete && rawBuffer.Length > 0)
             {
                 contentBuffer.Append(rawBuffer);
                 rawBuffer.Clear();
 
-                if (updateCounter % UpdateFrequency == 0)
+                if (this._enableResponseStreaming && updateCounter % UpdateFrequency == 0)
                 {
                     chatMessage.Content = contentBuffer.ToString().Trim();
                     await this.UpdateMessageOnClient(chatMessage, cancellationToken);
