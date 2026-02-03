@@ -1005,9 +1005,20 @@ internal sealed class ChatPlugin
                 this._kernel,
                 cancellationToken);
 
+            // Collect response - only stream to client if enabled
+            var contentBuilder = new System.Text.StringBuilder();
             await foreach (var contentPiece in autoInvokeStream)
             {
-                normalMessage.Content += contentPiece;
+                contentBuilder.Append(contentPiece);
+                if (this._enableResponseStreaming)
+                {
+                    normalMessage.Content = contentBuilder.ToString();
+                    await this.UpdateMessageOnClient(normalMessage, cancellationToken);
+                }
+            }
+            normalMessage.Content = contentBuilder.ToString();
+            if (!this._enableResponseStreaming)
+            {
                 await this.UpdateMessageOnClient(normalMessage, cancellationToken);
             }
         }
