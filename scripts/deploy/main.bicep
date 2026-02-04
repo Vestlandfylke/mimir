@@ -1090,6 +1090,131 @@ resource memorySourcesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDataba
   }
 }
 
+// Archived chat containers for soft-delete/trash functionality
+resource archivedSessionContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = if (deployCosmosDB) {
+  parent: cosmosDatabase
+  name: 'archivedchatsessions'
+  properties: {
+    resource: {
+      id: 'archivedchatsessions'
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
+      partitionKey: {
+        paths: [
+          '/deletedBy'
+        ]
+        kind: 'Hash'
+        version: 2
+      }
+    }
+  }
+}
+
+resource archivedMessageContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = if (deployCosmosDB) {
+  parent: cosmosDatabase
+  name: 'archivedchatmessages'
+  properties: {
+    resource: {
+      id: 'archivedchatmessages'
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
+      partitionKey: {
+        paths: [
+          '/originalChatId'
+        ]
+        kind: 'Hash'
+        version: 2
+      }
+    }
+  }
+}
+
+resource archivedParticipantContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = if (deployCosmosDB) {
+  parent: cosmosDatabase
+  name: 'archivedchatparticipants'
+  properties: {
+    resource: {
+      id: 'archivedchatparticipants'
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
+      partitionKey: {
+        paths: [
+          '/originalChatId'
+        ]
+        kind: 'Hash'
+        version: 2
+      }
+    }
+  }
+}
+
+resource archivedMemorySourcesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = if (deployCosmosDB) {
+  parent: cosmosDatabase
+  name: 'archivedmemorysources'
+  properties: {
+    resource: {
+      id: 'archivedmemorysources'
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
+      partitionKey: {
+        paths: [
+          '/chatId'
+        ]
+        kind: 'Hash'
+        version: 2
+      }
+    }
+  }
+}
+
 resource speechAccount 'Microsoft.CognitiveServices/accounts@2022-12-01' = if (deploySpeechServices) {
   name: 'cog-speech-${uniqueName}'
   location: location

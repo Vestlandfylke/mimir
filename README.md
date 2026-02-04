@@ -10,6 +10,7 @@ The application provides multi-model chat capabilities with document analysis, l
 - SharePoint document search with On-Behalf-Of authentication
 - Norwegian law lookup via Lovdata integration
 - File generation (Word, Excel, PowerPoint, PDF)
+- Chat archive system with 180-day retention (soft delete with restore)
 - Microsoft Teams SSO support
 - Mermaid diagram rendering
 - LaTeX/KaTeX math formulas
@@ -264,6 +265,37 @@ Prompts_Templates__my-assistant__AllowedUsers__0=user-id-1
 Prompts_Templates__my-assistant__AllowedUsers__1=user-id-2
 ```
 
+### Chat Archive System (Papirkorg)
+
+The application includes a soft-delete system for chat conversations. When users delete a chat, it is moved to an archive ("Papirkorg") instead of being permanently removed. This provides:
+
+- **180-day retention period** - Archived chats are kept for 180 days before automatic permanent deletion
+- **User self-service restore** - Users can restore their own deleted chats from the trash
+- **Permanent delete option** - Users can permanently delete archived chats before the retention period expires
+- **Compliance support** - Enables data recovery and audit capabilities
+
+**Accessing the Trash:**
+1. Open the user menu (top right)
+2. Click "Administrer samtalar" (Manage conversations)
+3. Switch to the "Papirkorg" tab to view and restore deleted chats
+
+**Configuration:**
+```json
+"ChatArchive": {
+  "RetentionDays": 180,
+  "CleanupIntervalHours": 24
+}
+```
+
+**Required CosmosDB Containers:**
+The archive system requires these additional containers:
+- `archivedchatsessions` (partition key: `/deletedBy`)
+- `archivedchatmessages` (partition key: `/originalChatId`)
+- `archivedchatparticipants` (partition key: `/originalChatId`)
+- `archivedmemorysources` (partition key: `/chatId`)
+
+These are automatically created when deploying with the Bicep templates. For manual deployments, create them in your CosmosDB database.
+
 ### Microsoft Teams Integration
 
 The application supports Microsoft Teams SSO authentication:
@@ -294,7 +326,7 @@ To deploy the application to Azure, see [scripts/deploy/README.md](./scripts/dep
 |----------|---------|
 | App Service | Backend API and static frontend |
 | Container App | MCP Bridge (optional) |
-| Cosmos DB | Chat sessions, messages, metadata |
+| Cosmos DB | Chat sessions, messages, metadata, and archived chats |
 | Azure AI Search | Vector index for semantic search |
 | Azure OpenAI | Language models and embeddings |
 | Blob Storage | Document storage |
