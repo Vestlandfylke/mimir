@@ -76,18 +76,27 @@ export const conversationsSlice = createSlice({
             action: PayloadAction<{ user: IChatUser; chatId: string }>,
         ) => {
             const { user, chatId } = action.payload;
-            state.conversations[chatId].users.push(user);
-            state.conversations[chatId].userDataLoaded = false;
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[chatId] as ChatState | undefined;
+            if (!conversation) return;
+            conversation.users.push(user);
+            conversation.userDataLoaded = false;
         },
         setImportingDocumentsToConversation: (
             state: ConversationsState,
             action: PayloadAction<{ importingDocuments: string[]; chatId: string }>,
         ) => {
             const { importingDocuments, chatId } = action.payload;
-            state.conversations[chatId].importingDocuments = importingDocuments;
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[chatId] as ChatState | undefined;
+            if (!conversation) return;
+            conversation.importingDocuments = importingDocuments;
         },
         setUsersLoaded: (state: ConversationsState, action: PayloadAction<string>) => {
-            state.conversations[action.payload].userDataLoaded = true;
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[action.payload] as ChatState | undefined;
+            if (!conversation) return;
+            conversation.userDataLoaded = true;
         },
         setConversationMessages: (
             state: ConversationsState,
@@ -160,7 +169,9 @@ export const conversationsSlice = createSlice({
             action: PayloadAction<{ chatId: string; status: string | undefined }>,
         ) => {
             const { chatId, status } = action.payload;
-            const conversation = state.conversations[chatId];
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[chatId] as ChatState | undefined;
+            if (!conversation) return;
             conversation.botResponseStatus = status;
         },
         updateMessageProperty: <K extends keyof IChatMessage, V extends IChatMessage[K]>(
@@ -175,7 +186,9 @@ export const conversationsSlice = createSlice({
             }>,
         ) => {
             const { property, value, messageIdOrIndex, chatId, updatedContent, frontLoad } = action.payload;
-            const conversation = state.conversations[chatId];
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[chatId] as ChatState | undefined;
+            if (!conversation) return;
 
             const messageIndex =
                 typeof messageIdOrIndex === 'number'
@@ -238,32 +251,37 @@ export const conversationsSlice = createSlice({
         },
         disableConversation: (state: ConversationsState, action: PayloadAction<string>) => {
             const id = action.payload;
-            state.conversations[id].disabled = true;
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[id] as ChatState | undefined;
+            if (!conversation) return;
+            conversation.disabled = true;
             frontLoadChat(state, id);
-            return;
         },
         updatePluginState: (state: ConversationsState, action: PayloadAction<UpdatePluginStatePayload>) => {
             const { id, pluginName, newState } = action.payload;
-            const isPluginEnabled = state.conversations[id].enabledHostedPlugins.find((p) => p === pluginName);
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[id] as ChatState | undefined;
+            if (!conversation) return;
+            const isPluginEnabled = conversation.enabledHostedPlugins.find((p) => p === pluginName);
             if (newState) {
                 if (isPluginEnabled) {
                     return;
                 }
-                state.conversations[id].enabledHostedPlugins.push(pluginName);
+                conversation.enabledHostedPlugins.push(pluginName);
             } else {
                 if (!isPluginEnabled) {
                     return;
                 }
-                state.conversations[id].enabledHostedPlugins = state.conversations[id].enabledHostedPlugins.filter(
-                    (p) => p !== pluginName,
-                );
+                conversation.enabledHostedPlugins = conversation.enabledHostedPlugins.filter((p) => p !== pluginName);
             }
         },
     },
 });
 
 const frontLoadChat = (state: ConversationsState, id: string) => {
-    const conversation = state.conversations[id];
+    // Conversation may have been archived/deleted - guard against edge cases
+    const conversation = state.conversations[id] as ChatState | undefined;
+    if (!conversation) return;
     const { [id]: _, ...rest } = state.conversations;
     state.conversations = { [id]: conversation, ...rest };
 };
@@ -345,7 +363,9 @@ const updateConversation = (state: ConversationsState, chatId: string, message: 
 };
 
 const updateUserTypingState = (state: ConversationsState, userId: string, chatId: string, isTyping: boolean) => {
-    const conversation = state.conversations[chatId];
+    // Conversation may have been archived/deleted - guard against edge cases
+    const conversation = state.conversations[chatId] as ChatState | undefined;
+    if (!conversation) return;
     const user = conversation.users.find((u) => u.id === userId);
     if (user) {
         user.isTyping = isTyping;

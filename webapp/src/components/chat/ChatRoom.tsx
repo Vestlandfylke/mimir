@@ -5,6 +5,7 @@ import { ArrowDownRegular } from '@fluentui/react-icons';
 import React from 'react';
 import { GetResponseOptions, useChat } from '../../libs/hooks/useChat';
 import { useConnectionSync } from '../../libs/hooks/useConnectionSync';
+import { AuthorRoles } from '../../libs/models/ChatMessage';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys, Features } from '../../redux/features/app/AppState';
@@ -128,6 +129,10 @@ export const ChatRoom: React.FC = () => {
     const justSubmittedRef = React.useRef(false);
     // Track previous message count to detect new messages
     const prevMessageCountRef = React.useRef(messages.length);
+    // Track previous botResponseStatus to detect when Mimir starts typing
+    const prevBotResponseStatusRef = React.useRef<string | undefined>(undefined);
+    // Get botResponseStatus for scroll handling
+    const botResponseStatus = conversation.botResponseStatus;
 
     const [isDraggingOver, setIsDraggingOver] = React.useState(false);
     // Use a counter to properly track drag enter/leave across nested elements
@@ -184,22 +189,63 @@ export const ChatRoom: React.FC = () => {
         };
     }, []);
 
-
-    // Scroll behavior when messages change - only scroll for user's own messages
+    // Scroll behavior when botResponseStatus changes - scroll to show typing indicator
     React.useEffect(() => {
         const container = scrollViewTargetRef.current;
         if (!container) return;
 
-        const messageCountChanged = messages.length !== prevMessageCountRef.current;
-        prevMessageCountRef.current = messages.length;
+        const wasNotTyping = !prevBotResponseStatusRef.current;
+        const isNowTyping = !!botResponseStatus;
+        prevBotResponseStatusRef.current = botResponseStatus;
 
-        // If user just submitted a message, scroll to show their message
-        if (justSubmittedRef.current && messageCountChanged) {
-            justSubmittedRef.current = false;
-            // Scroll to bottom to show user's message
+        // When Mimir starts typing (status changes from undefined to something), scroll to bottom
+        if (wasNotTyping && isNowTyping && justSubmittedRef.current) {
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
         }
-        // No auto-scroll for bot messages - let user read naturally from top
+    }, [botResponseStatus]);
+
+    // Scroll behavior when messages change
+    React.useEffect(() => {
+        const container = scrollViewTargetRef.current;
+        if (!container) return;
+
+        const prevCount = prevMessageCountRef.current;
+        const messageCountChanged = messages.length !== prevCount;
+        prevMessageCountRef.current = messages.length;
+
+        if (!messageCountChanged) return;
+
+        // If user just submitted a message, scroll to show their message
+        if (justSubmittedRef.current) {
+            const lastMessage = messages[messages.length - 1];
+
+            // If this is the user's message, scroll to bottom to show it
+            if (lastMessage.authorRole !== AuthorRoles.Bot) {
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                return;
+            }
+
+            // If this is a new bot message (first bot response after user submitted)
+            // Scroll to show the TOP of the bot's message so user can read from start
+            justSubmittedRef.current = false;
+
+            // Find the new bot message element and scroll to its top
+            requestAnimationFrame(() => {
+                const messageElement = container.querySelector(`[data-message-index="${messages.length - 1}"]`);
+                if (messageElement) {
+                    // Get the position of the message relative to the scroll container
+                    const messageRect = messageElement.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    const scrollOffset = messageRect.top - containerRect.top + container.scrollTop;
+
+                    // Scroll to show the top of the message with some padding
+                    container.scrollTo({
+                        top: scrollOffset - 16, // 16px padding from top
+                        behavior: 'smooth',
+                    });
+                }
+            });
+        }
     }, [messages]);
 
     // Scroll to bottom on initial load and when conversation changes

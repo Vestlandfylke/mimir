@@ -13,12 +13,16 @@ import {
     makeStyles,
     shorthands,
     Spinner,
+    Tab,
+    TabList,
     Text,
     tokens,
     Tooltip,
 } from '@fluentui/react-components';
 import {
+    ArrowUndo20Regular,
     Delete20Regular,
+    DeleteDismiss20Regular,
     Dismiss24Regular,
     Document20Regular,
     Chat20Regular,
@@ -35,6 +39,8 @@ import { ChatState } from '../../../redux/features/conversations/ChatState';
 import { Constants } from '../../../Constants';
 import { ScrollBarStyles } from '../../../styles';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
+import { IArchivedChatSession, getDaysUntilDeletion } from '../../../libs/models/ArchivedChatSession';
+import { useChat } from '../../../libs/hooks';
 
 // Mobile breakpoint
 const MOBILE_BREAKPOINT = '768px';
@@ -161,6 +167,16 @@ const useClasses = makeStyles({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    tabList: {
+        marginBottom: tokens.spacingVerticalM,
+    },
+    daysRemaining: {
+        fontSize: tokens.fontSizeBase200,
+        color: tokens.colorNeutralForeground3,
+    },
+    warningDays: {
+        color: tokens.colorPaletteRedForeground1,
+    },
 });
 
 interface ChatManagementModalProps {
@@ -198,16 +214,29 @@ function formatRelativeTime(timestamp: number | undefined): string {
     return 'akkurat no';
 }
 
+type TabValue = 'active' | 'archived';
+
 export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen, onClose, onDeleteChats }) => {
     const classes = useClasses();
     const { instance, inProgress } = useMsal();
     const { conversations } = useAppSelector((state: RootState) => state.conversations);
+    const chat = useChat();
 
+    const [activeTab, setActiveTab] = useState<TabValue>('active');
     const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
     const [documentCounts, setDocumentCounts] = useState<Record<string, number>>({});
     const [loadingDocuments, setLoadingDocuments] = useState<Set<string>>(new Set());
     const [isDeleting, setIsDeleting] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+    // Archived chats state
+    const [archivedChats, setArchivedChats] = useState<IArchivedChatSession[]>([]);
+    const [loadingArchived, setLoadingArchived] = useState(false);
+    const [archivedError, setArchivedError] = useState<string | null>(null);
+    const [selectedArchivedIds, setSelectedArchivedIds] = useState<Set<string>>(new Set());
+    const [isRestoring, setIsRestoring] = useState(false);
+    const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
+    const [showPermanentDeleteConfirm, setShowPermanentDeleteConfirm] = useState(false);
 
     const chatService = useMemo(() => new ChatService(), []);
 
@@ -262,6 +291,42 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
         void fetchDocumentCounts();
     }, [isOpen, sortedChats, instance, inProgress, chatService]);
 
+    // Fetch archived chats when archive tab is opened
+    useEffect(() => {
+        if (!isOpen || activeTab !== 'archived') {
+            return;
+        }
+
+        const fetchArchivedChats = async () => {
+            setLoadingArchived(true);
+            setArchivedError(null);
+
+            try {
+                const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+                const archived = await chatService.getArchivedChatsAsync(accessToken);
+                // Sort by deletion date, most recent first
+                archived.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
+                setArchivedChats(archived);
+            } catch (error) {
+                console.error('Failed to fetch archived chats:', error);
+                setArchivedError('Kunne ikkje laste sletta samtalar.');
+            } finally {
+                setLoadingArchived(false);
+            }
+        };
+
+        void fetchArchivedChats();
+    }, [isOpen, activeTab, instance, inProgress, chatService]);
+
+    // Reset archived selection when tab changes or modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setActiveTab('active');
+            setSelectedArchivedIds(new Set());
+            setArchivedChats([]);
+        }
+    }, [isOpen]);
+
     const handleSelectChat = useCallback((chatId: string, checked: boolean) => {
         setSelectedChatIds((prev) => {
             const next = new Set(prev);
@@ -310,9 +375,270 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
     const allSelected = selectedChatIds.size === sortedChats.length && sortedChats.length > 0;
     const someSelected = selectedChatIds.size > 0 && selectedChatIds.size < sortedChats.length;
 
+    // Archived chats handlers
+    const handleSelectArchivedChat = useCallback((chatId: string, checked: boolean) => {
+        setSelectedArchivedIds((prev) => {
+            const next = new Set(prev);
+            if (checked) {
+                next.add(chatId);
+            } else {
+                next.delete(chatId);
+            }
+            return next;
+        });
+    }, []);
+
+    const handleSelectAllArchived = useCallback(
+        (checked: boolean) => {
+            if (checked) {
+                setSelectedArchivedIds(new Set(archivedChats.map((c) => c.id)));
+            } else {
+                setSelectedArchivedIds(new Set());
+            }
+        },
+        [archivedChats],
+    );
+
+    const handleRestoreClick = useCallback(async () => {
+        if (selectedArchivedIds.size === 0) return;
+
+        setIsRestoring(true);
+        try {
+            const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+
+            // Restore selected chats one by one using the original chat ID
+            for (const archivedId of selectedArchivedIds) {
+                const archivedChat = archivedChats.find((c) => c.id === archivedId);
+                if (archivedChat) {
+                    // The restore endpoint expects the original chat ID, not the archived record ID
+                    await chatService.restoreChatAsync(archivedChat.originalChatId, accessToken);
+                }
+            }
+
+            // Refresh both lists
+            setSelectedArchivedIds(new Set());
+            setArchivedChats((prev) => prev.filter((c) => !selectedArchivedIds.has(c.id)));
+
+            // Refresh the main chat list
+            await chat.loadChats();
+        } catch (error) {
+            console.error('Failed to restore chats:', error);
+        } finally {
+            setIsRestoring(false);
+        }
+    }, [selectedArchivedIds, archivedChats, instance, inProgress, chatService, chat]);
+
+    const handlePermanentDeleteClick = useCallback(() => {
+        if (selectedArchivedIds.size === 0) return;
+        setShowPermanentDeleteConfirm(true);
+    }, [selectedArchivedIds]);
+
+    const handleConfirmPermanentDelete = useCallback(async () => {
+        if (selectedArchivedIds.size === 0) return;
+
+        setIsPermanentlyDeleting(true);
+        try {
+            const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+
+            // Permanently delete selected chats one by one using the original chat ID
+            for (const archivedId of selectedArchivedIds) {
+                const archivedChat = archivedChats.find((c) => c.id === archivedId);
+                if (archivedChat) {
+                    // The permanent delete endpoint expects the original chat ID, not the archived record ID
+                    await chatService.permanentlyDeleteChatAsync(archivedChat.originalChatId, accessToken);
+                }
+            }
+
+            // Remove from list
+            setSelectedArchivedIds(new Set());
+            setArchivedChats((prev) => prev.filter((c) => !selectedArchivedIds.has(c.id)));
+        } catch (error) {
+            console.error('Failed to permanently delete chats:', error);
+        } finally {
+            setIsPermanentlyDeleting(false);
+            setShowPermanentDeleteConfirm(false);
+        }
+    }, [selectedArchivedIds, archivedChats, instance, inProgress, chatService]);
+
+    const allArchivedSelected = selectedArchivedIds.size === archivedChats.length && archivedChats.length > 0;
+    const someArchivedSelected = selectedArchivedIds.size > 0 && selectedArchivedIds.size < archivedChats.length;
+
     const getMessageCount = (chat: ChatState): number => {
         // Count only user messages (not system/bot messages)
         return chat.messages.filter((m) => m.userId !== 'bot').length;
+    };
+
+    const renderActiveChatsView = () => (
+        <>
+            {sortedChats.length === 0 ? (
+                <div className={classes.emptyState}>
+                    <Text>Ingen samtalar å vise</Text>
+                </div>
+            ) : (
+                <>
+                    <div className={classes.tableHeader}>
+                        <Checkbox
+                            checked={allSelected ? true : someSelected ? 'mixed' : false}
+                            onChange={(_, data) => {
+                                handleSelectAll(!!data.checked);
+                            }}
+                            aria-label="Vel alle"
+                        />
+                        <span>Tittel</span>
+                        <span>Sist aktiv</span>
+                        <span>Meldingar</span>
+                        <span>Dokument</span>
+                        <span>Deltakarar</span>
+                    </div>
+
+                    {sortedChats.map((chatItem) => (
+                        <div
+                            key={chatItem.id}
+                            className={`${classes.tableRow} ${selectedChatIds.has(chatItem.id) ? classes.selectedRow : ''}`}
+                        >
+                            <Checkbox
+                                checked={selectedChatIds.has(chatItem.id)}
+                                onChange={(_, data) => {
+                                    handleSelectChat(chatItem.id, !!data.checked);
+                                }}
+                                aria-label={`Vel ${chatItem.title}`}
+                            />
+
+                            <Tooltip content={chatItem.title} relationship="label">
+                                <Text className={classes.chatTitle}>{chatItem.title}</Text>
+                            </Tooltip>
+
+                            <div className={classes.metricCell}>
+                                <Clock20Regular className={classes.metricIcon} />
+                                <span>{formatRelativeTime(chatItem.lastUpdatedTimestamp)}</span>
+                            </div>
+
+                            <div className={classes.metricCell}>
+                                <Chat20Regular className={classes.metricIcon} />
+                                <span>{getMessageCount(chatItem)}</span>
+                            </div>
+
+                            <div className={classes.metricCell}>
+                                {loadingDocuments.has(chatItem.id) ? (
+                                    <Spinner size="tiny" />
+                                ) : (
+                                    <>
+                                        <Document20Regular className={classes.metricIcon} />
+                                        <span>{documentCounts[chatItem.id] ?? 0}</span>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className={classes.metricCell}>
+                                <People20Regular className={classes.metricIcon} />
+                                <span>{chatItem.users.length}</span>
+                            </div>
+                        </div>
+                    ))}
+                </>
+            )}
+        </>
+    );
+
+    const renderArchivedChatsView = () => {
+        if (loadingArchived) {
+            return (
+                <div className={classes.emptyState}>
+                    <Spinner size="medium" />
+                    <Text style={{ marginTop: tokens.spacingVerticalM }}>Lastar sletta samtalar...</Text>
+                </div>
+            );
+        }
+
+        if (archivedError) {
+            return (
+                <div className={classes.emptyState}>
+                    <Text>{archivedError}</Text>
+                </div>
+            );
+        }
+
+        if (archivedChats.length === 0) {
+            return (
+                <div className={classes.emptyState}>
+                    <Text>Ingen sletta samtalar å gjenopprette.</Text>
+                </div>
+            );
+        }
+
+        return (
+            <>
+                <div className={classes.tableHeader}>
+                    <Checkbox
+                        checked={allArchivedSelected ? true : someArchivedSelected ? 'mixed' : false}
+                        onChange={(_, data) => {
+                            handleSelectAllArchived(!!data.checked);
+                        }}
+                        aria-label="Vel alle"
+                    />
+                    <span>Tittel</span>
+                    <span>Sletta</span>
+                    <span>Meldingar</span>
+                    <span>Dokument</span>
+                    <span>Deltakarar</span>
+                </div>
+
+                {archivedChats.map((archivedChat) => {
+                    const daysRemaining = getDaysUntilDeletion(archivedChat.deletedAt);
+                    const isWarning = daysRemaining <= 30;
+
+                    return (
+                        <div
+                            key={archivedChat.id}
+                            className={`${classes.tableRow} ${selectedArchivedIds.has(archivedChat.id) ? classes.selectedRow : ''}`}
+                        >
+                            <Checkbox
+                                checked={selectedArchivedIds.has(archivedChat.id)}
+                                onChange={(_, data) => {
+                                    handleSelectArchivedChat(archivedChat.id, !!data.checked);
+                                }}
+                                aria-label={`Vel ${archivedChat.title}`}
+                            />
+
+                            <Tooltip
+                                content={
+                                    <div>
+                                        <div>{archivedChat.title}</div>
+                                        <div style={{ fontSize: '0.85em', opacity: 0.8 }}>
+                                            {daysRemaining} {daysRemaining === 1 ? 'dag' : 'dagar'} til sletting
+                                            {isWarning && ' ⚠️'}
+                                        </div>
+                                    </div>
+                                }
+                                relationship="label"
+                            >
+                                <Text className={classes.chatTitle}>{archivedChat.title}</Text>
+                            </Tooltip>
+
+                            <div className={classes.metricCell}>
+                                <Clock20Regular className={classes.metricIcon} />
+                                <span>{formatRelativeTime(new Date(archivedChat.deletedAt).getTime())}</span>
+                            </div>
+
+                            <div className={classes.metricCell}>
+                                <Chat20Regular className={classes.metricIcon} />
+                                <span>{archivedChat.messageCount}</span>
+                            </div>
+
+                            <div className={classes.metricCell}>
+                                <Document20Regular className={classes.metricIcon} />
+                                <span>{archivedChat.documentCount}</span>
+                            </div>
+
+                            <div className={classes.metricCell}>
+                                <People20Regular className={classes.metricIcon} />
+                                <span>{archivedChat.participantCount}</span>
+                            </div>
+                        </div>
+                    );
+                })}
+            </>
+        );
     };
 
     return (
@@ -337,101 +663,83 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
                             <div className={classes.header}>
                                 <span>Administrer samtalar</span>
                                 <Text className={classes.subtitle}>
-                                    Du har {sortedChats.length} av {Constants.app.maxChats} samtalar. Vel samtalar å
-                                    slette.
+                                    {activeTab === 'active'
+                                        ? `Du har ${sortedChats.length} av ${Constants.app.maxChats} samtalar. Vel samtalar å slette.`
+                                        : `${archivedChats.length} sletta samtalar. Samtalar vert permanent sletta etter 180 dagar.`}
                                 </Text>
                             </div>
                         </DialogTitle>
 
+                        <TabList
+                            className={classes.tabList}
+                            selectedValue={activeTab}
+                            onTabSelect={(_, data) => {
+                                setActiveTab(data.value as TabValue);
+                            }}
+                        >
+                            <Tab value="active">Aktive samtalar</Tab>
+                            <Tab value="archived">Papirkorg</Tab>
+                        </TabList>
+
                         <DialogContent className={classes.content}>
-                            {sortedChats.length === 0 ? (
-                                <div className={classes.emptyState}>
-                                    <Text>Ingen samtalar å vise</Text>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className={classes.tableHeader}>
-                                        <Checkbox
-                                            checked={allSelected ? true : someSelected ? 'mixed' : false}
-                                            onChange={(_, data) => {
-                                                handleSelectAll(!!data.checked);
-                                            }}
-                                            aria-label="Vel alle"
-                                        />
-                                        <span>Tittel</span>
-                                        <span>Sist aktiv</span>
-                                        <span>Meldingar</span>
-                                        <span>Dokument</span>
-                                        <span>Deltakarar</span>
-                                    </div>
-
-                                    {sortedChats.map((chat) => (
-                                        <div
-                                            key={chat.id}
-                                            className={`${classes.tableRow} ${selectedChatIds.has(chat.id) ? classes.selectedRow : ''}`}
-                                        >
-                                            <Checkbox
-                                                checked={selectedChatIds.has(chat.id)}
-                                                onChange={(_, data) => {
-                                                    handleSelectChat(chat.id, !!data.checked);
-                                                }}
-                                                aria-label={`Vel ${chat.title}`}
-                                            />
-
-                                            <Tooltip content={chat.title} relationship="label">
-                                                <Text className={classes.chatTitle}>{chat.title}</Text>
-                                            </Tooltip>
-
-                                            <div className={classes.metricCell}>
-                                                <Clock20Regular className={classes.metricIcon} />
-                                                <span>{formatRelativeTime(chat.lastUpdatedTimestamp)}</span>
-                                            </div>
-
-                                            <div className={classes.metricCell}>
-                                                <Chat20Regular className={classes.metricIcon} />
-                                                <span>{getMessageCount(chat)}</span>
-                                            </div>
-
-                                            <div className={classes.metricCell}>
-                                                {loadingDocuments.has(chat.id) ? (
-                                                    <Spinner size="tiny" />
-                                                ) : (
-                                                    <>
-                                                        <Document20Regular className={classes.metricIcon} />
-                                                        <span>{documentCounts[chat.id] ?? 0}</span>
-                                                    </>
-                                                )}
-                                            </div>
-
-                                            <div className={classes.metricCell}>
-                                                <People20Regular className={classes.metricIcon} />
-                                                <span>{chat.users.length}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
+                            {activeTab === 'active' ? renderActiveChatsView() : renderArchivedChatsView()}
                         </DialogContent>
 
                         <DialogActions className={classes.actions}>
                             <div className={classes.selectAllContainer}>
-                                {selectedChatIds.size > 0 && (
+                                {activeTab === 'active' && selectedChatIds.size > 0 && (
                                     <Text size={200} className={classes.selectionCount}>
                                         {selectedChatIds.size} vald{selectedChatIds.size === 1 ? '' : 'e'}
+                                    </Text>
+                                )}
+                                {activeTab === 'archived' && selectedArchivedIds.size > 0 && (
+                                    <Text size={200} className={classes.selectionCount}>
+                                        {selectedArchivedIds.size} vald{selectedArchivedIds.size === 1 ? '' : 'e'}
                                     </Text>
                                 )}
                             </div>
 
                             <div className={classes.buttonGroup}>
-                                <Button
-                                    appearance="primary"
-                                    icon={<Delete20Regular />}
-                                    onClick={handleDeleteClick}
-                                    disabled={selectedChatIds.size === 0 || isDeleting}
-                                    className={selectedChatIds.size > 0 ? classes.deleteButton : undefined}
-                                >
-                                    {isDeleting ? <Spinner size="tiny" /> : `Slett valde (${selectedChatIds.size})`}
-                                </Button>
+                                {activeTab === 'active' ? (
+                                    <Button
+                                        appearance="primary"
+                                        icon={<Delete20Regular />}
+                                        onClick={handleDeleteClick}
+                                        disabled={selectedChatIds.size === 0 || isDeleting}
+                                        className={selectedChatIds.size > 0 ? classes.deleteButton : undefined}
+                                    >
+                                        {isDeleting ? <Spinner size="tiny" /> : `Slett valde (${selectedChatIds.size})`}
+                                    </Button>
+                                ) : (
+                                    <>
+                                        <Button
+                                            appearance="primary"
+                                            icon={<ArrowUndo20Regular />}
+                                            onClick={() => {
+                                                void handleRestoreClick();
+                                            }}
+                                            disabled={selectedArchivedIds.size === 0 || isRestoring}
+                                        >
+                                            {isRestoring ? (
+                                                <Spinner size="tiny" />
+                                            ) : (
+                                                `Gjenopprett (${selectedArchivedIds.size})`
+                                            )}
+                                        </Button>
+                                        <Button
+                                            appearance="secondary"
+                                            icon={<DeleteDismiss20Regular />}
+                                            onClick={handlePermanentDeleteClick}
+                                            disabled={selectedArchivedIds.size === 0 || isPermanentlyDeleting}
+                                        >
+                                            {isPermanentlyDeleting ? (
+                                                <Spinner size="tiny" />
+                                            ) : (
+                                                `Slett permanent (${selectedArchivedIds.size})`
+                                            )}
+                                        </Button>
+                                    </>
+                                )}
                                 <Button appearance="secondary" onClick={onClose}>
                                     Lukk
                                 </Button>
@@ -452,6 +760,47 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
                 }}
                 isDeleting={isDeleting}
             />
+
+            {/* Permanent delete confirmation dialog */}
+            <Dialog
+                open={showPermanentDeleteConfirm}
+                onOpenChange={(_, data) => {
+                    if (!data.open) {
+                        setShowPermanentDeleteConfirm(false);
+                    }
+                }}
+            >
+                <DialogSurface>
+                    <DialogBody>
+                        <DialogTitle>Slett permanent</DialogTitle>
+                        <DialogContent>
+                            <Text>
+                                Er du sikker på at du vil slette {selectedArchivedIds.size} samtale
+                                {selectedArchivedIds.size === 1 ? '' : 'r'} permanent? Dette kan ikkje angrast.
+                            </Text>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button
+                                appearance="secondary"
+                                onClick={() => {
+                                    setShowPermanentDeleteConfirm(false);
+                                }}
+                            >
+                                Avbryt
+                            </Button>
+                            <Button
+                                appearance="primary"
+                                onClick={() => {
+                                    void handleConfirmPermanentDelete();
+                                }}
+                                disabled={isPermanentlyDeleting}
+                            >
+                                {isPermanentlyDeleting ? <Spinner size="tiny" /> : 'Slett permanent'}
+                            </Button>
+                        </DialogActions>
+                    </DialogBody>
+                </DialogSurface>
+            </Dialog>
         </>
     );
 };

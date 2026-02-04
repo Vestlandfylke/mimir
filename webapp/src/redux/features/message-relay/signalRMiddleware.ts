@@ -52,13 +52,23 @@ export const signalRMiddleware: Middleware<any, RootState, Dispatch<SignalRActio
                 Promise.all(
                     Object.keys(signalRAction.payload).map(async (id) => {
                         await hubConnection.invoke('AddClientToGroupAsync', id);
+                        console.log('✅ SignalR: Joined group', id);
                     }),
-                ).catch((err) => store.dispatch(addAlert({ message: String(err), type: AlertType.Error })));
+                ).catch((err) => {
+                    console.error('❌ SignalR: Failed to join groups', err);
+                    store.dispatch(addAlert({ message: String(err), type: AlertType.Error }));
+                });
                 break;
             case 'conversations/addConversation':
                 hubConnection
                     .invoke('AddClientToGroupAsync', signalRAction.payload.id)
-                    .catch((err) => store.dispatch(addAlert({ message: String(err), type: AlertType.Error })));
+                    .then(() => {
+                        console.log('✅ SignalR: Joined new conversation group', signalRAction.payload.id);
+                    })
+                    .catch((err) => {
+                        console.error('❌ SignalR: Failed to join new conversation group', err);
+                        store.dispatch(addAlert({ message: String(err), type: AlertType.Error }));
+                    });
                 break;
         }
 

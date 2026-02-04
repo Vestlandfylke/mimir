@@ -228,8 +228,13 @@ internal sealed class DocumentController : ControllerBase
                 return this.Forbid("User does not have access to this chat session.");
             }
 
-            var memorySource = await this._sourceRepository.FindByIdAsync(documentId);
-            if (memorySource == null)
+            MemorySource memorySource;
+            try
+            {
+                // Pass chatId as partition key since MemorySource uses ChatId as its partition
+                memorySource = await this._sourceRepository.FindByIdAsync(documentId, chatId.ToString());
+            }
+            catch (KeyNotFoundException)
             {
                 return this.NotFound($"Document med ID {documentId} finst ikkje");
             }
@@ -274,8 +279,13 @@ internal sealed class DocumentController : ControllerBase
                 return this.Forbid("User does not have access to this chat session.");
             }
 
-            var memorySource = await this._sourceRepository.FindByIdAsync(documentId);
-            if (memorySource == null)
+            MemorySource memorySource;
+            try
+            {
+                // Pass chatId as partition key since MemorySource uses ChatId as its partition
+                memorySource = await this._sourceRepository.FindByIdAsync(documentId, chatId.ToString());
+            }
+            catch (KeyNotFoundException)
             {
                 return this.NotFound($"Document med ID {documentId} finst ikkje");
             }

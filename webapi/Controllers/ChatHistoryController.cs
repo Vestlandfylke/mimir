@@ -27,6 +27,8 @@ internal sealed class ChatHistoryController : ControllerBase
 {
     private const string ChatEditedClientCall = "ChatEdited";
     private const string ChatDeletedClientCall = "ChatDeleted";
+    private const string ChatArchivedClientCall = "ChatArchived";
+    private const string ChatRestoredClientCall = "ChatRestored";
     private const string GetChatRoute = "GetChatRoute";
 
     private readonly ILogger<ChatHistoryController> _logger;
@@ -35,6 +37,10 @@ internal sealed class ChatHistoryController : ControllerBase
     private readonly ChatMessageRepository _messageRepository;
     private readonly ChatParticipantRepository _participantRepository;
     private readonly ChatMemorySourceRepository _sourceRepository;
+    private readonly ArchivedChatSessionRepository _archivedSessionRepository;
+    private readonly ArchivedChatMessageRepository _archivedMessageRepository;
+    private readonly ArchivedChatParticipantRepository _archivedParticipantRepository;
+    private readonly ArchivedMemorySourceRepository _archivedSourceRepository;
     private readonly PromptsOptions _promptOptions;
     private readonly ChatAuthenticationOptions _authOptions;
     private readonly IAuthInfo _authInfo;
@@ -48,6 +54,10 @@ internal sealed class ChatHistoryController : ControllerBase
     /// <param name="messageRepository">The chat message repository.</param>
     /// <param name="participantRepository">The chat participant repository.</param>
     /// <param name="sourceRepository">The chat memory resource repository.</param>
+    /// <param name="archivedSessionRepository">The archived chat session repository.</param>
+    /// <param name="archivedMessageRepository">The archived chat message repository.</param>
+    /// <param name="archivedParticipantRepository">The archived chat participant repository.</param>
+    /// <param name="archivedSourceRepository">The archived memory source repository.</param>
     /// <param name="promptsOptions">The prompts options.</param>
     /// <param name="authOptions">The authentication options.</param>
     /// <param name="authInfo">The auth info for the current request.</param>
@@ -58,6 +68,10 @@ internal sealed class ChatHistoryController : ControllerBase
         ChatMessageRepository messageRepository,
         ChatParticipantRepository participantRepository,
         ChatMemorySourceRepository sourceRepository,
+        ArchivedChatSessionRepository archivedSessionRepository,
+        ArchivedChatMessageRepository archivedMessageRepository,
+        ArchivedChatParticipantRepository archivedParticipantRepository,
+        ArchivedMemorySourceRepository archivedSourceRepository,
         IOptions<PromptsOptions> promptsOptions,
         IOptions<ChatAuthenticationOptions> authOptions,
         IAuthInfo authInfo)
@@ -68,6 +82,10 @@ internal sealed class ChatHistoryController : ControllerBase
         this._messageRepository = messageRepository;
         this._participantRepository = participantRepository;
         this._sourceRepository = sourceRepository;
+        this._archivedSessionRepository = archivedSessionRepository;
+        this._archivedMessageRepository = archivedMessageRepository;
+        this._archivedParticipantRepository = archivedParticipantRepository;
+        this._archivedSourceRepository = archivedSourceRepository;
         this._promptOptions = promptsOptions.Value;
         this._authOptions = authOptions.Value;
         this._authInfo = authInfo;
@@ -371,7 +389,7 @@ internal sealed class ChatHistoryController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a chat session.
+    /// Delete (archive) a chat session. The chat is moved to the trash and can be restored within the retention period.
     /// </summary>
     /// <param name="chatId">The chat id.</param>
     [HttpDelete]
@@ -387,87 +405,400 @@ internal sealed class ChatHistoryController : ControllerBase
         CancellationToken cancellationToken)
     {
         var chatIdString = chatId.ToString();
-        ChatSession? chatToDelete = null;
+        ChatSession? chatToArchive = null;
         try
         {
             // Make sure the chat session exists
-            chatToDelete = await this._sessionRepository.FindByIdAsync(chatIdString);
+            chatToArchive = await this._sessionRepository.FindByIdAsync(chatIdString);
         }
         catch (KeyNotFoundException)
         {
             return this.NotFound($"No chat session found for chat id '{chatId}'.");
         }
 
-        // Delete any resources associated with the chat session.
+        // Archive the chat and all its resources instead of deleting them
         try
         {
-            await this.DeleteChatResourcesAsync(chatIdString, cancellationToken);
+            await this.ArchiveChatResourcesAsync(chatToArchive, this._authInfo.UserId, cancellationToken);
         }
         catch (AggregateException)
         {
-            return this.StatusCode(500, $"Failed to delete resources for chat id '{chatId}'.");
+            return this.StatusCode(500, $"Failed to archive resources for chat id '{chatId}'.");
         }
 
-        // Delete chat session and broadcast update to all participants.
-        await this._sessionRepository.DeleteAsync(chatToDelete);
-        await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(ChatDeletedClientCall, chatIdString, this._authInfo.UserId, cancellationToken: cancellationToken);
+        // Broadcast archive notification to all participants
+        await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(ChatArchivedClientCall, chatIdString, this._authInfo.UserId, cancellationToken: cancellationToken);
+
+        this._logger.LogInformation("Chat {ChatId} archived by user {UserId}", chatIdString, this._authInfo.UserId);
 
         return this.NoContent();
     }
 
     /// <summary>
-    /// Deletes all associated resources (messages, memories, participants) associated with a chat session.
+    /// Archives all resources (session, messages, participants, memory sources) associated with a chat session.
+    /// This moves them to archive storage instead of deleting them permanently.
     /// </summary>
-    /// <param name="chatId">The chat id.</param>
-    private async Task DeleteChatResourcesAsync(string chatId, CancellationToken cancellationToken)
+    /// <param name="chatSession">The chat session to archive.</param>
+    /// <param name="deletedBy">The user ID who is deleting the chat.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    private async Task ArchiveChatResourcesAsync(ChatSession chatSession, string deletedBy, CancellationToken cancellationToken)
     {
-        var cleanupTasks = new List<Task>();
+        var chatId = chatSession.Id;
+        var archiveTasks = new List<Task>();
 
-        // Create and store the tasks for deleting all users tied to the chat.
+        // Archive the chat session
+        var archivedSession = ArchivedChatSession.FromChatSession(chatSession, deletedBy);
+        archiveTasks.Add(this._archivedSessionRepository.CreateAsync(archivedSession));
+
+        // Archive all participants
         var participants = await this._participantRepository.FindByChatIdAsync(chatId);
         foreach (var participant in participants)
         {
-            cleanupTasks.Add(this._participantRepository.DeleteAsync(participant));
+            var archivedParticipant = ArchivedChatParticipant.FromChatParticipant(participant, deletedBy);
+            archiveTasks.Add(this._archivedParticipantRepository.CreateAsync(archivedParticipant));
         }
 
-        // Create and store the tasks for deleting chat messages.
+        // Archive all messages
         var messages = await this._messageRepository.FindByChatIdAsync(chatId);
         foreach (var message in messages)
         {
-            cleanupTasks.Add(this._messageRepository.DeleteAsync(message));
+            var archivedMessage = ArchivedChatMessage.FromCopilotChatMessage(message, deletedBy);
+            archiveTasks.Add(this._archivedMessageRepository.CreateAsync(archivedMessage));
         }
 
-        // Create and store the tasks for deleting memory sources.
+        // Archive all memory sources
         var sources = await this._sourceRepository.FindByChatIdAsync(chatId, false);
         foreach (var source in sources)
         {
-            cleanupTasks.Add(this._sourceRepository.DeleteAsync(source));
+            var archivedSource = ArchivedMemorySource.FromMemorySource(source, deletedBy);
+            archiveTasks.Add(this._archivedSourceRepository.CreateAsync(archivedSource));
         }
 
-        // Create and store the tasks for deleting semantic memories.
-        cleanupTasks.Add(this._memoryClient.RemoveChatMemoriesAsync(this._promptOptions.MemoryIndexName, chatId, cancellationToken));
-
-        // Create a task that represents the completion of all cleanupTasks
-        Task aggregationTask = Task.WhenAll(cleanupTasks);
+        // Wait for all archive operations to complete
+        Task archiveTask = Task.WhenAll(archiveTasks);
         try
         {
-            // Await the completion of all tasks in parallel
-            await aggregationTask;
+            await archiveTask;
         }
         catch (Exception ex)
         {
-            // Handle any exceptions that occurred during the tasks
-            if (aggregationTask?.Exception?.InnerExceptions != null && aggregationTask.Exception.InnerExceptions.Count != 0)
+            if (archiveTask?.Exception?.InnerExceptions != null && archiveTask.Exception.InnerExceptions.Count != 0)
             {
-                foreach (var innerEx in aggregationTask.Exception.InnerExceptions)
+                foreach (var innerEx in archiveTask.Exception.InnerExceptions)
                 {
-                    this._logger.LogInformation("Failed to delete an entity of chat {0}: {1}", chatId, innerEx.Message);
+                    this._logger.LogError("Failed to archive entity for chat {ChatId}: {Error}", chatId, innerEx.Message);
                 }
-
-                throw aggregationTask.Exception;
+                throw archiveTask.Exception;
             }
-
-            throw new AggregateException($"Resource deletion failed for chat {chatId}.", ex);
+            throw new AggregateException($"Archive failed for chat {chatId}.", ex);
         }
+
+        // Now delete the original resources after successful archiving
+        var deleteTasks = new List<Task>();
+
+        foreach (var participant in participants)
+        {
+            deleteTasks.Add(this._participantRepository.DeleteAsync(participant));
+        }
+
+        foreach (var message in messages)
+        {
+            deleteTasks.Add(this._messageRepository.DeleteAsync(message));
+        }
+
+        foreach (var source in sources)
+        {
+            deleteTasks.Add(this._sourceRepository.DeleteAsync(source));
+        }
+
+        // Note: We keep semantic memories in the archive but remove them from the active index
+        // They can be re-indexed on restore if needed
+        deleteTasks.Add(this._memoryClient.RemoveChatMemoriesAsync(this._promptOptions.MemoryIndexName, chatId, cancellationToken));
+
+        // Delete the original chat session
+        deleteTasks.Add(this._sessionRepository.DeleteAsync(chatSession));
+
+        Task deleteTask = Task.WhenAll(deleteTasks);
+        try
+        {
+            await deleteTask;
+        }
+        catch (Exception ex)
+        {
+            // Log but don't throw - archiving succeeded, cleanup can be retried
+            this._logger.LogWarning(ex, "Some cleanup tasks failed after archiving chat {ChatId}", chatId);
+        }
+    }
+
+    /// <summary>
+    /// Get all archived (deleted) chat sessions for the current user with summary counts.
+    /// </summary>
+    /// <returns>A list of archived chat session summaries.</returns>
+    [HttpGet]
+    [Route("chats/trash")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetArchivedChatsAsync()
+    {
+        var archivedChats = await this._archivedSessionRepository.FindByDeletedByAsync(this._authInfo.UserId);
+        var orderedChats = archivedChats.OrderByDescending(c => c.DeletedAt).ToList();
+
+        // Build summaries with counts
+        var summaries = new List<ArchivedChatSummary>();
+        foreach (var chat in orderedChats)
+        {
+            var messages = await this._archivedMessageRepository.FindByOriginalChatIdAsync(chat.OriginalChatId);
+            var documents = await this._archivedSourceRepository.FindByOriginalChatIdAsync(chat.OriginalChatId);
+            var participants = await this._archivedParticipantRepository.FindByOriginalChatIdAsync(chat.OriginalChatId);
+
+            summaries.Add(new ArchivedChatSummary
+            {
+                Id = chat.Id,
+                OriginalChatId = chat.OriginalChatId,
+                Title = chat.Title,
+                CreatedOn = chat.CreatedOn,
+                DeletedAt = chat.DeletedAt,
+                DeletedBy = chat.DeletedBy,
+                SystemDescription = chat.SystemDescription,
+                MemoryBalance = chat.MemoryBalance,
+                EnabledPlugins = chat.EnabledPlugins,
+                Version = chat.Version,
+                Template = chat.Template,
+                ModelId = chat.ModelId,
+                MessageCount = messages.Count(),
+                DocumentCount = documents.Count(),
+                ParticipantCount = participants.Count()
+            });
+        }
+
+        return this.Ok(summaries);
+    }
+
+    /// <summary>
+    /// Get details of a specific archived chat.
+    /// </summary>
+    /// <param name="chatId">The original chat id.</param>
+    [HttpGet]
+    [Route("chats/trash/{chatId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetArchivedChatByIdAsync(Guid chatId)
+    {
+        var archivedChat = await this._archivedSessionRepository.FindByOriginalChatIdAsync(chatId.ToString());
+        if (archivedChat == null)
+        {
+            return this.NotFound($"No archived chat found for chat id '{chatId}'.");
+        }
+
+        // Verify the current user deleted this chat
+        if (archivedChat.DeletedBy != this._authInfo.UserId)
+        {
+            return this.Forbid();
+        }
+
+        return this.Ok(archivedChat);
+    }
+
+    /// <summary>
+    /// Get messages from an archived chat.
+    /// </summary>
+    /// <param name="chatId">The original chat id.</param>
+    [HttpGet]
+    [Route("chats/trash/{chatId:guid}/messages")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetArchivedChatMessagesAsync(Guid chatId)
+    {
+        var archivedChat = await this._archivedSessionRepository.FindByOriginalChatIdAsync(chatId.ToString());
+        if (archivedChat == null)
+        {
+            return this.NotFound($"No archived chat found for chat id '{chatId}'.");
+        }
+
+        // Verify the current user deleted this chat
+        if (archivedChat.DeletedBy != this._authInfo.UserId)
+        {
+            return this.Forbid();
+        }
+
+        var archivedMessages = await this._archivedMessageRepository.FindByOriginalChatIdAsync(chatId.ToString());
+        return this.Ok(archivedMessages.OrderByDescending(m => m.Timestamp));
+    }
+
+    /// <summary>
+    /// Restore an archived chat session.
+    /// </summary>
+    /// <param name="chatId">The original chat id.</param>
+    [HttpPost]
+    [Route("chats/{chatId:guid}/restore")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RestoreChatSessionAsync(
+        [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
+        Guid chatId,
+        CancellationToken cancellationToken)
+    {
+        var chatIdString = chatId.ToString();
+        var archivedChat = await this._archivedSessionRepository.FindByOriginalChatIdAsync(chatIdString);
+        if (archivedChat == null)
+        {
+            return this.NotFound($"No archived chat found for chat id '{chatId}'.");
+        }
+
+        // Verify the current user deleted this chat (only they can restore it)
+        if (archivedChat.DeletedBy != this._authInfo.UserId)
+        {
+            return this.Forbid();
+        }
+
+        try
+        {
+            await this.RestoreChatResourcesAsync(archivedChat, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Failed to restore chat {ChatId}", chatIdString);
+            return this.StatusCode(500, $"Failed to restore chat id '{chatId}'.");
+        }
+
+        // Broadcast restore notification
+        await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(ChatRestoredClientCall, chatIdString, this._authInfo.UserId, cancellationToken: cancellationToken);
+
+        this._logger.LogInformation("Chat {ChatId} restored by user {UserId}", chatIdString, this._authInfo.UserId);
+
+        // Return the restored chat session
+        var restoredChat = await this._sessionRepository.FindByIdAsync(chatIdString);
+        return this.Ok(restoredChat);
+    }
+
+    /// <summary>
+    /// Restores all resources from archive to active storage.
+    /// </summary>
+    private async Task RestoreChatResourcesAsync(ArchivedChatSession archivedSession, CancellationToken cancellationToken)
+    {
+        var chatId = archivedSession.OriginalChatId;
+        var restoreTasks = new List<Task>();
+
+        // Restore the chat session
+        var chatSession = archivedSession.ToChatSession();
+        restoreTasks.Add(this._sessionRepository.CreateAsync(chatSession));
+
+        // Restore all participants
+        var archivedParticipants = await this._archivedParticipantRepository.FindByOriginalChatIdAsync(chatId);
+        foreach (var archivedParticipant in archivedParticipants)
+        {
+            var participant = archivedParticipant.ToChatParticipant();
+            restoreTasks.Add(this._participantRepository.CreateAsync(participant));
+        }
+
+        // Restore all messages
+        var archivedMessages = await this._archivedMessageRepository.FindByOriginalChatIdAsync(chatId);
+        foreach (var archivedMessage in archivedMessages)
+        {
+            var message = archivedMessage.ToCopilotChatMessage();
+            restoreTasks.Add(this._messageRepository.CreateAsync(message));
+        }
+
+        // Restore all memory sources
+        var archivedSources = await this._archivedSourceRepository.FindByOriginalChatIdAsync(chatId);
+        foreach (var archivedSource in archivedSources)
+        {
+            var source = archivedSource.ToMemorySource();
+            restoreTasks.Add(this._sourceRepository.CreateAsync(source));
+        }
+
+        // Wait for all restore operations to complete
+        await Task.WhenAll(restoreTasks);
+
+        // Now clean up the archive
+        var cleanupTasks = new List<Task>
+        {
+            this._archivedSessionRepository.DeleteAsync(archivedSession)
+        };
+
+        foreach (var participant in archivedParticipants)
+        {
+            cleanupTasks.Add(this._archivedParticipantRepository.DeleteAsync(participant));
+        }
+
+        foreach (var message in archivedMessages)
+        {
+            cleanupTasks.Add(this._archivedMessageRepository.DeleteAsync(message));
+        }
+
+        foreach (var source in archivedSources)
+        {
+            cleanupTasks.Add(this._archivedSourceRepository.DeleteAsync(source));
+        }
+
+        await Task.WhenAll(cleanupTasks);
+
+        // Note: Semantic memories would need to be re-indexed if they were important
+        // This could be done as a background job if needed
+    }
+
+    /// <summary>
+    /// Permanently delete an archived chat session. This cannot be undone.
+    /// </summary>
+    /// <param name="chatId">The original chat id.</param>
+    [HttpDelete]
+    [Route("chats/{chatId:guid}/permanent")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> PermanentlyDeleteChatSessionAsync(Guid chatId)
+    {
+        var chatIdString = chatId.ToString();
+        var archivedChat = await this._archivedSessionRepository.FindByOriginalChatIdAsync(chatIdString);
+        if (archivedChat == null)
+        {
+            return this.NotFound($"No archived chat found for chat id '{chatId}'.");
+        }
+
+        // Verify the current user deleted this chat (only they can permanently delete it)
+        if (archivedChat.DeletedBy != this._authInfo.UserId)
+        {
+            return this.Forbid();
+        }
+
+        try
+        {
+            await this.PermanentlyDeleteArchivedChatAsync(archivedChat);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Failed to permanently delete chat {ChatId}", chatIdString);
+            return this.StatusCode(500, $"Failed to permanently delete chat id '{chatId}'.");
+        }
+
+        this._logger.LogInformation("Chat {ChatId} permanently deleted by user {UserId}", chatIdString, this._authInfo.UserId);
+
+        return this.NoContent();
+    }
+
+    /// <summary>
+    /// Permanently deletes all archived resources for a chat.
+    /// </summary>
+    private async Task PermanentlyDeleteArchivedChatAsync(ArchivedChatSession archivedSession)
+    {
+        var chatId = archivedSession.OriginalChatId;
+        var deleteTasks = new List<Task>();
+
+        // Delete all archived messages
+        await this._archivedMessageRepository.DeleteByOriginalChatIdAsync(chatId);
+
+        // Delete all archived participants
+        await this._archivedParticipantRepository.DeleteByOriginalChatIdAsync(chatId);
+
+        // Delete all archived memory sources
+        await this._archivedSourceRepository.DeleteByOriginalChatIdAsync(chatId);
+
+        // Delete the archived session itself
+        await this._archivedSessionRepository.DeleteAsync(archivedSession);
     }
 }

@@ -72,6 +72,9 @@ internal static class CopilotChatServiceExtensions
         // AI Models configuration
         AddOptions<ModelsOptions>(ModelsOptions.PropertyName);
 
+        // Chat Archive configuration (soft-delete / trash bucket system)
+        AddOptions<ChatArchiveOptions>(ChatArchiveOptions.PropertyName);
+
         return services;
 
         void AddOptions<TOptions>(string propertyName)
@@ -184,6 +187,12 @@ internal static class CopilotChatServiceExtensions
         IStorageContext<ChatParticipant> chatParticipantStorageContext;
         IStorageContext<GeneratedFile> generatedFileStorageContext;
 
+        // Archive storage contexts
+        IStorageContext<ArchivedChatSession> archivedChatSessionStorageContext;
+        IStorageContext<ArchivedChatMessage> archivedChatMessageStorageContext;
+        IStorageContext<ArchivedChatParticipant> archivedChatParticipantStorageContext;
+        IStorageContext<ArchivedMemorySource> archivedMemorySourceStorageContext;
+
         ChatStoreOptions chatStoreConfig = services.BuildServiceProvider().GetRequiredService<IOptions<ChatStoreOptions>>().Value;
 
         switch (chatStoreConfig.Type)
@@ -195,6 +204,12 @@ internal static class CopilotChatServiceExtensions
                 chatMemorySourceStorageContext = new VolatileContext<MemorySource>();
                 chatParticipantStorageContext = new VolatileContext<ChatParticipant>();
                 generatedFileStorageContext = new VolatileContext<GeneratedFile>();
+
+                // Archive storage (volatile)
+                archivedChatSessionStorageContext = new VolatileContext<ArchivedChatSession>();
+                archivedChatMessageStorageContext = new VolatileContext<ArchivedChatMessage>();
+                archivedChatParticipantStorageContext = new VolatileContext<ArchivedChatParticipant>();
+                archivedMemorySourceStorageContext = new VolatileContext<ArchivedMemorySource>();
                 break;
             }
 
@@ -217,6 +232,16 @@ internal static class CopilotChatServiceExtensions
                     new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_participants{Path.GetExtension(fullPath)}")));
                 generatedFileStorageContext = new FileSystemContext<GeneratedFile>(
                     new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_generatedfiles{Path.GetExtension(fullPath)}")));
+
+                // Archive storage (filesystem)
+                archivedChatSessionStorageContext = new FileSystemContext<ArchivedChatSession>(
+                    new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_archived_sessions{Path.GetExtension(fullPath)}")));
+                archivedChatMessageStorageContext = new FileSystemContext<ArchivedChatMessage>(
+                    new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_archived_messages{Path.GetExtension(fullPath)}")));
+                archivedChatParticipantStorageContext = new FileSystemContext<ArchivedChatParticipant>(
+                    new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_archived_participants{Path.GetExtension(fullPath)}")));
+                archivedMemorySourceStorageContext = new FileSystemContext<ArchivedMemorySource>(
+                    new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_archived_memorysources{Path.GetExtension(fullPath)}")));
                 break;
             }
 
@@ -248,6 +273,16 @@ internal static class CopilotChatServiceExtensions
                     sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatParticipantsContainer);
                 generatedFileStorageContext = new CosmosDbContext<GeneratedFile>(
                     sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.GeneratedFilesContainer);
+
+                // Archive storage (CosmosDB)
+                archivedChatSessionStorageContext = new CosmosDbContext<ArchivedChatSession>(
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ArchivedChatSessionsContainer);
+                archivedChatMessageStorageContext = new CosmosDbContext<ArchivedChatMessage>(
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ArchivedChatMessagesContainer);
+                archivedChatParticipantStorageContext = new CosmosDbContext<ArchivedChatParticipant>(
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ArchivedChatParticipantsContainer);
+                archivedMemorySourceStorageContext = new CosmosDbContext<ArchivedMemorySource>(
+                    sharedCosmosClient, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ArchivedMemorySourcesContainer);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 break;
             }
@@ -259,11 +294,21 @@ internal static class CopilotChatServiceExtensions
             }
         }
 
+        // Register active storage repositories
         services.AddSingleton<ChatSessionRepository>(new ChatSessionRepository(chatSessionStorageContext));
         services.AddSingleton<ChatMessageRepository>(new ChatMessageRepository(chatMessageStorageContext));
         services.AddSingleton<ChatMemorySourceRepository>(new ChatMemorySourceRepository(chatMemorySourceStorageContext));
         services.AddSingleton<ChatParticipantRepository>(new ChatParticipantRepository(chatParticipantStorageContext));
         services.AddSingleton<GeneratedFileRepository>(new GeneratedFileRepository(generatedFileStorageContext));
+
+        // Register archive storage repositories
+        services.AddSingleton<ArchivedChatSessionRepository>(new ArchivedChatSessionRepository(archivedChatSessionStorageContext));
+        services.AddSingleton<ArchivedChatMessageRepository>(new ArchivedChatMessageRepository(archivedChatMessageStorageContext));
+        services.AddSingleton<ArchivedChatParticipantRepository>(new ArchivedChatParticipantRepository(archivedChatParticipantStorageContext));
+        services.AddSingleton<ArchivedMemorySourceRepository>(new ArchivedMemorySourceRepository(archivedMemorySourceStorageContext));
+
+        // Register archive cleanup background service
+        services.AddHostedService<ArchiveCleanupService>();
 
         return services;
     }

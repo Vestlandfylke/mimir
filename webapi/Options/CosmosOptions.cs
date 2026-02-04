@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 
@@ -50,4 +50,24 @@ internal sealed class CosmosOptions
     /// </summary>
     [Required, NotEmptyOrWhitespace]
     public string GeneratedFilesContainer { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Cosmos container for archived chat sessions.
+    /// </summary>
+    public string ArchivedChatSessionsContainer { get; set; } = "archivedchatsessions";
+
+    /// <summary>
+    /// Gets or sets the Cosmos container for archived chat messages.
+    /// </summary>
+    public string ArchivedChatMessagesContainer { get; set; } = "archivedchatmessages";
+
+    /// <summary>
+    /// Gets or sets the Cosmos container for archived chat participants.
+    /// </summary>
+    public string ArchivedChatParticipantsContainer { get; set; } = "archivedchatparticipants";
+
+    /// <summary>
+    /// Gets or sets the Cosmos container for archived memory sources.
+    /// </summary>
+    public string ArchivedMemorySourcesContainer { get; set; } = "archivedmemorysources";
 }

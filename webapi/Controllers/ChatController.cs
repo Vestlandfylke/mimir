@@ -915,7 +915,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
     /// <summary>
     /// Dispose of the object.
     /// </summary>
-    protected void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (disposing)
         {

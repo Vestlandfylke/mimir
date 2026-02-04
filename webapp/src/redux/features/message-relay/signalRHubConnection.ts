@@ -32,6 +32,8 @@ const enum SignalRCallbackMethods {
     GlobalDocumentUploaded = 'GlobalDocumentUploaded',
     ChatEdited = 'ChatEdited',
     ChatDeleted = 'ChatDeleted',
+    ChatArchived = 'ChatArchived',
+    ChatRestored = 'ChatRestored',
     MessageDeleted = 'MessageDeleted',
     GlobalSiteMaintenance = 'GlobalSiteMaintenance',
     PluginStateChanged = 'PluginStateChanged',
@@ -159,12 +161,23 @@ const registerCommonSignalConnectionEvents = (hubConnection: signalR.HubConnecti
 
 const startSignalRConnection = (hubConnection: signalR.HubConnection, store: StoreMiddlewareAPI) => {
     registerCommonSignalConnectionEvents(hubConnection, store);
-    hubConnection.start().catch((err) => {
-        logger.error('SignalR Connection Error: ', err);
-        setTimeout(() => {
-            startSignalRConnection(hubConnection, store);
-        }, 5000);
-    });
+    hubConnection
+        .start()
+        .then(() => {
+            // Log successful connection for production debugging
+            console.log('✅ SignalR Connected:', {
+                connectionId: hubConnection.connectionId,
+                state: hubConnection.state,
+                timestamp: new Date().toISOString(),
+            });
+        })
+        .catch((err) => {
+            logger.error('SignalR Connection Error: ', err);
+            console.error('❌ SignalR Connection Error:', err);
+            setTimeout(() => {
+                startSignalRConnection(hubConnection, store);
+            }, 5000);
+        });
 };
 
 const registerSignalREvents = (hubConnection: signalR.HubConnection, store: StoreMiddlewareAPI) => {
@@ -321,13 +334,16 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
     );
 
     hubConnection.on(SignalRCallbackMethods.ReceiveBotResponseStatus, (chatId: string, status: string | null) => {
-        // Debug logging for bot status
-        logger.debug('🔄 SignalR ReceiveBotResponseStatus:', {
+        // Log in both debug and console.log so it's visible in production
+        const logData = {
             chatId,
             status: status ?? 'null (done/clear)',
             timestamp: new Date().toISOString(),
             connectionState: hubConnection.state,
-        });
+        };
+        logger.debug('🔄 SignalR ReceiveBotResponseStatus:', logData);
+        // Temporarily log to console for production debugging
+        console.log('🔄 SignalR ReceiveBotResponseStatus:', logData);
 
         // Normalize null/empty to undefined to clear spinner reliably
         const normalizedStatus = status ?? undefined;
@@ -418,6 +434,59 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
                 });
             }
         }
+    });
+
+    // User Id is that of the user who initiated the archive (soft delete).
+    hubConnection.on(SignalRCallbackMethods.ChatArchived, (chatId: string, userId: string) => {
+        const conversations = store.getState().conversations.conversations;
+        if (!(chatId in conversations)) {
+            logger.warn(`ChatArchived: Chat ${chatId} not found in store.`);
+            return;
+        }
+
+        const friendlyChatName = getFriendlyChatName(conversations[chatId]);
+        const archivedByAnotherUser = userId !== store.getState().app.activeUserInfo?.id;
+
+        // Only show alert if archived by another user (important for collaboration)
+        // Skip notification for self-archives to reduce UI noise
+        if (archivedByAnotherUser) {
+            store.dispatch(
+                addAlert({
+                    message: COPY.CHAT_ARCHIVED_MESSAGE(friendlyChatName),
+                    type: AlertType.Warning,
+                }),
+            );
+            store.dispatch({
+                type: 'conversations/disableConversation',
+                payload: chatId,
+            });
+        } else {
+            // For self-archives, just remove from the conversation list
+            store.dispatch({
+                type: 'conversations/deleteConversation',
+                payload: chatId,
+            });
+        }
+
+        logger.debug(`ChatArchived: Chat ${chatId} archived by user ${userId}`);
+    });
+
+    // User Id is that of the user who initiated the restore.
+    hubConnection.on(SignalRCallbackMethods.ChatRestored, (chatId: string, userId: string) => {
+        // When a chat is restored, we need to reload the conversations list
+        // to get the restored chat. This is handled by the caller refreshing the list.
+        const restoredByAnotherUser = userId !== store.getState().app.activeUserInfo?.id;
+
+        if (restoredByAnotherUser) {
+            store.dispatch(
+                addAlert({
+                    message: COPY.CHAT_RESTORED_MESSAGE,
+                    type: AlertType.Info,
+                }),
+            );
+        }
+
+        logger.debug(`ChatRestored: Chat ${chatId} restored by user ${userId}`);
     });
 
     hubConnection.on(SignalRCallbackMethods.MessageDeleted, (chatId: string, messageId: string) => {

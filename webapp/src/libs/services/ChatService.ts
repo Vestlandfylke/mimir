@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import { Plugin } from '../../redux/features/plugins/PluginsState';
+import { IArchivedChatSession } from '../models/ArchivedChatSession';
 import { ChatMemorySource } from '../models/ChatMemorySource';
 import { IChatMessage } from '../models/ChatMessage';
 import { IChatParticipant } from '../models/ChatParticipant';
@@ -355,5 +356,48 @@ export class ChatService extends BaseService {
         );
 
         return result;
+    };
+
+    /**
+     * Get all archived (deleted) chats for the current user.
+     */
+    public getArchivedChatsAsync = async (accessToken?: string): Promise<IArchivedChatSession[]> => {
+        const result = await this.getResponseAsync<IArchivedChatSession[]>(
+            {
+                commandPath: 'chats/trash',
+                method: 'GET',
+            },
+            accessToken ?? '',
+        );
+
+        return result;
+    };
+
+    /**
+     * Restore an archived chat back to active chats.
+     */
+    public restoreChatAsync = async (chatId: string, accessToken?: string): Promise<IChatSession> => {
+        const result = await this.getResponseAsync<IChatSession>(
+            {
+                commandPath: `chats/${chatId}/restore`,
+                method: 'POST',
+            },
+            accessToken ?? '',
+        );
+
+        return result;
+    };
+
+    /**
+     * Permanently delete an archived chat. This cannot be undone.
+     */
+    public permanentlyDeleteChatAsync = async (chatId: string, accessToken?: string): Promise<void> => {
+        await this.getResponseAsync<undefined>(
+            {
+                commandPath: `chats/${chatId}/permanent`,
+                method: 'DELETE',
+            },
+            accessToken ?? '',
+        );
     };
 }

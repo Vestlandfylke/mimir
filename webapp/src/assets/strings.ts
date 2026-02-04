@@ -14,6 +14,18 @@ export const COPY = {
     LOADING_ERROR_USER: 'Klarte ikkje å laste brukarinfo.',
     LOADING_ERROR_CHATS: 'Klarte ikkje å laste samtalar.',
     SEND_ERROR: 'Kunne ikkje sende meldinga.',
+
+    // Trash / Archive messages
+    CHAT_ARCHIVED_MESSAGE: (chatName?: string) =>
+        `Samtale${chatName ? ` "${chatName}"` : ''} er flytta til papirkorga av ein annan brukar.`,
+    CHAT_RESTORED_MESSAGE: 'Ein samtale er gjenoppretta frå papirkorga.',
+    TRASH_EMPTY: 'Papirkorga er tom.',
+    TRASH_LOADING: 'Lastar papirkorga...',
+    TRASH_ERROR: 'Kunne ikkje laste papirkorga.',
+    TRASH_RESTORE_SUCCESS: 'Samtalen er gjenoppretta.',
+    TRASH_DELETE_CONFIRM: 'Er du sikker på at du vil slette denne samtalen permanent? Dette kan ikkje angrast.',
+    TRASH_DELETE_SUCCESS: 'Samtalen er permanent sletta.',
+    DAYS_UNTIL_DELETE: (days: number) => `${days} ${days === 1 ? 'dag' : 'dagar'} til sletting`,
 };
 
 /**
