@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel.DataAnnotations;
 
@@ -44,14 +44,25 @@ internal sealed class ChatTemplate
     public string? SystemCachePrefix { get; set; }
 
     /// <summary>
-    /// List of Azure AD group IDs or names that have access to this template.
-    /// If empty or null (and AllowedUsers is also empty), the template is available to all users.
+    /// App Roles required to access this template (RECOMMENDED).
+    /// These are defined in the App Registration manifest and assigned to AAD groups
+    /// via the Enterprise Application in Azure Portal (Enterprise App > Users and groups).
+    /// If empty/null (and no other restrictions), the template is available to all users.
+    /// Example: ["Mimir.Leiar"] - user must have the "Mimir.Leiar" App Role.
+    /// </summary>
+    public List<string>? RequiredRoles { get; set; }
+
+    /// <summary>
+    /// List of Azure AD group IDs that have access to this template (LEGACY/FALLBACK).
+    /// Prefer RequiredRoles instead - groups may not be present in the token due to
+    /// group overage (150+ groups) in large organizations like Vestland fylkeskommune.
+    /// If empty or null (and no other restrictions), the template is available to all users.
     /// </summary>
     public List<string>? AllowedGroups { get; set; }
 
     /// <summary>
     /// List of user IDs (Object IDs) that have access to this template.
-    /// Useful for testing or granting access to specific individuals.
+    /// Useful for testing or granting access to specific individuals during development.
     /// </summary>
     public List<string>? AllowedUsers { get; set; }
 
@@ -63,23 +74,40 @@ internal sealed class ChatTemplate
 
     /// <summary>
     /// Checks if a user has access to this template.
-    /// Access is granted if the user's ID is in AllowedUsers OR if the user is in any AllowedGroups.
+    /// Access is checked in this priority order:
+    /// 1. If no restrictions are configured → allow all users
+    /// 2. Check RequiredRoles against user's App Roles (recommended, always works)
+    /// 3. Check AllowedUsers against user's Object ID (for testing)
+    /// 4. Check AllowedGroups against user's group claims (may fail with group overage)
     /// </summary>
-    /// <param name="userId">The user's Object ID.</param>
+    /// <param name="userId">The user's Object ID (may include tenant suffix).</param>
     /// <param name="userGroups">The user's group claims (IDs or names).</param>
+    /// <param name="userRoles">The user's App Role claims from the token.</param>
     /// <returns>True if the user has access, false otherwise.</returns>
-    public bool IsUserAllowed(string? userId, IEnumerable<string>? userGroups)
+    public bool IsUserAllowed(string? userId, IEnumerable<string>? userGroups, IEnumerable<string>? userRoles)
     {
-        // If no restrictions are specified, template is available to all
+        // If no restrictions are specified at all, template is available to all
+        bool hasRoleRestrictions = RequiredRoles != null && RequiredRoles.Count > 0;
         bool hasGroupRestrictions = AllowedGroups != null && AllowedGroups.Count > 0;
         bool hasUserRestrictions = AllowedUsers != null && AllowedUsers.Count > 0;
 
-        if (!hasGroupRestrictions && !hasUserRestrictions)
+        if (!hasRoleRestrictions && !hasGroupRestrictions && !hasUserRestrictions)
         {
             return true;
         }
 
-        // Check if user ID is explicitly allowed
+        // Check App Roles first (recommended - always present in token, no overage issue)
+        if (hasRoleRestrictions && userRoles != null)
+        {
+            if (userRoles.Any(userRole =>
+              RequiredRoles!.Any(requiredRole =>
+                string.Equals(userRole, requiredRole, StringComparison.OrdinalIgnoreCase))))
+            {
+                return true;
+            }
+        }
+
+        // Check if user ID is explicitly allowed (useful for testing)
         if (hasUserRestrictions && !string.IsNullOrEmpty(userId))
         {
             if (AllowedUsers!.Any(allowedUser =>
@@ -91,7 +119,7 @@ internal sealed class ChatTemplate
             }
         }
 
-        // Check if user has any of the allowed groups
+        // Check if user has any of the allowed groups (legacy fallback)
         if (hasGroupRestrictions && userGroups != null)
         {
             if (userGroups.Any(userGroup =>
@@ -106,10 +134,18 @@ internal sealed class ChatTemplate
     }
 
     /// <summary>
+    /// Overload for backwards compatibility - checks user ID and groups only (no roles).
+    /// </summary>
+    public bool IsUserAllowed(string? userId, IEnumerable<string>? userGroups)
+    {
+        return IsUserAllowed(userId, userGroups, null);
+    }
+
+    /// <summary>
     /// Overload for backwards compatibility - checks only groups.
     /// </summary>
     public bool IsUserAllowed(IEnumerable<string>? userGroups)
     {
-        return IsUserAllowed(null, userGroups);
+        return IsUserAllowed(null, userGroups, null);
     }
 }

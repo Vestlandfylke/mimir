@@ -130,15 +130,17 @@ internal sealed class ChatHistoryController : ControllerBase
                 // Check if we're in dev mode (no authentication) - skip access check
                 bool isDevMode = this._authOptions.Type == ChatAuthenticationOptions.AuthenticationType.None;
 
-                // Validate that the user has access to this template (user ID or group membership check)
+                // Validate that the user has access to this template (App Role, user ID, or group membership check)
                 // Skip this check in dev mode for easier testing
-                if (!isDevMode && !template.IsUserAllowed(this._authInfo.UserId, this._authInfo.Groups))
+                if (!isDevMode && !template.IsUserAllowed(this._authInfo.UserId, this._authInfo.Groups, this._authInfo.Roles))
                 {
                     this._logger.LogWarning(
-                        "User {UserId} attempted to create chat with template '{Template}' but does not have access. User groups: [{UserGroups}], Required groups: [{AllowedGroups}], Required users: [{AllowedUsers}]",
+                        "User {UserId} attempted to create chat with template '{Template}' but does not have access. User roles: [{UserRoles}], User groups: [{UserGroups}], Required roles: [{RequiredRoles}], Allowed groups: [{AllowedGroups}], Allowed users: [{AllowedUsers}]",
                         this._authInfo.UserId,
                         chatParameters.Template,
+                        string.Join(", ", this._authInfo.Roles),
                         string.Join(", ", this._authInfo.Groups),
+                        string.Join(", ", template.RequiredRoles ?? new List<string>()),
                         string.Join(", ", template.AllowedGroups ?? new List<string>()),
                         string.Join(", ", template.AllowedUsers ?? new List<string>()));
                     return this.StatusCode(StatusCodes.Status403Forbidden, $"You do not have access to the '{chatParameters.Template}' assistant.");
@@ -661,8 +663,12 @@ internal sealed class ChatHistoryController : ControllerBase
         }
         catch (Exception ex)
         {
-            this._logger.LogError(ex, "Failed to restore chat {ChatId}", chatIdString);
-            return this.StatusCode(500, $"Failed to restore chat id '{chatId}'.");
+            this._logger.LogError(ex, "Failed to restore chat {ChatId}. Exception: {ExceptionType} - {Message}",
+                chatIdString, ex.GetType().Name, ex.Message);
+
+            // Include inner exception details if available
+            var innerMessage = ex.InnerException?.Message ?? "No inner exception";
+            return this.StatusCode(500, $"Failed to restore chat id '{chatId}'. Error: {ex.Message} (Inner: {innerMessage})");
         }
 
         // Broadcast restore notification
@@ -677,22 +683,23 @@ internal sealed class ChatHistoryController : ControllerBase
 
     /// <summary>
     /// Restores all resources from archive to active storage.
+    /// Uses Upsert to handle cases where partial restore data may already exist.
     /// </summary>
     private async Task RestoreChatResourcesAsync(ArchivedChatSession archivedSession, CancellationToken cancellationToken)
     {
         var chatId = archivedSession.OriginalChatId;
         var restoreTasks = new List<Task>();
 
-        // Restore the chat session
+        // Restore the chat session (upsert in case of partial previous restore)
         var chatSession = archivedSession.ToChatSession();
-        restoreTasks.Add(this._sessionRepository.CreateAsync(chatSession));
+        restoreTasks.Add(this._sessionRepository.UpsertAsync(chatSession));
 
         // Restore all participants
         var archivedParticipants = await this._archivedParticipantRepository.FindByOriginalChatIdAsync(chatId);
         foreach (var archivedParticipant in archivedParticipants)
         {
             var participant = archivedParticipant.ToChatParticipant();
-            restoreTasks.Add(this._participantRepository.CreateAsync(participant));
+            restoreTasks.Add(this._participantRepository.UpsertAsync(participant));
         }
 
         // Restore all messages
@@ -700,7 +707,7 @@ internal sealed class ChatHistoryController : ControllerBase
         foreach (var archivedMessage in archivedMessages)
         {
             var message = archivedMessage.ToCopilotChatMessage();
-            restoreTasks.Add(this._messageRepository.CreateAsync(message));
+            restoreTasks.Add(this._messageRepository.UpsertAsync(message));
         }
 
         // Restore all memory sources
@@ -708,7 +715,7 @@ internal sealed class ChatHistoryController : ControllerBase
         foreach (var archivedSource in archivedSources)
         {
             var source = archivedSource.ToMemorySource();
-            restoreTasks.Add(this._sourceRepository.CreateAsync(source));
+            restoreTasks.Add(this._sourceRepository.UpsertAsync(source));
         }
 
         // Wait for all restore operations to complete

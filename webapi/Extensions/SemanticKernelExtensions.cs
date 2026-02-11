@@ -112,7 +112,8 @@ internal static class SemanticKernelExtensions
                 mcpPlanService: sp.GetService<McpPlanService>(),
                 telemetryService: sp.GetService<ITelemetryService>(),
                 modelKernelFactory: sp.GetService<ModelKernelFactory>(),
-                leiarKontekstCitationService: sp.GetService<LeiarKontekstCitationService>()),
+                leiarKontekstCitationService: sp.GetService<LeiarKontekstCitationService>(),
+                piiSanitizationService: sp.GetService<PiiSanitizationService>()),
             nameof(ChatPlugin));
 
         return kernel;

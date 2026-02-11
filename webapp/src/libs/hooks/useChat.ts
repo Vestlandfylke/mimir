@@ -774,7 +774,7 @@ export const useChat = () => {
         } catch (e: any) {
             // Templates are optional, so we don't show an error alert
             // Just log the error and return empty array
-            console.warn('Unable to load available templates:', getErrorDetails(e));
+            logger.warn('Unable to load available templates:', getErrorDetails(e));
             return [];
         }
     };

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Text;
@@ -22,15 +22,18 @@ internal sealed class LeiarKontekstPlugin
     private readonly LeiarKontekstPluginOptions _options;
     private readonly SearchClient _searchClient;
     private readonly LeiarKontekstCitationService? _citationService;
+    private readonly PiiSanitizationService? _piiSanitizationService;
 
     public LeiarKontekstPlugin(
         LeiarKontekstPluginOptions options,
         ILogger logger,
-        LeiarKontekstCitationService? citationService = null)
+        LeiarKontekstCitationService? citationService = null,
+        PiiSanitizationService? piiSanitizationService = null)
     {
         this._options = options ?? throw new ArgumentNullException(nameof(options));
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this._citationService = citationService;
+        this._piiSanitizationService = piiSanitizationService;
 
         // Initialize Azure AI Search client
         var credential = new AzureKeyCredential(options.ApiKey!);
@@ -107,6 +110,20 @@ internal sealed class LeiarKontekstPlugin
 
                 // Get content and truncate if necessary
                 var content = GetFieldValue(result.Document, this._options.ContentFieldName);
+
+                // Sanitize PII from retrieved document content before it reaches the AI model
+                if (this._piiSanitizationService != null)
+                {
+                    var sanitizeResult = this._piiSanitizationService.Sanitize(content);
+                    if (sanitizeResult.ContainsPii)
+                    {
+                        content = sanitizeResult.SanitizedText;
+                        this._logger.LogWarning(
+                            "PII detected and masked in LeiarKontekst document '{Title}'. Types: {PiiTypes}",
+                            doc.Title, string.Join(", ", sanitizeResult.Warnings));
+                    }
+                }
+
                 if (content.Length > this._options.MaxContentLength)
                 {
                     content = content.Substring(0, this._options.MaxContentLength) + "\n\n[Innhaldet er forkorta...]";
@@ -218,6 +235,19 @@ internal sealed class LeiarKontekstPlugin
                 var docTitle = GetFieldValue(result.Document, this._options.TitleFieldName);
                 var content = GetFieldValue(result.Document, this._options.ContentFieldName);
                 var source = GetFieldValue(result.Document, this._options.SourceFieldName);
+
+                // Sanitize PII from retrieved document content
+                if (this._piiSanitizationService != null)
+                {
+                    var sanitizeResult = this._piiSanitizationService.Sanitize(content);
+                    if (sanitizeResult.ContainsPii)
+                    {
+                        content = sanitizeResult.SanitizedText;
+                        this._logger.LogWarning(
+                            "PII detected and masked in LeiarKontekst document '{Title}'. Types: {PiiTypes}",
+                            docTitle, string.Join(", ", sanitizeResult.Warnings));
+                    }
+                }
 
                 // Register citation with the citation service for display in the UI
                 if (this._citationService != null)

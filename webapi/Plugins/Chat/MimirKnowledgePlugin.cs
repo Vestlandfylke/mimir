@@ -6,6 +6,7 @@ using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
 using CopilotChat.WebApi.Options;
+using CopilotChat.WebApi.Services;
 using Microsoft.SemanticKernel;
 
 namespace CopilotChat.WebApi.Plugins.Chat;
@@ -21,13 +22,16 @@ public sealed class MimirKnowledgePlugin
     private readonly ILogger _logger;
     private readonly MimirKnowledgePluginOptions _options;
     private readonly SearchClient _searchClient;
+    private readonly PiiSanitizationService? _piiSanitizationService;
 
     public MimirKnowledgePlugin(
         MimirKnowledgePluginOptions options,
-        ILogger logger)
+        ILogger logger,
+        PiiSanitizationService? piiSanitizationService = null)
     {
         this._options = options ?? throw new ArgumentNullException(nameof(options));
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this._piiSanitizationService = piiSanitizationService;
 
         // Initialize Azure AI Search client
         var credential = new AzureKeyCredential(options.ApiKey!);
@@ -115,6 +119,20 @@ public sealed class MimirKnowledgePlugin
 
                 // Get content - for history category, don't truncate to preserve timeline
                 var content = GetFieldValue(result.Document, this._options.ContentFieldName);
+
+                // Sanitize PII from retrieved content
+                if (this._piiSanitizationService != null)
+                {
+                    var sanitizeResult = this._piiSanitizationService.Sanitize(content);
+                    if (sanitizeResult.ContainsPii)
+                    {
+                        content = sanitizeResult.SanitizedText;
+                        this._logger.LogWarning(
+                            "PII detected and masked in MimirKnowledge document '{Title}'. Types: {PiiTypes}",
+                            doc.Title, string.Join(", ", sanitizeResult.Warnings));
+                    }
+                }
+
                 if (doc.Category != "history" && content.Length > this._options.MaxContentLength)
                 {
                     content = content.Substring(0, this._options.MaxContentLength) + "\n\n[Innhaldet er forkorta...]";

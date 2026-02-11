@@ -52,6 +52,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
     private readonly IDictionary<string, Plugin> _plugins;
     private readonly ChatCancellationService _cancellationService;
     private readonly IDocumentTextExtractor _documentTextExtractor;
+    private readonly PiiSanitizationService _piiSanitizationService;
 
     private const string ChatPluginName = nameof(ChatPlugin);
     private const string ChatFunctionName = "Chat";
@@ -72,7 +73,8 @@ internal sealed class ChatController : ControllerBase, IDisposable
         IOptions<PromptsOptions> promptsOptions,
         IDictionary<string, Plugin> plugins,
         ChatCancellationService cancellationService,
-        IDocumentTextExtractor documentTextExtractor)
+        IDocumentTextExtractor documentTextExtractor,
+        PiiSanitizationService piiSanitizationService)
     {
         this._logger = logger;
         this._httpClientFactory = httpClientFactory;
@@ -90,6 +92,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
         this._plugins = plugins;
         this._cancellationService = cancellationService;
         this._documentTextExtractor = documentTextExtractor;
+        this._piiSanitizationService = piiSanitizationService;
     }
 
     /// <summary>
@@ -126,6 +129,20 @@ internal sealed class ChatController : ControllerBase, IDisposable
         this._logger.LogDebug("Chat message received.");
 
         string chatIdString = chatId.ToString();
+
+        // Sanitize user input for PII (personnummer, bank accounts, credit cards, etc.)
+        // before any processing, storage, or sending to the AI model.
+        var sanitizeResult = this._piiSanitizationService.Sanitize(ask.Input);
+        if (sanitizeResult.ContainsPii)
+        {
+            ask.Input = sanitizeResult.SanitizedText;
+            this._logger.LogWarning("PII detected and masked in chat {ChatId} from user {UserId}.", chatIdString, authInfo.UserId);
+
+            // Warn the user via SignalR that sensitive data was removed.
+            // Also send the sanitized text so the frontend can update the displayed message.
+            await messageRelayHubContext.Clients.Group(chatIdString)
+                .SendAsync("ReceivePiiWarning", chatIdString, sanitizeResult.Warnings, sanitizeResult.SanitizedText);
+        }
 
         // Put ask's variables in the context we will use.
         var contextVariables = GetContextVariables(ask, authInfo, chatIdString);
@@ -511,7 +528,8 @@ internal sealed class ChatController : ControllerBase, IDisposable
             new LeiarKontekstPlugin(
                 this._leiarKontekstPluginOptions,
                 this._logger,
-                this._leiarKontekstCitationService),
+                this._leiarKontekstCitationService,
+                this._piiSanitizationService),
             LeiarKontekstPluginOptions.PluginName);
     }
 
@@ -566,7 +584,8 @@ internal sealed class ChatController : ControllerBase, IDisposable
         kernel.ImportPluginFromObject(
             new MimirKnowledgePlugin(
                 this._mimirKnowledgePluginOptions,
-                this._logger),
+                this._logger,
+                this._piiSanitizationService),
             MimirKnowledgePluginOptions.PluginName);
     }
 

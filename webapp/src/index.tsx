@@ -11,6 +11,7 @@ import React from 'react';
 import { teamsAuthHelper } from './libs/auth/TeamsAuthHelper';
 import { BackendServiceUrl } from './libs/services/BaseService';
 import { EmbeddedAppHelper } from './libs/utils/EmbeddedAppHelper';
+import { logger } from './libs/utils/Logger';
 import { setAuthConfig } from './redux/features/app/appSlice';
 
 let container: HTMLElement | null = null;
@@ -100,7 +101,7 @@ export function renderApp() {
                         })
                         .catch((error) => {
                             // If redirect handling fails, clear cache and let user re-authenticate
-                            console.warn('MSAL redirect handling failed, clearing cache:', error);
+                            logger.warn('MSAL redirect handling failed, clearing cache:', error);
                             clearMsalCache();
                         });
 
@@ -120,7 +121,7 @@ export function renderApp() {
                     );
                 } catch (error) {
                     // MSAL initialization failed - likely corrupted cache
-                    console.error('MSAL initialization failed, clearing cache and retrying:', error);
+                    logger.error('MSAL initialization failed, clearing cache and retrying:', error);
                     clearMsalCache();
 
                     // Retry initialization after clearing cache
@@ -139,7 +140,7 @@ export function renderApp() {
                             </React.StrictMode>,
                         );
                     } catch (retryError) {
-                        console.error('MSAL initialization failed after retry:', retryError);
+                        logger.error('MSAL initialization failed after retry:', retryError);
                         // Render without MSAL - user will need to log in again
                         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                         root!.render(

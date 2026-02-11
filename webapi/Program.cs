@@ -79,6 +79,9 @@ internal sealed class Program
         // Add plugin hint service for proactive plugin usage
         builder.Services.AddSingleton<PluginHintService>();
 
+        // Add PII sanitization service for detecting and masking sensitive data (personnummer, bank accounts, etc.)
+        builder.Services.AddSingleton<PiiSanitizationService>();
+
         TelemetryDebugWriter.IsTracingDisabled = Debugger.IsAttached;
 
         // Add named HTTP clients for IHttpClientFactory
@@ -100,7 +103,7 @@ internal sealed class Program
             .AddEndpointsApiExplorer()
             .AddSwaggerGen(options =>
             {
-                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
                 {
                     Title = "Mimir API",
                     Version = "1.0.0",
@@ -111,28 +114,21 @@ internal sealed class Program
                 options.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
 
                 // Add Bearer token authentication for Swagger UI
-                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
                 {
                     Description = "JWT Authorization header using the Bearer scheme. Enter your token in the text input below.",
                     Name = "Authorization",
-                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                    In = Microsoft.OpenApi.ParameterLocation.Header,
+                    Type = Microsoft.OpenApi.SecuritySchemeType.Http,
                     Scheme = "bearer",
                     BearerFormat = "JWT"
                 });
 
-                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+                options.AddSecurityRequirement(document => new Microsoft.OpenApi.OpenApiSecurityRequirement
                 {
                     {
-                        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                        {
-                            Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                            {
-                                Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        Array.Empty<string>()
+                        new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer", document),
+                        new List<string>()
                     }
                 });
             })
@@ -202,11 +198,12 @@ internal sealed class Program
 
         // Enable Swagger for all environments with authorization
         // In development: open access
-        // In production: requires authentication and specific Azure AD group/user membership
+        // In production: requires authentication and role/group/user membership
+        var swaggerRequiredRoles = builder.Configuration.GetSection("Swagger:RequiredRoles").Get<string[]>() ?? Array.Empty<string>();
         var swaggerAuthorizedGroups = builder.Configuration.GetSection("Swagger:AuthorizedGroups").Get<string[]>() ?? Array.Empty<string>();
         var swaggerAuthorizedUsers = builder.Configuration.GetSection("Swagger:AuthorizedUsers").Get<string[]>() ?? Array.Empty<string>();
         var swaggerEnabled = builder.Configuration.GetValue<bool>("Swagger:Enabled", true);
-        var hasSwaggerRestrictions = swaggerAuthorizedGroups.Length > 0 || swaggerAuthorizedUsers.Length > 0;
+        var hasSwaggerRestrictions = swaggerRequiredRoles.Length > 0 || swaggerAuthorizedGroups.Length > 0 || swaggerAuthorizedUsers.Length > 0;
 
         if (swaggerEnabled)
         {
@@ -227,24 +224,38 @@ internal sealed class Program
                                 return;
                             }
 
-                            // Check if user's Object ID is in the authorized users list
+                            // 1. Check App Roles first (recommended, managed via Enterprise App in Azure Portal)
+                            var userRoles = context.User.Claims
+                                .Where(c => c.Type == "roles" ||
+                                       c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" ||
+                                       c.Type == System.Security.Claims.ClaimTypes.Role)
+                                .Select(c => c.Value)
+                                .ToList();
+
+                            var isRoleAuthorized = swaggerRequiredRoles.Length > 0 &&
+                                swaggerRequiredRoles.Any(requiredRole =>
+                                    userRoles.Contains(requiredRole, StringComparer.OrdinalIgnoreCase));
+
+                            // 2. Fallback: Check user Object ID (legacy)
                             var userObjectId = context.User.Claims
                                 .FirstOrDefault(c => c.Type == "oid" || c.Type == "http://schemas.microsoft.com/identity/claims/objectidentifier")
                                 ?.Value;
 
-                            var isUserAuthorized = userObjectId != null &&
+                            var isUserAuthorized = swaggerAuthorizedUsers.Length > 0 &&
+                                userObjectId != null &&
                                 swaggerAuthorizedUsers.Contains(userObjectId, StringComparer.OrdinalIgnoreCase);
 
-                            // Check if user is in any of the authorized groups
+                            // 3. Fallback: Check group membership (legacy, subject to group overage)
                             var userGroups = context.User.Claims
                                 .Where(c => c.Type == "groups" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups")
                                 .Select(c => c.Value)
                                 .ToList();
 
-                            var isGroupAuthorized = swaggerAuthorizedGroups.Any(authorizedGroup =>
-                                userGroups.Contains(authorizedGroup, StringComparer.OrdinalIgnoreCase));
+                            var isGroupAuthorized = swaggerAuthorizedGroups.Length > 0 &&
+                                swaggerAuthorizedGroups.Any(authorizedGroup =>
+                                    userGroups.Contains(authorizedGroup, StringComparer.OrdinalIgnoreCase));
 
-                            if (!isUserAuthorized && !isGroupAuthorized)
+                            if (!isRoleAuthorized && !isUserAuthorized && !isGroupAuthorized)
                             {
                                 context.Response.StatusCode = 403;
                                 await context.Response.WriteAsync("Forbidden: You do not have permission to access Swagger. Contact your administrator.");

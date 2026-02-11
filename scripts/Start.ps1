@@ -108,9 +108,9 @@ Write-Host "Chat Copilot is starting up!" -ForegroundColor Green
 Write-Host "========================================"
 Write-Host ""
 Write-Host "Services:" -ForegroundColor Cyan
-Write-Host "  - MCP Bridge:  http://localhost:8002" -ForegroundColor White
-Write-Host "  - Backend:     https://localhost:40443" -ForegroundColor White
-Write-Host "  - Frontend:    http://localhost:3000" -ForegroundColor White
+Write-Host "  - MCP Bridge:       http://localhost:8002" -ForegroundColor White
+Write-Host "  - Backend:          https://localhost:40443" -ForegroundColor White
+Write-Host "  - Frontend:         http://localhost:3000" -ForegroundColor White
 Write-Host ""
 Write-Host "MCP Tools Available:" -ForegroundColor Cyan
 Write-Host "  25 tools from your Azure FastMCP server" -ForegroundColor White

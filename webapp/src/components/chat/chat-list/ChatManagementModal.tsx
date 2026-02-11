@@ -33,6 +33,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { AuthHelper } from '../../../libs/auth/AuthHelper';
 import { ChatService } from '../../../libs/services/ChatService';
+import { logger } from '../../../libs/utils/Logger';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { ChatState } from '../../../redux/features/conversations/ChatState';
@@ -308,7 +309,7 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
                 archived.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
                 setArchivedChats(archived);
             } catch (error) {
-                console.error('Failed to fetch archived chats:', error);
+                logger.error('Failed to fetch archived chats:', error);
                 setArchivedError('Kunne ikkje laste sletta samtalar.');
             } finally {
                 setLoadingArchived(false);
@@ -422,7 +423,7 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
             // Refresh the main chat list
             await chat.loadChats();
         } catch (error) {
-            console.error('Failed to restore chats:', error);
+            logger.error('Failed to restore chats:', error);
         } finally {
             setIsRestoring(false);
         }
@@ -453,7 +454,7 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
             setSelectedArchivedIds(new Set());
             setArchivedChats((prev) => prev.filter((c) => !selectedArchivedIds.has(c.id)));
         } catch (error) {
-            console.error('Failed to permanently delete chats:', error);
+            logger.error('Failed to permanently delete chats:', error);
         } finally {
             setIsPermanentlyDeleting(false);
             setShowPermanentDeleteConfirm(false);

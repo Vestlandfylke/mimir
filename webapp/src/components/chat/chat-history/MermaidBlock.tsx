@@ -13,6 +13,7 @@ import {
 } from '@fluentui/react-components';
 import { ArrowDownload20Regular, ChevronDown16Regular } from '@fluentui/react-icons';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { logger } from '../../../libs/utils/Logger';
 import { MermaidEditorModal } from './MermaidEditorModal';
 import { buildVestlandThemeVariables, diagramBaseStyles, getXYChartConfig, LIGHT_BACKGROUND } from './MermaidStyles';
 import { MermaidViewerModal } from './MermaidViewerModal';
@@ -508,7 +509,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = memo(({ code, isDark = 
             a.remove();
             URL.revokeObjectURL(url);
         } catch (err) {
-            console.error('Failed to export SVG in light mode:', err);
+            logger.error('Failed to export SVG in light mode:', err);
             // Fallback to current SVG if light mode render fails
             const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(svgBlob);

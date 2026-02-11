@@ -9,6 +9,7 @@ on:
       - "webapp/**"
       - "mcp-bridge/**"
       - "memorypipeline/**"
+      - "scripts/deploy/**"
       - ".github/workflows/*.yml"
   workflow_dispatch:
     inputs:

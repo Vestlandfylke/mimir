@@ -2,6 +2,7 @@
 
 import { Action, Dispatch, Middleware } from '@reduxjs/toolkit';
 import { AlertType } from '../../../libs/models/AlertType';
+import { logger } from '../../../libs/utils/Logger';
 import { addAlert } from '../app/appSlice';
 import { IChatMessage } from './../../../libs/models/ChatMessage';
 import { RootState, StoreMiddlewareAPI, getSelectedChatID } from './../../app/store';
@@ -52,10 +53,10 @@ export const signalRMiddleware: Middleware<any, RootState, Dispatch<SignalRActio
                 Promise.all(
                     Object.keys(signalRAction.payload).map(async (id) => {
                         await hubConnection.invoke('AddClientToGroupAsync', id);
-                        console.log('✅ SignalR: Joined group', id);
+                        logger.debug('SignalR: Joined group', id);
                     }),
                 ).catch((err) => {
-                    console.error('❌ SignalR: Failed to join groups', err);
+                    logger.error('SignalR: Failed to join groups', err);
                     store.dispatch(addAlert({ message: String(err), type: AlertType.Error }));
                 });
                 break;
@@ -63,10 +64,10 @@ export const signalRMiddleware: Middleware<any, RootState, Dispatch<SignalRActio
                 hubConnection
                     .invoke('AddClientToGroupAsync', signalRAction.payload.id)
                     .then(() => {
-                        console.log('✅ SignalR: Joined new conversation group', signalRAction.payload.id);
+                        logger.debug('SignalR: Joined new conversation group', signalRAction.payload.id);
                     })
                     .catch((err) => {
-                        console.error('❌ SignalR: Failed to join new conversation group', err);
+                        logger.error('SignalR: Failed to join new conversation group', err);
                         store.dispatch(addAlert({ message: String(err), type: AlertType.Error }));
                     });
                 break;

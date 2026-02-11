@@ -1206,7 +1206,7 @@ resource archivedMemorySourcesContainer 'Microsoft.DocumentDB/databaseAccounts/s
       }
       partitionKey: {
         paths: [
-          '/chatId'
+          '/originalChatId'
         ]
         kind: 'Hash'
         version: 2

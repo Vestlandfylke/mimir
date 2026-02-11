@@ -142,10 +142,12 @@ internal sealed class ServiceInfoController : ControllerBase
         }
 
         var userGroups = this._authInfo.Groups;
+        var userRoles = this._authInfo.Roles;
 
         this._logger.LogDebug(
-            "Getting available templates for user {UserId}. User groups: [{Groups}]",
+            "Getting available templates for user {UserId}. User roles: [{Roles}], User groups: [{Groups}]",
             this._authInfo.UserId,
+            string.Join(", ", userRoles),
             string.Join(", ", userGroups));
 
         foreach (var (templateId, template) in this._promptsOptions.Templates)
@@ -160,13 +162,14 @@ internal sealed class ServiceInfoController : ControllerBase
             // In dev mode, skip access check and show all enabled templates
             if (!isDevMode)
             {
-                // Check if user has access to this template (by user ID or group membership)
-                if (!template.IsUserAllowed(this._authInfo.UserId, userGroups))
+                // Check if user has access to this template (by App Role, user ID, or group membership)
+                if (!template.IsUserAllowed(this._authInfo.UserId, userGroups, userRoles))
                 {
                     this._logger.LogDebug(
-                        "User {UserId} does not have access to template '{TemplateId}'. Required groups: [{AllowedGroups}], Required users: [{AllowedUsers}]",
+                        "User {UserId} does not have access to template '{TemplateId}'. Required roles: [{RequiredRoles}], Allowed groups: [{AllowedGroups}], Allowed users: [{AllowedUsers}]",
                         this._authInfo.UserId,
                         templateId,
+                        string.Join(", ", template.RequiredRoles ?? new List<string>()),
                         string.Join(", ", template.AllowedGroups ?? new List<string>()),
                         string.Join(", ", template.AllowedUsers ?? new List<string>()));
                     continue;
@@ -185,6 +188,101 @@ internal sealed class ServiceInfoController : ControllerBase
         }
 
         return this.Ok(availableTemplates);
+    }
+
+    /// <summary>
+    /// Debug endpoint to inspect the current user's token claims.
+    /// Useful for verifying that App Roles, groups, and other claims are correctly
+    /// emitted by Azure AD. Only available in Development environment.
+    /// </summary>
+    [Route("debug/claims")]
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public IActionResult GetDebugClaims([FromServices] IWebHostEnvironment env)
+    {
+        // Only allow in Development or when user has Swagger access (via role, group, or user ID)
+        if (!env.IsDevelopment())
+        {
+            var swaggerRequiredRoles = this._configuration.GetSection("Swagger:RequiredRoles").Get<string[]>() ?? [];
+            var swaggerAuthorizedUsers = this._configuration.GetSection("Swagger:AuthorizedUsers").Get<string[]>() ?? [];
+            var swaggerAuthorizedGroups = this._configuration.GetSection("Swagger:AuthorizedGroups").Get<string[]>() ?? [];
+
+            // Check App Roles (recommended)
+            var isRoleAuthorized = swaggerRequiredRoles.Length > 0 &&
+                this._authInfo.Roles.Any(userRole =>
+                    swaggerRequiredRoles.Any(requiredRole =>
+                        string.Equals(userRole, requiredRole, StringComparison.OrdinalIgnoreCase)));
+
+            // Fallback: check user Object ID
+            var userObjectId = this.HttpContext.User.Claims
+                .FirstOrDefault(c => c.Type == "oid" || c.Type == "http://schemas.microsoft.com/identity/claims/objectidentifier")
+                ?.Value;
+            var isUserAuthorized = swaggerAuthorizedUsers.Length > 0 &&
+                userObjectId != null &&
+                swaggerAuthorizedUsers.Contains(userObjectId, StringComparer.OrdinalIgnoreCase);
+
+            // Fallback: check group membership
+            var isGroupAuthorized = swaggerAuthorizedGroups.Length > 0 &&
+                this._authInfo.Groups.Any(userGroup =>
+                    swaggerAuthorizedGroups.Contains(userGroup, StringComparer.OrdinalIgnoreCase));
+
+            if (!isRoleAuthorized && !isUserAuthorized && !isGroupAuthorized)
+            {
+                return this.Forbid();
+            }
+        }
+
+        // Extract all claims from the token for debugging
+        var allClaims = this.HttpContext.User.Claims
+            .Select(c => new { c.Type, c.Value })
+            .ToList();
+
+        // Check for group overage indicators
+        var hasGroupOverage = this.HttpContext.User.Claims
+            .Any(c => c.Type == "_claim_names" && c.Value.Contains("groups"));
+        var hasGroupsClaimSource = this.HttpContext.User.Claims
+            .Any(c => c.Type == "_claim_sources");
+
+        var debugInfo = new
+        {
+            UserId = this._authInfo.UserId,
+            UserName = this._authInfo.Name,
+            Email = this._authInfo.Email,
+            IsAuthenticated = this._authInfo.IsAuthenticated,
+
+            // App Roles (the recommended way to control template access)
+            Roles = this._authInfo.Roles,
+            RolesCount = this._authInfo.Roles.Count,
+
+            // Groups (may be empty due to overage)
+            Groups = this._authInfo.Groups,
+            GroupsCount = this._authInfo.Groups.Count,
+
+            // Group overage detection
+            GroupOverageDetected = hasGroupOverage,
+            HasClaimSources = hasGroupsClaimSource,
+            GroupOverageNote = hasGroupOverage
+                ? "Group overage detected! The user has too many groups (150+) for Azure AD to include in the token. Use App Roles (RequiredRoles) instead of AllowedGroups for template access control."
+                : "No group overage detected.",
+
+            // Template access summary
+            TemplateAccess = this._promptsOptions.Templates?.Select(t => new
+            {
+                TemplateId = t.Key,
+                t.Value.DisplayName,
+                t.Value.Enabled,
+                RequiredRoles = t.Value.RequiredRoles ?? [],
+                AllowedGroups = t.Value.AllowedGroups ?? [],
+                AllowedUsers = t.Value.AllowedUsers ?? [],
+                UserHasAccess = t.Value.IsUserAllowed(this._authInfo.UserId, this._authInfo.Groups, this._authInfo.Roles),
+            }),
+
+            // Raw token claims for debugging
+            AllClaims = allClaims,
+        };
+
+        return this.Ok(debugInfo);
     }
 
     /// <summary>

@@ -37,6 +37,7 @@ import * as htmlToImage from 'html-to-image';
 import React, { useRef, useState } from 'react';
 import { useChat } from '../../../libs/hooks/useChat';
 import { AuthorRoles, ChatMessageType, IChatMessage, UserFeedback } from '../../../libs/models/ChatMessage';
+import { logger } from '../../../libs/utils/Logger';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { DefaultChatUser, FeatureKeys } from '../../../redux/features/app/AppState';
@@ -200,7 +201,7 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
                 setImageCopied(false);
             }, 2000);
         } catch (error) {
-            console.error('Failed to copy image:', error);
+            logger.error('Failed to copy image:', error);
         }
     };
 

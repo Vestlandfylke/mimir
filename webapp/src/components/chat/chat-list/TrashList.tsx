@@ -27,6 +27,7 @@ import {
     getDaysUntilDeletion,
 } from '../../../libs/models/ArchivedChatSession';
 import { ChatService } from '../../../libs/services/ChatService';
+import { logger } from '../../../libs/utils/Logger';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { FeatureKeys } from '../../../redux/features/app/AppState';
@@ -171,7 +172,7 @@ export const TrashList: FC<TrashListProps> = ({ onBack }) => {
             const chats = await chatService.getArchivedChatsAsync();
             setArchivedChats(chats);
         } catch (err) {
-            console.error('Failed to load archived chats:', err);
+            logger.error('Failed to load archived chats:', err);
             setError(COPY.TRASH_ERROR);
         } finally {
             setLoading(false);
@@ -191,7 +192,7 @@ export const TrashList: FC<TrashListProps> = ({ onBack }) => {
             // Refresh the main chat list so the restored chat appears
             await chat.loadChats();
         } catch (err) {
-            console.error('Failed to restore chat:', err);
+            logger.error('Failed to restore chat:', err);
             alert('Kunne ikkje gjenopprette samtalen');
         } finally {
             setRestoringId(null);
@@ -205,7 +206,7 @@ export const TrashList: FC<TrashListProps> = ({ onBack }) => {
             // Remove from list after successful deletion
             setArchivedChats((prev) => prev.filter((c) => c.originalChatId !== chatId));
         } catch (err) {
-            console.error('Failed to permanently delete chat:', err);
+            logger.error('Failed to permanently delete chat:', err);
             alert('Kunne ikkje slette samtalen permanent');
         } finally {
             setDeletingId(null);

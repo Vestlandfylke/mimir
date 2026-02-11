@@ -97,6 +97,11 @@ internal sealed class ChatPlugin
     private readonly LeiarKontekstCitationService? _leiarKontekstCitationService;
 
     /// <summary>
+    /// PII sanitization service for masking sensitive data in retrieved content.
+    /// </summary>
+    private readonly PiiSanitizationService? _piiSanitizationService;
+
+    /// <summary>
     /// Whether to stream responses to the client in real-time.
     /// When false, responses are collected fully before sending.
     /// </summary>
@@ -126,7 +131,8 @@ internal sealed class ChatPlugin
         McpPlanService? mcpPlanService = null,
         ITelemetryService? telemetryService = null,
         ModelKernelFactory? modelKernelFactory = null,
-        LeiarKontekstCitationService? leiarKontekstCitationService = null)
+        LeiarKontekstCitationService? leiarKontekstCitationService = null,
+        PiiSanitizationService? piiSanitizationService = null)
     {
         this._logger = logger;
         this._kernel = kernel;
@@ -137,13 +143,14 @@ internal sealed class ChatPlugin
         // Clone the prompt options to avoid modifying the original prompt options.
         this._promptOptions = promptOptions.Value.Copy();
 
-        this._kernelMemoryRetriever = new KernelMemoryRetriever(promptOptions, chatSessionRepository, sourceRepository, memoryClient, logger);
+        this._kernelMemoryRetriever = new KernelMemoryRetriever(promptOptions, chatSessionRepository, sourceRepository, memoryClient, logger, piiSanitizationService);
 
         this._contentSafety = contentSafety;
         this._mcpPlanService = mcpPlanService;
         this._telemetryService = telemetryService;
         this._modelKernelFactory = modelKernelFactory;
         this._leiarKontekstCitationService = leiarKontekstCitationService;
+        this._piiSanitizationService = piiSanitizationService;
         this._enableResponseStreaming = serviceOptions.Value.EnableResponseStreaming;
     }
 
@@ -370,6 +377,12 @@ internal sealed class ChatPlugin
     /// <param name="chatId">The chat ID</param>
     /// <param name="context">The KernelArguments.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <summary>
+    /// Marker used in SystemDescription to delimit user custom instructions ("Eigne instruksjonar").
+    /// Must match the marker used by the frontend (PersonaTab.tsx).
+    /// </summary>
+    private const string CustomInstructionsMarker = "\n\n--- EIGNE INSTRUKSJONAR ---\n";
+
     private async Task<string> RenderSystemInstructionsAsync(string chatId, KernelArguments context, CancellationToken cancellationToken)
     {
         // Render system instruction components
@@ -388,8 +401,19 @@ internal sealed class ChatPlugin
         var promptTemplate = promptTemplateFactory.Create(new PromptTemplateConfig(this._promptOptions.SystemPersona));
         var systemPersona = await promptTemplate.RenderAsync(this._kernel, context, cancellationToken);
 
-        // 3. Add reasoning instruction if model supports it
-        // IMPORTANT: Place at the START of the prompt - models pay more attention to beginnings
+        // 3. Extract user custom instructions and move them to a prominent position.
+        // Custom instructions are appended at the end of SystemDescription by the frontend,
+        // but models pay less attention to content buried deep in long prompts.
+        // We extract them and place them right after the cache prefix for maximum visibility.
+        string? userCustomInstructions = null;
+        var markerIndex = systemPersona.IndexOf(CustomInstructionsMarker, StringComparison.Ordinal);
+        if (markerIndex >= 0)
+        {
+            userCustomInstructions = systemPersona[(markerIndex + CustomInstructionsMarker.Length)..].Trim();
+            systemPersona = systemPersona[..markerIndex];
+        }
+
+        // 4. Add reasoning instruction if model supports it
         ChatSession? chatSession = null;
         await this._chatSessionRepository.TryFindByIdAsync(chatId, callback: v => chatSession = v);
         if (chatSession != null && this.IsReasoningEnabled(chatSession.ModelId))
@@ -401,13 +425,29 @@ internal sealed class ChatPlugin
             systemPersona = this.GetReasoningInstruction(effort) + "\n\n" + systemPersona;
         }
 
-        // Combine: Static prefix first (for optimal caching), then session-specific content
+        // 5. Combine all parts. Order (most prominent first):
+        //    CachePrefix → User Custom Instructions → Reasoning → SystemDescription → SystemResponse
+        var parts = new List<string>();
+
         if (!string.IsNullOrWhiteSpace(cachePrefix))
         {
-            return $"{cachePrefix}\n\n{systemPersona}";
+            parts.Add(cachePrefix);
         }
 
-        return systemPersona;
+        if (!string.IsNullOrWhiteSpace(userCustomInstructions))
+        {
+            parts.Add(
+                "=== BRUKAREN SINE EIGNE INSTRUKSJONAR (HAR HØGASTE PRIORITET) ===\n" +
+                "Instruksjonane nedanfor er sett av brukaren og skal alltid respekterast, " +
+                "også dersom dei er i konflikt med standardinnstillingane ovanfor " +
+                "(t.d. språkval, svarstil, format).\n\n" +
+                userCustomInstructions + "\n" +
+                "=== SLUTT PÅ EIGNE INSTRUKSJONAR ===");
+        }
+
+        parts.Add(systemPersona);
+
+        return string.Join("\n\n", parts);
     }
 
     /// <summary>

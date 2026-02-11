@@ -15,6 +15,7 @@ import { StoreMiddlewareAPI } from '../../app/store';
 import { addAlert, removeAlertById, setConnectionReconnected, setMaintenance } from '../app/appSlice';
 import { ChatState } from '../conversations/ChatState';
 import { UpdatePluginStatePayload } from '../conversations/ConversationsState';
+import { updateMessageProperty } from '../conversations/conversationsSlice';
 
 /*
  * This is a module that encapsulates the SignalR connection
@@ -37,6 +38,7 @@ const enum SignalRCallbackMethods {
     MessageDeleted = 'MessageDeleted',
     GlobalSiteMaintenance = 'GlobalSiteMaintenance',
     PluginStateChanged = 'PluginStateChanged',
+    ReceivePiiWarning = 'ReceivePiiWarning',
 }
 
 // Set up a SignalR connection to the messageRelayHub on the server
@@ -164,16 +166,13 @@ const startSignalRConnection = (hubConnection: signalR.HubConnection, store: Sto
     hubConnection
         .start()
         .then(() => {
-            // Log successful connection for production debugging
-            console.log('✅ SignalR Connected:', {
+            logger.log('SignalR Connected:', {
                 connectionId: hubConnection.connectionId,
                 state: hubConnection.state,
-                timestamp: new Date().toISOString(),
             });
         })
         .catch((err) => {
-            logger.error('SignalR Connection Error: ', err);
-            console.error('❌ SignalR Connection Error:', err);
+            logger.error('SignalR Connection Error:', err);
             setTimeout(() => {
                 startSignalRConnection(hubConnection, store);
             }, 5000);
@@ -334,16 +333,10 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
     );
 
     hubConnection.on(SignalRCallbackMethods.ReceiveBotResponseStatus, (chatId: string, status: string | null) => {
-        // Log in both debug and console.log so it's visible in production
-        const logData = {
+        logger.debug('SignalR ReceiveBotResponseStatus:', {
             chatId,
             status: status ?? 'null (done/clear)',
-            timestamp: new Date().toISOString(),
-            connectionState: hubConnection.state,
-        };
-        logger.debug('🔄 SignalR ReceiveBotResponseStatus:', logData);
-        // Temporarily log to console for production debugging
-        console.log('🔄 SignalR ReceiveBotResponseStatus:', logData);
+        });
 
         // Normalize null/empty to undefined to clear spinner reliably
         const normalizedStatus = status ?? undefined;
@@ -351,10 +344,6 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
             type: 'conversations/updateBotResponseStatus',
             payload: { chatId, status: normalizedStatus },
         });
-
-        if (!normalizedStatus) {
-            logger.debug('✓ Bot response complete - spinner should clear');
-        }
     });
 
     hubConnection.on(
@@ -514,6 +503,40 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
                 type: 'conversations/updatePluginState',
                 payload: { id: chatId, pluginName: pluginName, newState: pluginState } as UpdatePluginStatePayload,
             });
+        },
+    );
+
+    hubConnection.on(
+        SignalRCallbackMethods.ReceivePiiWarning,
+        (chatId: string, warnings: string[], sanitizedText: string) => {
+            // Show a warning alert to inform the user that PII was detected and removed
+            const warningMessage = warnings.join(' ');
+            store.dispatch(
+                addAlert({
+                    message: `Sensitiv informasjon vart oppdaga og fjerna frå meldinga di: ${warningMessage}`,
+                    type: AlertType.Warning,
+                }),
+            );
+
+            // Update the displayed user message to show the masked version instead of the original
+            const conversation = store.getState().conversations.conversations[chatId] as ChatState | undefined;
+            if (conversation && sanitizedText) {
+                // Find the last user message (the one that was just sent and sanitized)
+                const messages = conversation.messages;
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].authorRole === AuthorRoles.User) {
+                        store.dispatch(
+                            updateMessageProperty({
+                                chatId,
+                                messageIdOrIndex: i,
+                                property: 'content',
+                                value: sanitizedText,
+                            }),
+                        );
+                        break;
+                    }
+                }
+            }
         },
     );
 };

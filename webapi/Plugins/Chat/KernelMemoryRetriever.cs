@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Text;
@@ -6,6 +6,7 @@ using CopilotChat.WebApi.Extensions;
 using CopilotChat.WebApi.Models.Storage;
 using CopilotChat.WebApi.Options;
 using CopilotChat.WebApi.Plugins.Utils;
+using CopilotChat.WebApi.Services;
 using CopilotChat.WebApi.Storage;
 using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
@@ -28,6 +29,11 @@ internal sealed class KernelMemoryRetriever
     private readonly List<string> _memoryNames;
 
     /// <summary>
+    /// PII sanitization service for masking sensitive data in retrieved document content.
+    /// </summary>
+    private readonly PiiSanitizationService? _piiSanitizationService;
+
+    /// <summary>
     /// High level logger.
     /// </summary>
     private readonly ILogger _logger;
@@ -40,13 +46,15 @@ internal sealed class KernelMemoryRetriever
         ChatSessionRepository chatSessionRepository,
         ChatMemorySourceRepository sourceRepository,
         IKernelMemory memoryClient,
-        ILogger logger)
+        ILogger logger,
+        PiiSanitizationService? piiSanitizationService = null)
     {
         this._promptOptions = promptOptions.Value;
         this._chatSessionRepository = chatSessionRepository;
         this._sourceRepository = sourceRepository;
         this._memoryClient = memoryClient;
         this._logger = logger;
+        this._piiSanitizationService = piiSanitizationService;
 
         this._memoryNames = new List<string>
         {
@@ -249,7 +257,22 @@ internal sealed class KernelMemoryRetriever
 
             foreach (var result in relevantMemories.OrderByDescending(m => m.Memory.Relevance))
             {
-                var tokenCount = TokenUtils.TokenCount(result.Memory.Text);
+                // Sanitize PII from retrieved document/memory content before it reaches the AI model.
+                var memoryText = result.Memory.Text;
+                if (this._piiSanitizationService != null)
+                {
+                    var sanitizeResult = this._piiSanitizationService.Sanitize(memoryText);
+                    if (sanitizeResult.ContainsPii)
+                    {
+                        memoryText = sanitizeResult.SanitizedText;
+                        this._logger.LogWarning(
+                            "PII detected and masked in retrieved memory content from source '{Source}'. Types: {PiiTypes}",
+                            result.Citation.SourceName,
+                            string.Join(", ", sanitizeResult.Warnings));
+                    }
+                }
+
+                var tokenCount = TokenUtils.TokenCount(memoryText);
                 if (remainingToken - tokenCount > 0)
                 {
                     if (result.Memory.Tags.TryGetValue(MemoryTags.TagMemory, out var tag) && tag.Count > 0)
@@ -257,7 +280,7 @@ internal sealed class KernelMemoryRetriever
                         var memoryName = tag.Single()!;
                         var citationSource = CitationSource.FromKernelMemoryCitation(
                             result.Citation,
-                            result.Memory.Text,
+                            memoryText,
                             result.Memory.Relevance
                         );
 
@@ -269,7 +292,7 @@ internal sealed class KernelMemoryRetriever
                                 memoryMap.Add(memoryName, memories);
                             }
 
-                            memories.Add((result.Memory.Text, citationSource));
+                            memories.Add((memoryText, citationSource));
                             remainingToken -= tokenCount;
                         }
 
