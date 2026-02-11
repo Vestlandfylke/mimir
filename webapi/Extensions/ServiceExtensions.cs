@@ -310,6 +310,10 @@ internal static class CopilotChatServiceExtensions
         // Register archive cleanup background service
         services.AddHostedService<ArchiveCleanupService>();
 
+        // One-time migration: set CreatedBy on existing chat sessions.
+        // Safe to remove after all environments have been migrated.
+        services.AddHostedService<ChatCreatedByMigrationService>();
+
         return services;
     }
 

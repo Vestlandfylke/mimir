@@ -10,6 +10,7 @@ export interface IChatSession {
     enabledPlugins: string[];
     modelId?: string;
     createdOn?: string | number; // Timestamp from backend (ISO string or ms)
+    createdBy?: string; // User ID of the chat creator (null for old chats)
 }
 
 export interface ICreateChatSessionResponse {

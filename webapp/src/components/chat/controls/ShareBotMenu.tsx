@@ -1,13 +1,14 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import React, { FC, useCallback } from 'react';
+import React, { FC, useCallback, useState } from 'react';
 
 import { Button, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Tooltip } from '@fluentui/react-components';
-import { ArrowDownloadRegular, PeopleTeamAddRegular, ShareRegular } from '@fluentui/react-icons';
+import { ArrowDownloadRegular, PeopleTeamAddRegular, PersonDeleteRegular, ShareRegular } from '@fluentui/react-icons';
 import { useChat, useFile } from '../../../libs/hooks';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { FeatureKeys } from '../../../redux/features/app/AppState';
+import { LeaveChatDialog } from '../chat-list/dialogs/LeaveChatDialog';
 import { InvitationCreateDialog } from '../invitation-dialog/InvitationCreateDialog';
 
 interface ShareBotMenuProps {
@@ -19,7 +20,14 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
     const chat = useChat();
     const { downloadFile } = useFile();
     const [isGettingInvitationId, setIsGettingInvitationId] = React.useState(false);
-    const { features } = useAppSelector((state: RootState) => state.app);
+    const [isLeavingChat, setIsLeavingChat] = useState(false);
+    const { features, activeUserInfo } = useAppSelector((state: RootState) => state.app);
+    const { conversations } = useAppSelector((state: RootState) => state.conversations);
+
+    const conversation = conversations[chatId];
+    const isCreator = !conversation.createdBy || conversation.createdBy === activeUserInfo?.id;
+    const isSharedChat = conversation.users.length > 1;
+    const canLeave = isSharedChat && !isCreator;
 
     const onDownloadBotClick = useCallback(() => {
         // TODO: [Issue #47] Add a loading indicator
@@ -66,6 +74,18 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
                         >
                             Inviter andre til samtalen
                         </MenuItem>
+
+                        {canLeave && (
+                            <MenuItem
+                                data-testid="leaveChatMenuItem"
+                                icon={<PersonDeleteRegular />}
+                                onClick={() => {
+                                    setIsLeavingChat(true);
+                                }}
+                            >
+                                Forlat samtalen
+                            </MenuItem>
+                        )}
                     </MenuList>
                 </MenuPopover>
             </Menu>
@@ -75,6 +95,15 @@ export const ShareBotMenu: FC<ShareBotMenuProps> = ({ chatId, chatTitle }) => {
                         setIsGettingInvitationId(false);
                     }}
                     chatId={chatId}
+                />
+            )}
+            {isLeavingChat && (
+                <LeaveChatDialog
+                    chatId={chatId}
+                    open={isLeavingChat}
+                    onClose={() => {
+                        setIsLeavingChat(false);
+                    }}
                 />
             )}
         </div>

@@ -28,6 +28,7 @@ const enum SignalRCallbackMethods {
     ReceiveMessageUpdate = 'ReceiveMessageUpdate',
     ReceiveReasoningUpdate = 'ReceiveReasoningUpdate',
     UserJoined = 'UserJoined',
+    UserLeft = 'UserLeft',
     ReceiveUserTypingState = 'ReceiveUserTypingState',
     ReceiveBotResponseStatus = 'ReceiveBotResponseStatus',
     GlobalDocumentUploaded = 'GlobalDocumentUploaded',
@@ -320,6 +321,25 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
             photo: '',
         };
         store.dispatch({ type: 'conversations/addUserToConversation', payload: { user, chatId } });
+    });
+
+    hubConnection.on(SignalRCallbackMethods.UserLeft, (chatId: string, userId: string) => {
+        const conversations = store.getState().conversations.conversations;
+        if (!(chatId in conversations)) {
+            logger.warn(`UserLeft: Chat ${chatId} not found in store.`);
+            return;
+        }
+
+        const isCurrentUser = userId === store.getState().app.activeUserInfo?.id;
+        if (isCurrentUser) {
+            // Current user left (triggered from another tab/device) - remove chat from store
+            store.dispatch({ type: 'conversations/deleteConversation', payload: chatId });
+        } else {
+            // Another user left - remove them from the participants list
+            store.dispatch({ type: 'conversations/removeUserFromConversation', payload: { userId, chatId } });
+        }
+
+        logger.debug(`UserLeft: User ${userId} left chat ${chatId}`);
     });
 
     hubConnection.on(

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.Text.Json.Serialization;
 using CopilotChat.WebApi.Storage;
@@ -65,6 +65,13 @@ internal sealed class ChatSession : IStorageEntity
     /// Null or empty uses the default model.
     /// </summary>
     public string? ModelId { get; set; }
+
+    /// <summary>
+    /// The user ID of the person who created this chat session.
+    /// Used to determine who has ownership (e.g., only the creator can delete the chat).
+    /// Null for chats created before this field was added.
+    /// </summary>
+    public string? CreatedBy { get; set; }
 
     /// <summary>
     /// The partition key for the session.

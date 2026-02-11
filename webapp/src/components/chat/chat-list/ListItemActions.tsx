@@ -12,6 +12,7 @@ import { Breakpoints } from '../../../styles';
 import { ArrowDownload16, Edit, Share20 } from '../../shared/BundledIcons';
 import { InvitationCreateDialog } from '../invitation-dialog/InvitationCreateDialog';
 import { DeleteChatDialog } from './dialogs/DeleteChatDialog';
+import { LeaveChatDialog } from './dialogs/LeaveChatDialog';
 
 const useClasses = makeStyles({
     root: {
@@ -31,12 +32,16 @@ interface IListItemActionsProps {
 
 export const ListItemActions: React.FC<IListItemActionsProps> = ({ chatId, onEditTitleClick }) => {
     const classes = useClasses();
-    const { features } = useAppSelector((state: RootState) => state.app);
+    const { features, activeUserInfo } = useAppSelector((state: RootState) => state.app);
     const { conversations } = useAppSelector((state: RootState) => state.conversations);
 
     const chat = useChat();
     const { downloadFile } = useFile();
     const [isGettingInvitationId, setIsGettingInvitationId] = useState(false);
+
+    const conversation = conversations[chatId];
+    const isCreator = !conversation.createdBy || conversation.createdBy === activeUserInfo?.id;
+    const isSharedChat = conversation.users.length > 1;
 
     const onDownloadBotClick = useCallback(() => {
         // TODO: [Issue #47] Add a loading indicator
@@ -51,7 +56,7 @@ export const ListItemActions: React.FC<IListItemActionsProps> = ({ chatId, onEdi
 
     return (
         <div className={classes.root}>
-            {conversations[chatId].disabled ? (
+            {conversation.disabled ? (
                 <Tooltip content={COPY.CHAT_DELETED_MESSAGE()} relationship="label">
                     <Button
                         icon={<ErrorCircleRegular />}
@@ -90,7 +95,14 @@ export const ListItemActions: React.FC<IListItemActionsProps> = ({ chatId, onEdi
                             }}
                         />
                     </Tooltip>
-                    <DeleteChatDialog chatId={chatId} />
+                    {/* Show Delete for creator, Leave for non-creator in shared chats */}
+                    {isCreator ? (
+                        <DeleteChatDialog chatId={chatId} />
+                    ) : isSharedChat ? (
+                        <LeaveChatDialog chatId={chatId} />
+                    ) : (
+                        <DeleteChatDialog chatId={chatId} />
+                    )}
                     {isGettingInvitationId && (
                         <InvitationCreateDialog
                             onCancel={() => {

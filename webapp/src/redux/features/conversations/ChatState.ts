@@ -20,4 +20,5 @@ export interface ChatState {
     disabled: boolean; // For labeling a chat has been deleted
     hidden: boolean; // For hiding a chat from the list
     modelId?: string; // The selected AI model for this chat
+    createdBy?: string; // User ID of the chat creator (undefined for old chats)
 }

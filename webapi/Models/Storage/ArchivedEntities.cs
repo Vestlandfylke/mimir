@@ -77,6 +77,11 @@ internal sealed class ArchivedChatSession : ArchivedEntityBase, IStorageEntity
     public string? ModelId { get; set; }
 
     /// <summary>
+    /// The user ID of the person who created this chat session.
+    /// </summary>
+    public string? CreatedBy { get; set; }
+
+    /// <summary>
     /// The partition key for the archived session.
     /// Partitioned by DeletedBy (user ID) for efficient user queries.
     /// </summary>
@@ -105,6 +110,7 @@ internal sealed class ArchivedChatSession : ArchivedEntityBase, IStorageEntity
             Version = session.Version,
             Template = session.Template,
             ModelId = session.ModelId,
+            CreatedBy = session.CreatedBy,
             DeletedAt = DateTimeOffset.UtcNow,
             DeletedBy = deletedBy
         };
@@ -123,7 +129,8 @@ internal sealed class ArchivedChatSession : ArchivedEntityBase, IStorageEntity
             EnabledPlugins = this.EnabledPlugins,
             Version = this.Version,
             Template = this.Template,
-            ModelId = this.ModelId
+            ModelId = this.ModelId,
+            CreatedBy = this.CreatedBy
         };
     }
 }

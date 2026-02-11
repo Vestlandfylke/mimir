@@ -250,6 +250,16 @@ export class ChatService extends BaseService {
         return result;
     };
 
+    public leaveChatAsync = async (chatId: string, accessToken: string): Promise<void> => {
+        await this.getResponseAsync<undefined>(
+            {
+                commandPath: `chats/${chatId}/participants/me`,
+                method: 'DELETE',
+            },
+            accessToken,
+        );
+    };
+
     public joinChatAsync = async (chatId: string, accessToken: string): Promise<IChatSession> => {
         await this.getResponseAsync<any>(
             {

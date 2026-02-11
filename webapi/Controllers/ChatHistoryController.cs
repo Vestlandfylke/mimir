@@ -164,7 +164,8 @@ internal sealed class ChatHistoryController : ControllerBase
         // Create a new chat session with template info
         var newChat = new ChatSession(chatParameters.Title, systemDescription)
         {
-            Template = chatParameters.Template  // Store the template for MCP filtering
+            Template = chatParameters.Template,  // Store the template for MCP filtering
+            CreatedBy = this._authInfo.UserId,
         };
         await this._sessionRepository.CreateAsync(newChat);
 
@@ -416,6 +417,13 @@ internal sealed class ChatHistoryController : ControllerBase
         catch (KeyNotFoundException)
         {
             return this.NotFound($"No chat session found for chat id '{chatId}'.");
+        }
+
+        // Only the creator of the chat can delete it.
+        // For backwards compatibility, allow deletion if CreatedBy is not set (old chats).
+        if (chatToArchive.CreatedBy != null && chatToArchive.CreatedBy != this._authInfo.UserId)
+        {
+            return this.StatusCode(StatusCodes.Status403Forbidden, "Only the creator of a chat can delete it. Use the leave endpoint to leave a shared chat.");
         }
 
         // Archive the chat and all its resources instead of deleting them

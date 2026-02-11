@@ -21,6 +21,7 @@ namespace CopilotChat.WebApi.Controllers;
 internal sealed class ChatParticipantController : ControllerBase
 {
     private const string UserJoinedClientCall = "UserJoined";
+    private const string UserLeftClientCall = "UserLeft";
     private readonly ILogger<ChatParticipantController> _logger;
     private readonly ChatParticipantRepository _chatParticipantRepository;
     private readonly ChatSessionRepository _chatSessionRepository;
@@ -101,5 +102,59 @@ internal sealed class ChatParticipantController : ControllerBase
         var chatParticipants = await this._chatParticipantRepository.FindByChatIdAsync(chatId.ToString());
 
         return this.Ok(chatParticipants);
+    }
+
+    /// <summary>
+    /// Leave a chat session. Removes the logged in user from the chat participants.
+    /// The creator of the chat cannot leave; they should delete the chat instead.
+    /// </summary>
+    /// <param name="messageRelayHubContext">Message Hub that performs the real time relay service.</param>
+    /// <param name="authInfo">The auth info for the current request.</param>
+    /// <param name="chatId">The ID of the chat to leave.</param>
+    [HttpDelete]
+    [Route("chats/{chatId:guid}/participants/me")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [Authorize(Policy = AuthPolicyName.RequireChatParticipant)]
+    public async Task<IActionResult> LeaveChatAsync(
+        [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
+        [FromServices] IAuthInfo authInfo,
+        [FromRoute] Guid chatId)
+    {
+        string userId = authInfo.UserId;
+        string chatIdString = chatId.ToString();
+
+        // Make sure the chat session exists.
+        ChatSession? chatSession = null;
+        if (!await this._chatSessionRepository.TryFindByIdAsync(chatIdString, callback: v => chatSession = v))
+        {
+            return this.NotFound("Chat session does not exist.");
+        }
+
+        // Prevent the creator from leaving their own chat. They should delete it instead.
+        if (chatSession!.CreatedBy == userId)
+        {
+            return this.BadRequest("The creator of a chat cannot leave. Delete the chat instead.");
+        }
+
+        // Find the participant record for this user in this chat.
+        var participants = await this._chatParticipantRepository.FindByChatIdAsync(chatIdString);
+        var participantToRemove = participants.FirstOrDefault(p => p.UserId == userId);
+
+        if (participantToRemove == null)
+        {
+            return this.NotFound("User is not a participant of this chat.");
+        }
+
+        // Remove the participant record.
+        await this._chatParticipantRepository.DeleteAsync(participantToRemove);
+
+        // Broadcast the user left event to all the connected clients in the chat group.
+        await messageRelayHubContext.Clients.Group(chatIdString).SendAsync(UserLeftClientCall, chatIdString, userId);
+
+        this._logger.LogInformation("User {UserId} left chat {ChatId}.", userId, chatIdString);
+
+        return this.NoContent();
     }
 }

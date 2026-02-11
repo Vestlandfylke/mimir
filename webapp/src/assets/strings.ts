@@ -15,6 +15,10 @@ export const COPY = {
     LOADING_ERROR_CHATS: 'Klarte ikkje å laste samtalar.',
     SEND_ERROR: 'Kunne ikkje sende meldinga.',
 
+    // Leave chat messages
+    CHAT_USER_LEFT_MESSAGE: (chatName?: string) =>
+        `Ein brukar har forlate samtalen${chatName ? ` "${chatName}"` : ''}.`,
+
     // Trash / Archive messages
     CHAT_ARCHIVED_MESSAGE: (chatName?: string) =>
         `Samtale${chatName ? ` "${chatName}"` : ''} er flytta til papirkorga av ein annan brukar.`,

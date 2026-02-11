@@ -82,6 +82,16 @@ export const conversationsSlice = createSlice({
             conversation.users.push(user);
             conversation.userDataLoaded = false;
         },
+        removeUserFromConversation: (
+            state: ConversationsState,
+            action: PayloadAction<{ userId: string; chatId: string }>,
+        ) => {
+            const { userId, chatId } = action.payload;
+            // Conversation may have been archived/deleted - guard against edge cases
+            const conversation = state.conversations[chatId] as ChatState | undefined;
+            if (!conversation) return;
+            conversation.users = conversation.users.filter((u) => u.id !== userId);
+        },
         setImportingDocumentsToConversation: (
             state: ConversationsState,
             action: PayloadAction<{ importingDocuments: string[]; chatId: string }>,
@@ -382,6 +392,7 @@ export const {
     setSelectedConversation,
     toggleMultiUserConversations,
     addConversation,
+    removeUserFromConversation,
     setImportingDocumentsToConversation,
     addMessageToConversationFromUser,
     addMessageToConversationFromServer,

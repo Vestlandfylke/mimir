@@ -180,6 +180,7 @@ export const useChat = () => {
                         userDataLoaded: false,
                         disabled: false,
                         hidden: false,
+                        createdBy: result.chatSession.createdBy,
                     };
 
                     dispatch(addConversation(newChat));
@@ -427,6 +428,7 @@ export const useChat = () => {
                         lastUpdatedTimestamp: lastMessageTimestamp ?? chatCreatedTimestamp,
                         disabled: false,
                         hidden: !features[FeatureKeys.MultiUserChat].enabled && chatUsers.length > 1,
+                        createdBy: chatSession.createdBy,
                     };
                 }
 
@@ -513,6 +515,7 @@ export const useChat = () => {
                     userDataLoaded: false,
                     disabled: false,
                     hidden: false,
+                    createdBy: chatSession.createdBy,
                 };
 
                 dispatch(addConversation(newChat));
@@ -626,6 +629,7 @@ export const useChat = () => {
                     userDataLoaded: false,
                     disabled: false,
                     hidden: false,
+                    createdBy: result.createdBy,
                 };
 
                 dispatch(addConversation(newChat));
@@ -636,6 +640,29 @@ export const useChat = () => {
         }
 
         return { success: true, message: '' };
+    };
+
+    const leaveChat = async (chatId: string) => {
+        const friendlyChatName = getFriendlyChatName(conversations[chatId]);
+        try {
+            await chatService.leaveChatAsync(chatId, await AuthHelper.getSKaaSAccessToken(instance, inProgress));
+            dispatch(deleteConversation(chatId));
+
+            // If there are no remaining non-hidden chats, create a new one
+            if (Object.values(conversations).filter((c) => !c.hidden && c.id !== chatId).length === 0) {
+                void createChat();
+            }
+
+            dispatch(
+                addAlert({
+                    message: `Du har forlate samtalen "${friendlyChatName}".`,
+                    type: AlertType.Success,
+                }),
+            );
+        } catch (e: any) {
+            const errorMessage = `Kunne ikkje forlate samtalen. Detaljar: ${getErrorDetails(e)}`;
+            dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));
+        }
     };
 
     const editChat = async (chatId: string, title: string, syetemDescription: string, memoryBalance: number) => {
@@ -791,6 +818,7 @@ export const useChat = () => {
         getSemanticMemories,
         importDocument,
         joinChat,
+        leaveChat,
         editChat,
         getServiceInfo,
         deleteChat,
