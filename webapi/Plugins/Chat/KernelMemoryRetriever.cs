@@ -56,11 +56,14 @@ internal sealed class KernelMemoryRetriever
         this._logger = logger;
         this._piiSanitizationService = piiSanitizationService;
 
+        // NOTE: LongTermMemory and WorkingMemory have been removed from the search.
+        // These were a workaround for GPT-3.5's 4K context window, where conversation had to be
+        // compressed into memory snippets. With GPT-5.2's 128K context, raw chat history
+        // provides better context than extracted memory fragments.
+        // Only DocumentMemory (user-uploaded + global documents) is searched.
         this._memoryNames = new List<string>
         {
-            this._promptOptions.DocumentMemoryName,
-            this._promptOptions.LongTermMemoryName,
-            this._promptOptions.WorkingMemoryName
+            this._promptOptions.DocumentMemoryName
         };
     }
 
@@ -83,18 +86,38 @@ internal sealed class KernelMemoryRetriever
 
         var remainingToken = tokenLimit;
 
-        // Search for relevant memories.
-        List<(Citation Citation, Citation.Partition Memory)> relevantMemories = new();
-        List<Task> tasks = new();
-        foreach (var memoryName in this._memoryNames)
-        {
-            tasks.Add(SearchMemoryAsync(memoryName));
-        }
+        // Search for relevant document memories only.
+        // LongTermMemory and WorkingMemory searches have been removed — GPT-5.2's 128K context
+        // handles conversation context directly via chat history inclusion.
+        // Combined filter: (per-chat documents) OR (global documents) in a single embedding call.
+        float docThreshold = this._promptOptions.DocumentMemoryMinRelevance;
 
-        // Global document memory.
-        tasks.Add(SearchMemoryAsync(this._promptOptions.DocumentMemoryName, isGlobalMemory: true));
-        // Wait for all tasks to complete.
-        await Task.WhenAll(tasks);
+        var filters = new List<MemoryFilter>
+        {
+            new MemoryFilter()
+                .ByTag(MemoryTags.TagChatId, chatId)
+                .ByTag(MemoryTags.TagMemory, this._promptOptions.DocumentMemoryName),
+            new MemoryFilter()
+                .ByTag(MemoryTags.TagChatId, DocumentMemoryOptions.GlobalDocumentChatId.ToString())
+                .ByTag(MemoryTags.TagMemory, this._promptOptions.DocumentMemoryName)
+        };
+
+        var searchResult = await this._memoryClient.SearchAsync(
+            query,
+            this._promptOptions.MemoryIndexName,
+            filter: null,
+            filters: filters,
+            minRelevance: docThreshold,
+            limit: -1);
+
+        List<(Citation Citation, Citation.Partition Memory)> relevantMemories = new();
+        foreach (var citation in searchResult.Results)
+        {
+            foreach (var partition in citation.Partitions)
+            {
+                relevantMemories.Add((citation, partition));
+            }
+        }
 
         // ALWAYS include pinned documents (regardless of relevance search)
         await AddPinnedDocumentsAsync();
@@ -157,6 +180,8 @@ internal sealed class KernelMemoryRetriever
 
         // <summary>
         // Add pinned documents to relevant memories (always included regardless of search relevance).
+        // OPTIMIZATION: Searches ONCE for all pinned documents instead of per-document,
+        // saving (N-1) embedding generations for N pinned documents.
         // </summary>
         async Task AddPinnedDocumentsAsync()
         {
@@ -176,73 +201,50 @@ internal sealed class KernelMemoryRetriever
                 this._logger.LogInformation("Including {Count} pinned document(s) in context for chat {ChatId}",
                     pinnedDocs.Count, chatId);
 
-                // For each pinned document, fetch its content from memory
-                foreach (var pinnedDoc in pinnedDocs)
+                // Build a set of pinned document IDs for fast lookup
+                var pinnedDocIds = new HashSet<string>(pinnedDocs.Select(d => d.Id), StringComparer.OrdinalIgnoreCase);
+
+                // Search ONCE for all DocumentMemory results in this chat
+                var pinnedSearchResult = await this._memoryClient.SearchMemoryAsync(
+                    this._promptOptions.MemoryIndexName,
+                    query,
+                    this._promptOptions.DocumentMemoryMinRelevance,
+                    chatId,
+                    this._promptOptions.DocumentMemoryName);
+
+                // Filter results to only include partitions from pinned documents
+                foreach (var memory in pinnedSearchResult.Results)
                 {
-                    try
+                    foreach (var partition in memory.Partitions)
                     {
-                        // Search for this specific document in memory
-                        var searchResult = await this._memoryClient.SearchMemoryAsync(
-                            this._promptOptions.MemoryIndexName,
-                            query, // Use the user's query
-                            this._promptOptions.DocumentMemoryMinRelevance, // Relevance filter
-                            chatId, // Chat filter
-                            this._promptOptions.DocumentMemoryName); // Memory type
+                        // Check if this partition belongs to a pinned document
+                        bool isPinned = partition.Tags.Any(t =>
+                            t.Key == "__document_id" && t.Value.Any(v => pinnedDocIds.Contains(v)));
 
-                        // Add memories from this pinned document
-                        foreach (var memory in searchResult.Results)
+                        if (isPinned)
                         {
-                            // Check if this memory is from the pinned document
-                            if (memory.Partitions.Any(p => p.Tags.Any(t =>
-                                t.Key == "__document_id" && t.Value.Contains(pinnedDoc.Id))))
+                            // Avoid adding duplicates (partition may already be in relevantMemories from main search)
+                            if (!relevantMemories.Any(rm => rm.Memory.Text == partition.Text))
                             {
-                                foreach (var partition in memory.Partitions)
+                                relevantMemories.Add((Citation: memory, Memory: partition));
+
+                                int tokenCount = TokenUtils.TokenCount(partition.Text);
+                                remainingToken -= tokenCount;
+
+                                if (remainingToken <= 0)
                                 {
-                                    relevantMemories.Add((Citation: memory, Memory: partition));
-
-                                    // Reduce remaining token budget
-                                    int tokenCount = TokenUtils.TokenCount(partition.Text);
-                                    remainingToken -= tokenCount;
-
-                                    if (remainingToken <= 0)
-                                    {
-                                        this._logger.LogWarning(
-                                            "Pinned document {DocumentName} exceeded token budget. Some pinned content may be excluded.",
-                                            pinnedDoc.Name);
-                                        return; // Stop if we run out of tokens
-                                    }
+                                    this._logger.LogWarning(
+                                        "Pinned documents exceeded token budget. Some pinned content may be excluded.");
+                                    return;
                                 }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        this._logger.LogError(ex, "Error adding pinned document {DocumentId} to context", pinnedDoc.Id);
                     }
                 }
             }
             catch (Exception ex)
             {
                 this._logger.LogError(ex, "Error retrieving pinned documents for chat {ChatId}", chatId);
-            }
-        }
-
-        // <summary>
-        // Search the memory for relevant memories by memory name.
-        // </summary>
-        async Task SearchMemoryAsync(string memoryName, bool isGlobalMemory = false)
-        {
-            var searchResult =
-                await this._memoryClient.SearchMemoryAsync(
-                    this._promptOptions.MemoryIndexName,
-                    query,
-                    this.CalculateRelevanceThreshold(memoryName, chatSession!.MemoryBalance),
-                    isGlobalMemory ? DocumentMemoryOptions.GlobalDocumentChatId.ToString() : chatId,
-                    memoryName);
-
-            foreach (var result in searchResult.Results.SelectMany(c => c.Partitions.Select(p => (c, p))))
-            {
-                relevantMemories.Add(result);
             }
         }
 

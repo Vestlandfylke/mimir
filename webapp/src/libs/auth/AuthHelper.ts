@@ -338,6 +338,87 @@ const getSKaaSAccessToken = async (instance: IPublicClientApplication, inProgres
     return await TokenHelper.getAccessTokenUsingMsal(inProgress, instance, getMsalScopes());
 };
 
+/**
+ * Clear MSAL cache from localStorage and sessionStorage.
+ * This helps recover from corrupted auth state that causes errors like
+ * "stubbed_public_client_application_called".
+ */
+const clearMsalCache = () => {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (
+            key &&
+            (key.startsWith('msal.') || key.includes('login.windows.net') || key.includes('login.microsoftonline.com'))
+        ) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach((key) => {
+        localStorage.removeItem(key);
+    });
+
+    const sessionKeysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (
+            key &&
+            (key.startsWith('msal.') || key.includes('login.windows.net') || key.includes('login.microsoftonline.com'))
+        ) {
+            sessionKeysToRemove.push(key);
+        }
+    }
+    sessionKeysToRemove.forEach((key) => {
+        sessionStorage.removeItem(key);
+    });
+
+    log('MSAL cache cleared from localStorage and sessionStorage');
+};
+
+/**
+ * Check if an error is a recoverable MSAL cache error that can be fixed
+ * by clearing the browser cache and reloading.
+ */
+const isMsalCacheError = (error: unknown): boolean => {
+    const errorString = error instanceof Error ? error.message : String(error);
+    const cacheErrorPatterns = [
+        'stubbed_public_client_application_called',
+        'uninitialized_public_client_application',
+        'BrowserAuthError',
+    ];
+    return cacheErrorPatterns.some((pattern) => errorString.toLowerCase().includes(pattern.toLowerCase()));
+};
+
+const MSAL_RECOVERY_KEY = 'msal_cache_recovery_attempted';
+
+/**
+ * Attempt auto-recovery from MSAL cache errors by clearing cache and reloading.
+ * Returns true if recovery was initiated (page will reload), false if already attempted.
+ */
+const attemptCacheRecovery = (): boolean => {
+    // Prevent infinite reload loops - only try once
+    const alreadyAttempted = sessionStorage.getItem(MSAL_RECOVERY_KEY);
+    if (alreadyAttempted) {
+        log('MSAL cache recovery already attempted this session, skipping auto-recovery');
+        sessionStorage.removeItem(MSAL_RECOVERY_KEY);
+        return false;
+    }
+
+    log('Attempting MSAL cache recovery: clearing cache and reloading...');
+    sessionStorage.setItem(MSAL_RECOVERY_KEY, 'true');
+    clearMsalCache();
+    window.location.reload();
+    return true;
+};
+
+/**
+ * Clear the recovery flag after a successful login.
+ * Call this when authentication succeeds to reset the recovery state.
+ */
+const clearRecoveryFlag = () => {
+    sessionStorage.removeItem(MSAL_RECOVERY_KEY);
+};
+
 export const AuthHelper = {
     getSKaaSAccessToken,
     getMsalConfig,
@@ -350,4 +431,8 @@ export const AuthHelper = {
     getAuthConfig,
     attemptSilentLogin,
     initializeAndAttemptSso,
+    clearMsalCache,
+    isMsalCacheError,
+    attemptCacheRecovery,
+    clearRecoveryFlag,
 };

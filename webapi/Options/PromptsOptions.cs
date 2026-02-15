@@ -59,6 +59,24 @@ internal sealed class PromptsOptions
     [Required, NotEmptyOrWhitespace] public string SystemResponse { get; set; } = string.Empty;
 
     /// <summary>
+    /// A short, lean description of the bot used for intent extraction and memory extraction prompts.
+    /// Unlike SystemDescription (which contains full instructions for chat responses),
+    /// this should be a brief identity description (~50-100 tokens) similar to Microsoft's original
+    /// Chat Copilot SystemDescription. This avoids sending thousands of irrelevant tokens
+    /// (Mermaid rules, file generation, tool instructions, etc.) to intent/memory extraction calls.
+    /// Falls back to SystemDescription if not set.
+    /// </summary>
+    public string SystemIntentDescription { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Returns the lean intent description if set, otherwise falls back to SystemDescription.
+    /// </summary>
+    internal string EffectiveIntentDescription =>
+        !string.IsNullOrWhiteSpace(this.SystemIntentDescription)
+            ? this.SystemIntentDescription
+            : this.SystemDescription;
+
+    /// <summary>
     /// Static cache prefix for Azure OpenAI prompt caching optimization.
     /// This content is placed at the very beginning of the prompt and should be >1024 tokens.
     /// Azure OpenAI automatically caches prompts where the first 1024+ tokens are identical,
@@ -117,7 +135,7 @@ internal sealed class PromptsOptions
         this.SystemCognitive,
         $"{this.LongTermMemoryName} Description:\n{this.LongTermMemoryExtraction}",
         this.MemoryAntiHallucination,
-        $"Chat Description:\n{this.SystemDescription}",
+        $"Chat Description:\n{this.EffectiveIntentDescription}",
         "{{ChatPlugin.ExtractChatHistory}}",
         this.MemoryContinuation
     };
@@ -133,7 +151,7 @@ internal sealed class PromptsOptions
         this.SystemCognitive,
         $"{this.WorkingMemoryName} Description:\n{this.WorkingMemoryExtraction}",
         this.MemoryAntiHallucination,
-        $"Chat Description:\n{this.SystemDescription}",
+        $"Chat Description:\n{this.EffectiveIntentDescription}",
         "{{ChatPlugin.ExtractChatHistory}}",
         this.MemoryContinuation
     };

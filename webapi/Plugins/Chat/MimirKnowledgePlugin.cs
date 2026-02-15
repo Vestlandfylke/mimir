@@ -45,10 +45,10 @@ public sealed class MimirKnowledgePlugin
     /// Searches for information about Mimir based on the user's query.
     /// Use this when users ask about Mimir itself - how to use it, its features, history, or best practices.
     /// </summary>
-    [KernelFunction, Description("Søk i dokumentasjon om Mimir. Bruk dette når brukaren spør om korleis Mimir fungerer, korleis dei brukar grensesnittet, kva funksjonar som finst, historia til Mimir, tidslinje for prosjektet, eller tips for å skrive gode spørsmål. Døme på spørsmål: 'Korleis deler eg ein samtale?', 'Kva modellar kan eg velje?', 'Korleis lastar eg opp dokument?', 'Kva er Mimir?', 'Kva var tidslinja for prosjektet?'")]
+    [KernelFunction, Description("Søk i Mimir sin kunnskapsbase. Bruk dette når brukaren spør om Mimir, Vestland fylkeskommune, fylkesdirektøren, direktørar, besøksadresser, tenester, opningstid, forskjellen mellom Mimir og Botolf, personvern og lagring i Mimir, KI-kurs, eller tips for å skrive gode spørsmål. Kunnskapsbasen inneheld både informasjon om Mimir (funksjonar, historie, brukargrensesnitt) og viktig informasjon om Vestland fylkeskommune (leiing, kontor, tenester). Døme: 'Kven er fylkesdirektøren?', 'Kva er adressa til fylkeskommunen?', 'Kva tenester tilbyr fylkeskommunen?', 'Kva er forskjellen på Mimir og Botolf?', 'Korleis deler eg ein samtale?', 'Kva modellar kan eg velje?'")]
     public async Task<string> SearchMimirKnowledgeAsync(
-        [Description("Søkeord eller spørsmål om Mimir")] string query,
-        [Description("Kategori å søke i: 'ui' (brukargrensesnitt), 'features' (funksjonar), 'history' (historie og tidslinje), 'prompting' (skrivetips), 'troubleshooting' (feilsøking), 'policy' (KI-retningslinjer). La stå tom for å søke i alle.")] string? category = null,
+        [Description("Søkeord eller spørsmål om Mimir eller Vestland fylkeskommune")] string query,
+        [Description("Kategori å søke i: 'ui' (brukargrensesnitt), 'features' (funksjonar), 'history' (historie og tidslinje), 'prompting' (skrivetips), 'troubleshooting' (feilsøking), 'policy' (KI-retningslinjer), 'info' (informasjon om Vestland fylkeskommune), 'faq' (spørsmål og svar om Mimir). La stå tom for å søke i alle.")] string? category = null,
         [Description("Maksimalt antal resultat (standard: 3)")] int maxResults = 3,
         CancellationToken cancellationToken = default)
     {
@@ -114,7 +114,7 @@ public sealed class MimirKnowledgePlugin
                     Score = result.Score ?? 0
                 };
 
-                this._logger.LogDebug("MimirKnowledge: Found document '{Title}' (category: {Category}, score: {Score})", 
+                this._logger.LogDebug("MimirKnowledge: Found document '{Title}' (category: {Category}, score: {Score})",
                     doc.Title, doc.Category, doc.Score);
 
                 // Get content - for history category, don't truncate to preserve timeline
@@ -471,6 +471,9 @@ public sealed class MimirKnowledgePlugin
         categories.AppendLine("- **Skrivetips (prompting)**: Korleis skrive gode spørsmål for å få betre svar");
         categories.AppendLine("- **Feilsøking (troubleshooting)**: Løysingar på vanlege problem");
         categories.AppendLine("- **KI-policy (policy)**: Retningslinjer for bruk av KI, datahandtering og personvern");
+        categories.AppendLine("- **Vestland fylkeskommune (info)**: Informasjon om leiing, kontor, tenester og KI-kurs");
+        categories.AppendLine("- **Spørsmål og svar (faq)**: Ofte stilte spørsmål om Mimir, personvern og bruk");
+        categories.AppendLine("- **Strategi (strategi)**: Organisasjonsstrategi, ambisjonar og prinsipp for VLFK");
         categories.AppendLine();
         categories.AppendLine("Spør meg gjerne om noko spesifikt!");
 
@@ -532,7 +535,10 @@ public sealed class MimirKnowledgePlugin
                 { "history", "📜 Historie og bakgrunn" },
                 { "prompting", "💡 Tips for gode spørsmål" },
                 { "policy", "📋 KI-policy og retningslinjer" },
-                { "troubleshooting", "🔧 Feilsøking" }
+                { "troubleshooting", "🔧 Feilsøking" },
+                { "info", "🏛️ Vestland fylkeskommune" },
+                { "faq", "❓ Spørsmål og svar" },
+                { "strategi", "📊 Strategi og organisasjonsutvikling" }
             };
 
             foreach (var kvp in documentsByCategory.OrderBy(k => k.Key))
@@ -550,7 +556,7 @@ public sealed class MimirKnowledgePlugin
             sb.AppendLine($"**Totalt:** {documentsByCategory.Values.Sum(v => v.Count)} dokument");
             sb.AppendLine("\nDu kan spørje meg om innhaldet i kvart av desse dokumenta!");
 
-            this._logger.LogInformation("MimirKnowledge: Found {Count} documents in {Categories} categories", 
+            this._logger.LogInformation("MimirKnowledge: Found {Count} documents in {Categories} categories",
                 documentsByCategory.Values.Sum(v => v.Count), documentsByCategory.Count);
 
             return sb.ToString();

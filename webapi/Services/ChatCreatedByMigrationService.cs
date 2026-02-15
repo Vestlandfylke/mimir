@@ -27,8 +27,9 @@ internal sealed class ChatCreatedByMigrationService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Wait a bit for the application to fully start before running migration
-        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+        // Wait for the application to fully start and initial traffic to settle
+        // before running migration to avoid RU spikes during peak startup load
+        await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
 
         this._logger.LogInformation("ChatCreatedBy migration: Starting...");
 
@@ -95,6 +96,9 @@ internal sealed class ChatCreatedByMigrationService : BackgroundService
                 await chatSessionRepository.UpsertAsync(session);
 
                 migratedCount++;
+
+                // Throttle to avoid RU spikes on Cosmos DB — space out writes
+                await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
 
                 this._logger.LogDebug(
                     "ChatCreatedBy migration: Set CreatedBy={UserId} on chat {ChatId} ({Title})",

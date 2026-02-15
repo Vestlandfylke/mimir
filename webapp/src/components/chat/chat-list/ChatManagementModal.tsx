@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 
+import { useMsal } from '@azure/msal-react';
 import {
     Button,
     Checkbox,
@@ -21,27 +22,27 @@ import {
 } from '@fluentui/react-components';
 import {
     ArrowUndo20Regular,
+    Chat20Regular,
+    Clock20Regular,
     Delete20Regular,
     DeleteDismiss20Regular,
     Dismiss24Regular,
     Document20Regular,
-    Chat20Regular,
     People20Regular,
-    Clock20Regular,
+    PersonDeleteRegular,
 } from '@fluentui/react-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useMsal } from '@azure/msal-react';
+import { Constants } from '../../../Constants';
 import { AuthHelper } from '../../../libs/auth/AuthHelper';
+import { useChat } from '../../../libs/hooks';
+import { getDaysUntilDeletion, IArchivedChatSession } from '../../../libs/models/ArchivedChatSession';
 import { ChatService } from '../../../libs/services/ChatService';
 import { logger } from '../../../libs/utils/Logger';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { ChatState } from '../../../redux/features/conversations/ChatState';
-import { Constants } from '../../../Constants';
 import { ScrollBarStyles } from '../../../styles';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
-import { IArchivedChatSession, getDaysUntilDeletion } from '../../../libs/models/ArchivedChatSession';
-import { useChat } from '../../../libs/hooks';
 
 // Mobile breakpoint
 const MOBILE_BREAKPOINT = '768px';
@@ -178,6 +179,23 @@ const useClasses = makeStyles({
     warningDays: {
         color: tokens.colorPaletteRedForeground1,
     },
+    joinedBadge: {
+        fontSize: tokens.fontSizeBase100,
+        color: tokens.colorNeutralForeground3,
+        backgroundColor: tokens.colorNeutralBackground5,
+        ...shorthands.padding('1px', tokens.spacingHorizontalXS),
+        ...shorthands.borderRadius(tokens.borderRadiusSmall),
+        marginLeft: tokens.spacingHorizontalXS,
+        whiteSpace: 'nowrap' as const,
+    },
+    leaveButton: {
+        backgroundColor: tokens.colorPaletteMarigoldBackground3,
+        color: '#1a1a1a',
+        '&:hover': {
+            backgroundColor: tokens.colorPaletteMarigoldForeground1,
+            color: '#1a1a1a',
+        },
+    },
 });
 
 interface ChatManagementModalProps {
@@ -221,6 +239,7 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
     const classes = useClasses();
     const { instance, inProgress } = useMsal();
     const { conversations } = useAppSelector((state: RootState) => state.conversations);
+    const { activeUserInfo } = useAppSelector((state: RootState) => state.app);
     const chat = useChat();
 
     const [activeTab, setActiveTab] = useState<TabValue>('active');
@@ -240,6 +259,14 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
     const [showPermanentDeleteConfirm, setShowPermanentDeleteConfirm] = useState(false);
 
     const chatService = useMemo(() => new ChatService(), []);
+
+    // Determine if the current user is the creator of a chat
+    const isCreator = useCallback(
+        (chatItem: ChatState): boolean => {
+            return !chatItem.createdBy || chatItem.createdBy === activeUserInfo?.id;
+        },
+        [activeUserInfo],
+    );
 
     // Get non-hidden chats sorted by oldest first
     const sortedChats = useMemo(() => {
@@ -361,17 +388,53 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
 
         setIsDeleting(true);
         try {
-            await onDeleteChats(Array.from(selectedChatIds));
+            // Split selected chats into owned (delete) and joined (leave)
+            const ownedChatIds: string[] = [];
+            const joinedChatIds: string[] = [];
+
+            for (const chatId of selectedChatIds) {
+                const chatItem = conversations[chatId];
+                if (!isCreator(chatItem) && chatItem.users.length > 1) {
+                    joinedChatIds.push(chatId);
+                } else {
+                    ownedChatIds.push(chatId);
+                }
+            }
+
+            // Delete owned chats
+            if (ownedChatIds.length > 0) {
+                await onDeleteChats(ownedChatIds);
+            }
+
+            // Leave joined chats
+            for (const chatId of joinedChatIds) {
+                await chat.leaveChat(chatId);
+            }
+
             setSelectedChatIds(new Set());
         } finally {
             setIsDeleting(false);
             setShowConfirmDialog(false);
         }
-    }, [selectedChatIds, onDeleteChats]);
+    }, [selectedChatIds, onDeleteChats, conversations, isCreator, chat]);
 
     const selectedChats = useMemo(() => {
         return sortedChats.filter((c) => selectedChatIds.has(c.id));
     }, [sortedChats, selectedChatIds]);
+
+    // Split selected chats into owned and joined for display
+    const { ownedSelectedChats, joinedSelectedChats } = useMemo(() => {
+        const owned: ChatState[] = [];
+        const joined: ChatState[] = [];
+        for (const chatItem of selectedChats) {
+            if (!isCreator(chatItem) && chatItem.users.length > 1) {
+                joined.push(chatItem);
+            } else {
+                owned.push(chatItem);
+            }
+        }
+        return { ownedSelectedChats: owned, joinedSelectedChats: joined };
+    }, [selectedChats, isCreator]);
 
     const allSelected = selectedChatIds.size === sortedChats.length && sortedChats.length > 0;
     const someSelected = selectedChatIds.size > 0 && selectedChatIds.size < sortedChats.length;
@@ -492,50 +555,63 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
                         <span>Deltakarar</span>
                     </div>
 
-                    {sortedChats.map((chatItem) => (
-                        <div
-                            key={chatItem.id}
-                            className={`${classes.tableRow} ${selectedChatIds.has(chatItem.id) ? classes.selectedRow : ''}`}
-                        >
-                            <Checkbox
-                                checked={selectedChatIds.has(chatItem.id)}
-                                onChange={(_, data) => {
-                                    handleSelectChat(chatItem.id, !!data.checked);
-                                }}
-                                aria-label={`Vel ${chatItem.title}`}
-                            />
+                    {sortedChats.map((chatItem) => {
+                        const isJoinedChat = !isCreator(chatItem) && chatItem.users.length > 1;
+                        return (
+                            <div
+                                key={chatItem.id}
+                                className={`${classes.tableRow} ${selectedChatIds.has(chatItem.id) ? classes.selectedRow : ''}`}
+                            >
+                                <Checkbox
+                                    checked={selectedChatIds.has(chatItem.id)}
+                                    onChange={(_, data) => {
+                                        handleSelectChat(chatItem.id, !!data.checked);
+                                    }}
+                                    aria-label={`Vel ${chatItem.title}`}
+                                />
 
-                            <Tooltip content={chatItem.title} relationship="label">
-                                <Text className={classes.chatTitle}>{chatItem.title}</Text>
-                            </Tooltip>
+                                <Tooltip
+                                    content={
+                                        isJoinedChat
+                                            ? `${chatItem.title} (delt samtale – du kan forlate)`
+                                            : chatItem.title
+                                    }
+                                    relationship="label"
+                                >
+                                    <Text className={classes.chatTitle}>
+                                        {chatItem.title}
+                                        {isJoinedChat && <span className={classes.joinedBadge}>Delt</span>}
+                                    </Text>
+                                </Tooltip>
 
-                            <div className={classes.metricCell}>
-                                <Clock20Regular className={classes.metricIcon} />
-                                <span>{formatRelativeTime(chatItem.lastUpdatedTimestamp)}</span>
+                                <div className={classes.metricCell}>
+                                    <Clock20Regular className={classes.metricIcon} />
+                                    <span>{formatRelativeTime(chatItem.lastUpdatedTimestamp)}</span>
+                                </div>
+
+                                <div className={classes.metricCell}>
+                                    <Chat20Regular className={classes.metricIcon} />
+                                    <span>{getMessageCount(chatItem)}</span>
+                                </div>
+
+                                <div className={classes.metricCell}>
+                                    {loadingDocuments.has(chatItem.id) ? (
+                                        <Spinner size="tiny" />
+                                    ) : (
+                                        <>
+                                            <Document20Regular className={classes.metricIcon} />
+                                            <span>{documentCounts[chatItem.id] ?? 0}</span>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className={classes.metricCell}>
+                                    <People20Regular className={classes.metricIcon} />
+                                    <span>{chatItem.users.length}</span>
+                                </div>
                             </div>
-
-                            <div className={classes.metricCell}>
-                                <Chat20Regular className={classes.metricIcon} />
-                                <span>{getMessageCount(chatItem)}</span>
-                            </div>
-
-                            <div className={classes.metricCell}>
-                                {loadingDocuments.has(chatItem.id) ? (
-                                    <Spinner size="tiny" />
-                                ) : (
-                                    <>
-                                        <Document20Regular className={classes.metricIcon} />
-                                        <span>{documentCounts[chatItem.id] ?? 0}</span>
-                                    </>
-                                )}
-                            </div>
-
-                            <div className={classes.metricCell}>
-                                <People20Regular className={classes.metricIcon} />
-                                <span>{chatItem.users.length}</span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </>
             )}
         </>
@@ -665,7 +741,7 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
                                 <span>Administrer samtalar</span>
                                 <Text className={classes.subtitle}>
                                     {activeTab === 'active'
-                                        ? `Du har ${sortedChats.length} av ${Constants.app.maxChats} samtalar. Vel samtalar å slette.`
+                                        ? `Du har ${sortedChats.length} av ${Constants.app.maxChats} samtalar. Vel samtalar å slette eller forlate.`
                                         : `${archivedChats.length} sletta samtalar. Samtalar vert permanent sletta etter 180 dagar.`}
                                 </Text>
                             </div>
@@ -704,12 +780,32 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
                                 {activeTab === 'active' ? (
                                     <Button
                                         appearance="primary"
-                                        icon={<Delete20Regular />}
+                                        icon={
+                                            joinedSelectedChats.length > 0 && ownedSelectedChats.length === 0 ? (
+                                                <PersonDeleteRegular />
+                                            ) : (
+                                                <Delete20Regular />
+                                            )
+                                        }
                                         onClick={handleDeleteClick}
                                         disabled={selectedChatIds.size === 0 || isDeleting}
-                                        className={selectedChatIds.size > 0 ? classes.deleteButton : undefined}
+                                        className={
+                                            selectedChatIds.size > 0
+                                                ? joinedSelectedChats.length > 0 && ownedSelectedChats.length === 0
+                                                    ? classes.leaveButton
+                                                    : classes.deleteButton
+                                                : undefined
+                                        }
                                     >
-                                        {isDeleting ? <Spinner size="tiny" /> : `Slett valde (${selectedChatIds.size})`}
+                                        {isDeleting ? (
+                                            <Spinner size="tiny" />
+                                        ) : ownedSelectedChats.length > 0 && joinedSelectedChats.length > 0 ? (
+                                            `Slett (${ownedSelectedChats.length}) / Forlat (${joinedSelectedChats.length})`
+                                        ) : joinedSelectedChats.length > 0 ? (
+                                            `Forlat valde (${joinedSelectedChats.length})`
+                                        ) : (
+                                            `Slett valde (${ownedSelectedChats.length})`
+                                        )}
                                     </Button>
                                 ) : (
                                     <>
@@ -752,7 +848,8 @@ export const ChatManagementModal: React.FC<ChatManagementModalProps> = ({ isOpen
 
             <DeleteConfirmDialog
                 isOpen={showConfirmDialog}
-                chatsToDelete={selectedChats}
+                chatsToDelete={ownedSelectedChats}
+                chatsToLeave={joinedSelectedChats}
                 onConfirm={() => {
                     void handleConfirmDelete();
                 }}

@@ -72,6 +72,7 @@ const useClasses = makeStyles({
 interface DeleteConfirmDialogProps {
     isOpen: boolean;
     chatsToDelete: ChatState[];
+    chatsToLeave?: ChatState[];
     onConfirm: () => void;
     onCancel: () => void;
     isDeleting: boolean;
@@ -80,17 +81,37 @@ interface DeleteConfirmDialogProps {
 export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
     isOpen,
     chatsToDelete,
+    chatsToLeave = [],
     onConfirm,
     onCancel,
     isDeleting,
 }) => {
     const classes = useClasses();
 
-    const count = chatsToDelete.length;
+    const deleteCount = chatsToDelete.length;
+    const leaveCount = chatsToLeave.length;
+    const totalCount = deleteCount + leaveCount;
+
+    const getTitle = () => {
+        if (deleteCount > 0 && leaveCount > 0) return 'Stadfest sletting og forlating';
+        if (leaveCount > 0) return 'Stadfest forlating';
+        return 'Stadfest sletting';
+    };
+
+    const getButtonText = () => {
+        if (isDeleting) return null;
+        if (deleteCount > 0 && leaveCount > 0) {
+            return `Slett (${deleteCount}) og forlat (${leaveCount})`;
+        }
+        if (leaveCount > 0) {
+            return `Forlat ${leaveCount} samtale${leaveCount === 1 ? '' : 'r'}`;
+        }
+        return `Slett ${deleteCount} samtale${deleteCount === 1 ? '' : 'r'}`;
+    };
 
     return (
         <Dialog
-            open={isOpen}
+            open={isOpen && totalCount > 0}
             onOpenChange={(_, data) => {
                 if (!data.open && !isDeleting) {
                     onCancel();
@@ -102,23 +123,44 @@ export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
                     <DialogTitle>
                         <div className={classes.warningHeader}>
                             <Warning24Regular className={classes.warningIcon} />
-                            <span>Stadfest sletting</span>
+                            <span>{getTitle()}</span>
                         </div>
                     </DialogTitle>
 
                     <DialogContent className={classes.content}>
-                        <Text className={classes.warningText}>
-                            Er du sikker på at du vil slette {count} samtale{count === 1 ? '' : 'r'}? Denne handlinga
-                            kan ikkje angrast.
-                        </Text>
-
-                        <div className={classes.chatList}>
-                            {chatsToDelete.map((chat) => (
-                                <div key={chat.id} className={classes.chatItem} title={chat.title}>
-                                    {chat.title}
+                        {deleteCount > 0 && (
+                            <>
+                                <Text className={classes.warningText}>
+                                    {leaveCount > 0
+                                        ? `${deleteCount} samtale${deleteCount === 1 ? '' : 'r'} du eig vil bli sletta:`
+                                        : `Er du sikker på at du vil slette ${deleteCount} samtale${deleteCount === 1 ? '' : 'r'}? Denne handlinga kan ikkje angrast.`}
+                                </Text>
+                                <div className={classes.chatList}>
+                                    {chatsToDelete.map((chat) => (
+                                        <div key={chat.id} className={classes.chatItem} title={chat.title}>
+                                            {chat.title}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            </>
+                        )}
+
+                        {leaveCount > 0 && (
+                            <>
+                                <Text className={classes.warningText}>
+                                    {deleteCount > 0
+                                        ? `${leaveCount} delte samtale${leaveCount === 1 ? '' : 'r'} du vil forlate:`
+                                        : `Er du sikker på at du vil forlate ${leaveCount} delte samtale${leaveCount === 1 ? '' : 'r'}? Du kan bli med igjen seinare.`}
+                                </Text>
+                                <div className={classes.chatList}>
+                                    {chatsToLeave.map((chat) => (
+                                        <div key={chat.id} className={classes.chatItem} title={chat.title}>
+                                            {chat.title}
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </DialogContent>
 
                     <DialogActions className={classes.actions}>
@@ -134,10 +176,10 @@ export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
                             {isDeleting ? (
                                 <>
                                     <Spinner size="tiny" style={{ marginRight: tokens.spacingHorizontalS }} />
-                                    Slettar...
+                                    Arbeider...
                                 </>
                             ) : (
-                                `Slett ${count} samtale${count === 1 ? '' : 'r'}`
+                                getButtonText()
                             )}
                         </Button>
                     </DialogActions>

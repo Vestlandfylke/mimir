@@ -44,41 +44,8 @@ async function initializeAndRenderApp() {
     renderApp();
 }
 
-/**
- * Clear MSAL cache from localStorage and sessionStorage.
- * This helps recover from corrupted auth state.
- */
-function clearMsalCache() {
-    // Clear all MSAL-related items from storage
-    const keysToRemove: string[] = [];
-
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (
-            key &&
-            (key.startsWith('msal.') || key.includes('login.windows.net') || key.includes('login.microsoftonline.com'))
-        ) {
-            keysToRemove.push(key);
-        }
-    }
-    keysToRemove.forEach((key) => {
-        localStorage.removeItem(key);
-    });
-
-    const sessionKeysToRemove: string[] = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (
-            key &&
-            (key.startsWith('msal.') || key.includes('login.windows.net') || key.includes('login.microsoftonline.com'))
-        ) {
-            sessionKeysToRemove.push(key);
-        }
-    }
-    sessionKeysToRemove.forEach((key) => {
-        sessionStorage.removeItem(key);
-    });
-}
+// Use shared clearMsalCache from AuthHelper
+const clearMsalCache = AuthHelper.clearMsalCache;
 
 export function renderApp() {
     fetch(new URL('authConfig', BackendServiceUrl))
@@ -97,6 +64,8 @@ export function renderApp() {
                         .then((response) => {
                             if (response) {
                                 msalInstance.setActiveAccount(response.account);
+                                // Clear recovery flag on successful auth
+                                AuthHelper.clearRecoveryFlag();
                             }
                         })
                         .catch((error) => {

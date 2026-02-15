@@ -446,6 +446,12 @@ $documentMeta = @{
         category = "prosjekt"
         description = "Direktelenke til prosjektportalen i Vestland fylkeskommune. Oversikt over prosjekt, status, framdrift og porteføljestyring. Innlogging og tilgang til prosjektinformasjon."
     }
+    "Rutine for behandling av krav om partsinnsyn i rekrutteringssaker.pdf" = @{
+        id = "rutine-partsinnsyn-rekruttering"
+        title = "Rutine for behandling av krav om partsinnsyn i rekrutteringssaker"
+        category = "personal"
+        description = "Rutine for handsaming av krav om partsinnsyn i rekrutteringssaker i Vestland fylkeskommune. Prosedyrar for mottak, journalføring og behandling av innsynskrav. Kva dokument ein part har rett til å sjå i tilsettingssaker: utvida søkjarliste, innstilling, faktiske opplysningar. Reglar etter forvaltningslova og forvaltningslovforskrifta kapittel 5. Frist for behandling, avslag, grunngjeving, klagerett. Ansvarleg leiar, rådgjevar HR-seksjonen, juridisk bistand. Klage til statsforvaltaren."
+    }
 }
 
 # Maximum content size per document (Azure Search works best with smaller chunks)

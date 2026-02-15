@@ -83,14 +83,56 @@ export function formatParagraphTextContent(messageContent = '') {
 }
 
 /*
+ * Convert a number to Unicode superscript characters (e.g., 1 → ¹, 12 → ¹²).
+ */
+const superscriptDigits = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+function toSuperscript(num: number): string {
+    return num
+        .toString()
+        .split('')
+        .map((d) => superscriptDigits[parseInt(d)])
+        .join('');
+}
+
+/*
+ * Escape special regex characters in a string.
+ */
+function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/*
  * Function to replace citation links with indices matching the citation list.
+ *
+ * The LLM is instructed to include document links in square brackets in its response,
+ * which it often formats as markdown links: [Document Name](citation-link).
+ * Previously, only the URL was replaced with a number, turning [text](url) into [text](1),
+ * which ReactMarkdown rendered as a clickable link to the relative path /1 on the domain.
+ *
+ * Fix: Replace the ENTIRE markdown link construct with the document name as plain text
+ * plus a superscript citation number (e.g., "Document Name ¹"). This prevents broken
+ * links while preserving the document reference and matching it to the citation cards below.
  */
 export function replaceCitationLinksWithIndices(formattedMessageContent: string, message: IChatMessage) {
     const citations = message.citations;
     if (citations) {
         citations.forEach((citation, index) => {
             const citationLink = citation.link;
-            formattedMessageContent = formattedMessageContent.replaceAll(citationLink, (index + 1).toString());
+            const citationRef = toSuperscript(index + 1);
+            const escapedLink = escapeRegex(citationLink);
+
+            // 1. Replace full markdown links: [text](citationLink) → text ¹
+            //    This catches the most common pattern where the LLM wraps the doc name in a link.
+            const markdownLinkPattern = new RegExp(`\\[([^\\]]*?)\\]\\(\\s*${escapedLink}\\s*\\)`, 'g');
+            formattedMessageContent = formattedMessageContent.replace(markdownLinkPattern, `$1 ${citationRef}`);
+
+            // 2. Replace bare citation links in square brackets: [citationLink] → [¹]
+            //    This catches the pattern where the LLM just quotes the link as instructed.
+            const bareLinkPattern = new RegExp(`\\[\\s*${escapedLink}\\s*\\]`, 'g');
+            formattedMessageContent = formattedMessageContent.replace(bareLinkPattern, citationRef);
+
+            // 3. Replace any remaining bare citation links (without brackets)
+            formattedMessageContent = formattedMessageContent.replaceAll(citationLink, citationRef);
         });
     }
 

@@ -185,6 +185,21 @@ $documentMeta = @{
         title = "Policy for bruk av kunstig intelligens (KI eller AI)"
         category = "policy"
     }
+    "mimir-vestland-info.md" = @{
+        id = "mimir-vestland-info"
+        title = "Viktig informasjon om Vestland fylkeskommune"
+        category = "info"
+    }
+    "mimir-faq.md" = @{
+        id = "mimir-faq"
+        title = "Spoersmaal og svar om Mimir"
+        category = "faq"
+    }
+    "mimir-organisasjonsstrategi.md" = @{
+        id = "mimir-organisasjonsstrategi"
+        title = "Organisasjonsstrategi for Vestland fylkeskommune 2024-2028"
+        category = "strategi"
+    }
 }
 
 $documents = @()

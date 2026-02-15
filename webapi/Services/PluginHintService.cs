@@ -34,7 +34,19 @@ public sealed class PluginHintService
         // Tips
         "betre svar", "gode spørsmål", "prompt", "tips",
         // Troubleshooting
-        "virkar ikkje", "feil", "problem", "bug"
+        "virkar ikkje", "feil", "problem", "bug",
+        // Vestland fylkeskommune info
+        "fylkeskommune", "vestland", "fylkesdirektør", "direktør",
+        "besøksadresse", "postadresse", "opningstid", "kontor",
+        "tenester", "tannhelse", "fylkesveg", "kollektivtransport",
+        // FAQ and comparison
+        "botolf", "chatgpt", "forskjell", "lagring", "data lagra",
+        // KI courses
+        "ki-kurs", "kurs i ki", "skriv klart", "klarare med ki",
+        // Strategy and organizational
+        "organisasjonsstrategi", "ambisjon", "prinsipp", "verdiar",
+        "samfunnsoppdrag", "visjon", "nyskapande", "berekraftig",
+        "kompetent open modig", "læringskultur", "mangfald", "tillit"
     };
 
     // Keywords that should trigger LeiarKontekst plugin (ONLY for leader template)
@@ -114,12 +126,12 @@ public sealed class PluginHintService
             if (leiarScore > 0)
             {
                 this._logger.LogDebug("PluginHint: Detected LeiarKontekst-related query (score: {Score})", leiarScore);
-                
+
                 var leiarHint = "[VERKTØY-HINT: Dette spørsmålet kan handla om leiar-relaterte emne. " +
                     "SØK I LEIAR-KUNNSKAPSBASEN FØRST med SearchStrategicDocumentsAsync før du svarar. " +
                     "Kunnskapsbasen inneheld strategiske dokument, retningslinjer, malar og prosedyrar for leiarar i Vestland fylkeskommune.]";
                 hints.Add(leiarHint);
-                
+
                 this._logger.LogInformation("PluginHint: Generated LeiarKontekst hint for query");
             }
         }
@@ -129,12 +141,12 @@ public sealed class PluginHintService
         if (mimirScore > 0)
         {
             this._logger.LogDebug("PluginHint: Detected Mimir-related query (score: {Score})", mimirScore);
-            
+
             // Determine which specific function to recommend
             var function = DetermineMimirFunction(lowerMessage);
             var mimirHint = $"[VERKTØY-HINT: Dette spørsmålet handlar om Mimir. BRUK {function} for å hente korrekt informasjon FØR du svarar.]";
             hints.Add(mimirHint);
-            
+
             this._logger.LogInformation("PluginHint: Generated Mimir hint for query");
         }
 
@@ -185,6 +197,15 @@ public sealed class PluginHintService
         if (ContainsAny(lowerMessage, "betre svar", "gode spørsmål", "prompt", "tips"))
         {
             return "GetPromptingTipsAsync";
+        }
+
+        // Vestland fylkeskommune info / FAQ
+        if (ContainsAny(lowerMessage, "fylkeskommune", "vestland", "fylkesdirektør", "direktør",
+            "besøksadresse", "postadresse", "opningstid", "kontor", "tenester",
+            "botolf", "chatgpt", "forskjell", "lagring", "data lagra",
+            "ki-kurs", "kurs i ki", "skriv klart", "klarare med ki"))
+        {
+            return "SearchMimirKnowledgeAsync";
         }
 
         // Default to search

@@ -31,7 +31,6 @@ import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { addAlert } from '../../../redux/features/app/appSlice';
 import { editConversationSystemDescription } from '../../../redux/features/conversations/conversationsSlice';
-import { MemoryBiasSlider } from '../persona/MemoryBiasSlider';
 import { PromptEditor } from '../persona/PromptEditor';
 import { TabView } from './TabView';
 
@@ -280,8 +279,6 @@ export const PersonaTab: React.FC = () => {
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
     const chatState = conversations[selectedId];
 
-    const [shortTermMemory, setShortTermMemory] = React.useState<string>('');
-    const [longTermMemory, setLongTermMemory] = React.useState<string>('');
     const [customInstructions, setCustomInstructions] = React.useState<string>('');
     const [selectedTone, setSelectedTone] = React.useState<string>('standard');
     const [selectedLength, setSelectedLength] = React.useState<string>('standard');
@@ -306,19 +303,8 @@ export const PersonaTab: React.FC = () => {
         }
     }, [availableModels.length, fetchAvailableModels]);
 
-    // Load memories and extract custom instructions
+    // Load custom instructions from system description
     React.useEffect(() => {
-        if (!conversations[selectedId].disabled) {
-            void Promise.all([
-                chat.getSemanticMemories(selectedId, 'WorkingMemory').then((memories) => {
-                    setShortTermMemory(memories.join('\n'));
-                }),
-                chat.getSemanticMemories(selectedId, 'LongTermMemory').then((memories) => {
-                    setLongTermMemory(memories.join('\n'));
-                }),
-            ]);
-        }
-
         // Extract saved values from current system description
         const extractedInstructions = extractCustomInstructions(chatState.systemDescription);
         const extractedTone = extractSavedTone(chatState.systemDescription);
@@ -585,9 +571,6 @@ export const PersonaTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* Memory Balance */}
-            <MemoryBiasSlider />
-
             {/* Advanced Section - Collapsible */}
             <div className={classes.advancedSection}>
                 <Accordion collapsible>
@@ -601,20 +584,6 @@ export const PersonaTab: React.FC = () => {
                                     prompt={chatState.systemDescription}
                                     isEditable={false}
                                     info="Den fullstendige tekniske instruksjonen som styrer Mimir. Denne kan ikkje endrast direkte - bruk dei forenkla vala øvst for tilpassingar."
-                                />
-                                <PromptEditor
-                                    title="Korttidsminne"
-                                    chatId={selectedId}
-                                    prompt={`<label>: <details>\n${shortTermMemory}`}
-                                    isEditable={false}
-                                    info="Viser nyleg kontekst frå denne samtaleøkta."
-                                />
-                                <PromptEditor
-                                    title="Langtidsminne"
-                                    chatId={selectedId}
-                                    prompt={`<label>: <details>\n${longTermMemory}`}
-                                    isEditable={false}
-                                    info="Viser viktige fakta og tema frå denne samtaleøkta."
                                 />
                             </div>
                         </AccordionPanel>

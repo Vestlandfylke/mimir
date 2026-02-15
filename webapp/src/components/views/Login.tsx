@@ -3,6 +3,8 @@
 import { useMsal } from '@azure/msal-react';
 import { Body1, Button, makeStyles, Spinner, tokens } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
+import logoDark from '../../assets/sidestilt-logo-kvit-skrift-vlfk.svg';
+import logo from '../../assets/sidestilt-logo-vlfk.svg';
 import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { teamsAuthHelper } from '../../libs/auth/TeamsAuthHelper';
 import { EmbeddedAppHelper } from '../../libs/utils/EmbeddedAppHelper';
@@ -11,8 +13,6 @@ import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
 import { getErrorDetails } from '../utils/TextUtils';
-import logo from '../../assets/sidestilt-logo-vlfk.svg';
-import logoDark from '../../assets/sidestilt-logo-kvit-skrift-vlfk.svg';
 
 interface LoginProps {
     onTeamsAuthSuccess?: () => void;
@@ -107,6 +107,32 @@ export const Login: React.FC<LoginProps> = ({ onTeamsAuthSuccess }) => {
     const isDarkMode = features[FeatureKeys.DarkMode].enabled;
     const currentLogo = isDarkMode ? logoDark : logo;
 
+    const handleLoginError = (e: unknown) => {
+        // Check if this is a recoverable MSAL cache error
+        if (AuthHelper.isMsalCacheError(e)) {
+            logger.warn('Login: Detected MSAL cache error, attempting auto-recovery...', e);
+            const recoveryInitiated = AuthHelper.attemptCacheRecovery();
+            if (recoveryInitiated) {
+                // Page will reload - show a message while that happens
+                setSilentAuthMessage('Ryddar opp i innloggingsdata...');
+                return;
+            }
+            // Recovery already attempted once - show error to user
+            logger.error('Login: Auto-recovery already attempted, showing error to user');
+        }
+
+        const context = EmbeddedAppHelper.getAppContext();
+        setSilentAuthInProgress(false);
+        alert(`Feil ved innlogging (${context}): ${getErrorDetails(e)}`);
+    };
+
+    const handleLogin = () => {
+        setSilentAuthInProgress(true);
+        setSilentAuthMessage('Logger inn...');
+
+        void AuthHelper.loginAsync(instance).catch(handleLoginError);
+    };
+
     // Attempt silent authentication when component mounts
     useEffect(() => {
         const attemptSilentAuth = async () => {
@@ -158,11 +184,7 @@ export const Login: React.FC<LoginProps> = ({ onTeamsAuthSuccess }) => {
                                         onTeamsAuthSuccess();
                                     }
                                 })
-                                .catch((e: unknown) => {
-                                    const context = EmbeddedAppHelper.getAppContext();
-                                    setSilentAuthInProgress(false);
-                                    alert(`Feil ved innlogging (${context}): ${getErrorDetails(e)}`);
-                                });
+                                .catch(handleLoginError);
                         } catch (teamsError) {
                             logger.error('Login component: Teams auth error:', teamsError);
                             setSilentAuthInProgress(false);
@@ -172,6 +194,17 @@ export const Login: React.FC<LoginProps> = ({ onTeamsAuthSuccess }) => {
                     }
                 }
             } catch (error) {
+                // Check if this is a recoverable MSAL cache error
+                if (AuthHelper.isMsalCacheError(error)) {
+                    logger.warn(
+                        'Login component: Detected MSAL cache error during silent auth, attempting recovery...',
+                    );
+                    const recoveryInitiated = AuthHelper.attemptCacheRecovery();
+                    if (recoveryInitiated) {
+                        setSilentAuthMessage('Ryddar opp i innloggingsdata...');
+                        return;
+                    }
+                }
                 logger.error('Login component: Silent authentication error:', error);
                 setSilentAuthInProgress(false);
             }
@@ -185,18 +218,8 @@ export const Login: React.FC<LoginProps> = ({ onTeamsAuthSuccess }) => {
         return () => {
             clearTimeout(timer);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [instance, onTeamsAuthSuccess]);
-
-    const handleLogin = () => {
-        setSilentAuthInProgress(true);
-        setSilentAuthMessage('Logger inn...');
-
-        void AuthHelper.loginAsync(instance).catch((e: unknown) => {
-            const context = EmbeddedAppHelper.getAppContext();
-            setSilentAuthInProgress(false);
-            alert(`Feil ved innlogging (${context}): ${getErrorDetails(e)}`);
-        });
-    };
 
     return (
         <div className={classes.container}>
