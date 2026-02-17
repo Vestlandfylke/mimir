@@ -114,7 +114,7 @@ internal sealed class FileGenerationPlugin
 
             await this._fileRepository.CreateAsync(file);
 
-            var downloadUrl = this.GetDownloadUrl(fileId, chatId, fileName);
+            var downloadUrl = GetDownloadUrl(fileId, chatId, fileName);
             this._logger.LogInformation("Created downloadable file {FileName} with ID {FileId} in chat {ChatId}", fileName, fileId, chatId);
 
             return downloadUrl;
@@ -286,7 +286,7 @@ internal sealed class FileGenerationPlugin
 
             await this._fileRepository.CreateAsync(file);
 
-            var downloadUrl = this.GetDownloadUrl(fileId, chatId, fileName);
+            var downloadUrl = GetDownloadUrl(fileId, chatId, fileName);
             this._logger.LogInformation("Created binary file {FileName} with ID {FileId} in chat {ChatId}", fileName, fileId, chatId);
 
             return downloadUrl;
@@ -756,21 +756,15 @@ internal sealed class FileGenerationPlugin
     /// Gets the full download URL for a file based on the current request context.
     /// The filename is included in the URL path so browsers use it as the default download name.
     /// </summary>
-    private string GetDownloadUrl(string fileId, string chatId, string? fileName = null)
+    private static string GetDownloadUrl(string fileId, string chatId, string? fileName = null)
     {
+        // Always return a relative URL. The frontend resolves it against its own origin,
+        // which ensures the request goes through Front Door/reverse proxy in production
+        // instead of hitting the App Service directly (which would cause CORS errors).
         var filePath = string.IsNullOrEmpty(fileName)
             ? $"/files/{fileId}"
             : $"/files/{fileId}/{Uri.EscapeDataString(fileName)}";
 
-        var httpContext = this._httpContextAccessor.HttpContext;
-        if (httpContext != null)
-        {
-            var request = httpContext.Request;
-            var baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}";
-            return $"{baseUrl}{filePath}?chatId={chatId}";
-        }
-
-        // Fallback to relative URL if HttpContext is not available
         return $"{filePath}?chatId={chatId}";
     }
 }

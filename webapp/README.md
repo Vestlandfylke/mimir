@@ -2,20 +2,21 @@
 
 React-basert webgrensesnitt for Mimir, bygd med Fluent UI React Components.
 
-## Oversikt
+## Funksjonar
 
-Frontend-en tilbyr:
-
-- 💬 Chat-grensesnitt med streaming-respons
-- 📄 Dokumentopplasting og -administrasjon
-- 📌 Festa dokument (pinned documents)
-- 🔢 Matematikk-rendering med KaTeX
-- 📊 **Mermaid-diagram** - Visualiser flowcharts, sekvensdiagram, ER-diagram og meir
-- 💻 **Kodeblokker** - Syntax highlighting, linjenummer og kopier-knapp
-- 📋 Kopier-knapp på meldingar
-- 🎨 Moderne UI med Fluent Design
-- 🔐 Azure AD B2C autentisering
-- 📱 Teams/iframe-støtte
+- Chat med streaming-respons via SignalR
+- Fleirmodellval (GPT-5.2, GPT-5 Mini, Claude, m.fl.)
+- Assistentmalar med tilgangskontroll
+- Plugin-sitat med kjeldetype og fargekoda merkelappar
+- Filgenerering og filhandtering ("Mine filer"-panel)
+- Dokumentopplasting med drag-and-drop
+- Mermaid-diagram med nedlasting og redigering
+- Kodeblokker med syntax highlighting og kopier-knapp
+- LaTeX/KaTeX-matematikk
+- Samtalearkiv ("Papirkorg") med gjenoppretting
+- Mørk modus
+- Azure AD og Teams SSO-autentisering
+- Token-basert filnedlasting for mobil/Teams
 
 ## Kjøre lokalt
 
@@ -26,198 +27,114 @@ Frontend-en tilbyr:
 
 ### Setup
 
-1. **Installer dependencies**
+```bash
+# Installer avhengigheiter
+yarn install
 
-    ```bash
-    yarn install
-    ```
+# Start utviklingsserver
+yarn start
+```
 
-2. **Start utviklingsserver**
-    ```bash
-    yarn start
-    ```
+Frontend køyrer på `http://localhost:3000`.
 
-Frontend køyrer no på `http://localhost:3000`
-
-### Andre kommandoar
+### Kommandoar
 
 ```bash
-# Bygg for produksjon
-yarn build
-
-# Kjør linter
-yarn lint
-
-# Kjør formatter
-yarn format
-
-# Kjør testar
-yarn test
+yarn start       # Utviklingsserver
+yarn build       # Produksjonsbygg
+yarn lint        # Sjekk linting
+yarn lint --fix  # Fiks linting
+yarn format      # Formater kode
+yarn test        # Køyr testar
 ```
 
 ## Konfigurasjon
 
-Frontend hentar konfigurasjon frå backend via `/authConfig` endpoint.
-
-### Miljøvariablar (valgfritt)
-
-Opprett `.env.local`:
+Frontend hentar konfigurasjon frå backend via `/authConfig`. For lokal utvikling, opprett `.env.local`:
 
 ```env
 REACT_APP_BACKEND_URI=https://localhost:40443
 ```
 
-## Arkitektur
-
-### Mappestruktur
+## Mappestruktur
 
 ```
-webapp/
-├── src/
-│   ├── components/        # React-komponentar
-│   │   ├── chat/         # Chat-UI
-│   │   ├── shared/       # Delte komponentar
-│   │   └── views/        # Hovudsider
-│   ├── libs/
-│   │   ├── hooks/        # Custom React hooks
-│   │   ├── models/       # TypeScript-modellar
-│   │   ├── services/     # API-klientar
-│   │   └── utils/        # Hjelpefunksjonar
-│   ├── redux/            # Redux state management
-│   └── styles/           # Fluent UI styles
-├── public/               # Statiske filer
-└── tests/                # Playwright E2E-testar
+webapp/src/
+├── components/
+│   ├── chat/                # Chat-UI
+│   │   ├── chat-history/    # Meldingsvisning, sitat, kodeblokker, diagram
+│   │   ├── chat-list/       # Samtaleliste
+│   │   └── controls/        # Input, modelval, diagramval
+│   ├── files/               # Filhandtering (FileManagementModal)
+│   ├── header/              # Toppmeny, brukarinnstillingar
+│   ├── shared/              # Delte komponentar
+│   └── views/               # Hovudsider (ChatView, Login)
+├── libs/
+│   ├── hooks/               # Custom React hooks
+│   ├── models/              # TypeScript-modellar (ChatMessage, Citation)
+│   ├── services/            # API-klientar (ChatService, FileService)
+│   └── auth/                # Autentiseringslogikk
+├── redux/
+│   ├── features/app/        # App-tilstand, feature flags
+│   ├── features/conversations/  # Samtaledata
+│   └── features/message-relay/  # SignalR-tilkopling
+└── styles/                  # Fluent UI-stilar
 ```
 
-### Hovudkomponentar
+## Viktige komponentar
 
-- **Chat.tsx** - Hovud chat-grensesnitt
-- **ChatHistoryItem.tsx** - Enkelt chat-melding
-- **DocumentsTab.tsx** - Dokumentadministrasjon
-- **PersonaTab.tsx** - Chat-personalisering
-- **Login.tsx** - Innloggingsside
+### Plugin-sitat (CitationCards)
 
-## Viktige funksjonar
+Viser kjelder nederst i meldingar med fargekoda merkelappar per kjeldetype:
+- Kunnskapsbase, Leiardokument, Lovdata, SharePoint, Opplasta dokument
 
-### Autentisering
+### Filhandtering (FileManagementModal)
 
-Frontend støttar både redirect og popup auth:
+"Mine filer"-panel som viser genererte filer med nedlasting og sletting. Støttar:
+- Standard blob-nedlasting for desktop
+- Token-basert `window.open()` for mobil/Teams (omgår WebView-avgrensingar)
 
-- **Redirect** - Standard for nettlesar
-- **Popup** - For Teams og andre iframe-miljø
+### Mermaid-diagram (MermaidBlock)
 
-Sjå `libs/utils/EmbeddedAppHelper.ts` for implementasjon.
+Renderar diagram direkte i chatten med:
+- Nedlasting som JPG
+- Fullskjerm-visning og redigering
 
-### Chat-streaming
+### SignalR-meldingsrelay
 
-Meldingar streamast i sanntid via SignalR:
+Sanntidsoppdateringar via SignalR inkludert:
+- Streaming av svar
+- Oppdatering av sitat etter plugin-kall
+- Reasoning-visning for resonneringsmodellar
 
-```typescript
-connection.on('ReceiveMessage', (message) => {
-    // Håndter streaming-melding
-});
-```
+## Autentisering
 
-### Dokumentopplasting
+- **Redirect** — standard for nettlesar
+- **Popup** — for Teams og iframe-miljø (auto-detektert)
 
-Støttar:
-
-- PDF, DOCX, TXT, MD
-- Bilete (PNG, JPG, TIFF) med OCR
-- Drag-and-drop
-
-### Matematikk-rendering
-
-Bruker KaTeX for LaTeX-syntaks:
-
-```typescript
-import 'katex/dist/katex.min.css';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-```
-
-### Mermaid-diagram
-
-Støttar rendering av Mermaid-diagram direkte i chatten:
-
-- Flowcharts, sekvensdiagram, ER-diagram, Gantt-diagram, osv.
-- Last ned diagram som JPG med éin klikk
-- Bruk `\`\`\`mermaid` code blocks
-
-### Kodeblokker
-
-Avansert kode-visning med:
-
-- **Syntax highlighting** via prism-react-renderer
-- **Linjenummer** for enkel navigering
-- **Kopier-knapp** for rask kopiering
-- Støtte for mange språk: TypeScript, JavaScript, Python, SQL, osv.
-
-## Utvikling
-
-### VS Code
-
-Anbefalt extensions:
-
-- ESLint
-- Prettier
-- TypeScript and JavaScript Language Features
-
-### Debugging
-
-1. Start backend: `dotnet run` i `webapi/`
-2. Start frontend: `yarn start` i `webapp/`
-3. Opne `http://localhost:3000` i nettlesar
-4. Bruk browser DevTools for debugging
-
-### Linting og Formatering
-
-```bash
-# Sjekk for feil
-yarn lint
-
-# Fiks automatisk
-yarn lint --fix
-
-# Formater kode
-yarn format
-```
+Sjå `libs/auth/AuthHelper.ts` og `libs/utils/EmbeddedAppHelper.ts`.
 
 ## Testing
 
-### Unit Tests (Jest)
-
 ```bash
+# Unit-testar (Jest)
 yarn test
-```
 
-### E2E Tests (Playwright)
-
-```bash
-# Install Playwright
+# E2E-testar (Playwright)
 yarn playwright install
-
-# Run tests
 yarn test:e2e
 ```
 
-Sjå [tests/README.md](tests/README.md) for meir info.
+Sjå [tests/README.md](tests/README.md) for meir.
 
 ## Deployment
 
-Frontend deployast som statiske filer til Azure App Service (hosted av backend) via GitHub Actions.
+Frontend byggast og kopierast til `webapi/wwwroot/` under deployment:
 
-Build-prosess:
+```bash
+yarn install --frozen-lockfile
+yarn build
+# Output: build/ → webapi/wwwroot/
+```
 
-1. `yarn install --frozen-lockfile`
-2. `yarn build`
-3. Output går til `build/`
-4. Kopieres til `webapi/wwwroot/` under backend deployment
-
-Sjå [../GITHUB_ACTIONS_SETUP.md](../GITHUB_ACTIONS_SETUP.md) for detaljar.
-
-## Meir informasjon
-
-- [../FAQ_MIMIR.md](../FAQ_MIMIR.md) - Brukarrettleiing
-- [../FEATURE_SUMMARY.md](../FEATURE_SUMMARY.md) - Funksjonsoversikt
-- [../scripts/README.md](../scripts/README.md) - Lokal utvikling
+Sjå [../scripts/deploy/README.md](../scripts/deploy/README.md).

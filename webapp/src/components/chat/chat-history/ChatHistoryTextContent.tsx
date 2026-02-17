@@ -164,7 +164,16 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
 
         try {
             const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
-            const url = new URL(href, window.location.origin);
+
+            // Normalize the href: extract the relative path (/files/...) regardless of
+            // whether href is absolute (https://backend.../files/...) or relative (/files/...).
+            // This ensures we always fetch through BackendServiceUrl (which goes through
+            // Front Door) instead of hitting the App Service directly (which would cause CORS errors).
+            const parsed = new URL(href, window.location.origin);
+            const relativePath = `${parsed.pathname}${parsed.search}`;
+
+            const baseUrl = BackendServiceUrl.replace(/\/$/, '');
+            const fetchUrl = `${baseUrl}${relativePath}`;
 
             // On mobile/Teams WebViews, blob downloads don't work.
             // Use a token-based direct URL instead.
@@ -175,23 +184,22 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
 
             if (isMobileOrTeams) {
                 // Extract fileId from the URL path: /files/{fileId}/...
-                const pathParts = url.pathname.split('/').filter(Boolean);
+                const pathParts = parsed.pathname.split('/').filter(Boolean);
                 const filesIdx = pathParts.indexOf('files');
                 const fileId = filesIdx >= 0 && filesIdx + 1 < pathParts.length ? pathParts[filesIdx + 1] : null;
 
                 if (fileId) {
                     const fileService = new FileService();
                     const token = await fileService.getDownloadTokenAsync(fileId, accessToken);
-                    const baseUrl = BackendServiceUrl.replace(/\/$/, '');
-                    const separator = url.search ? '&' : '?';
-                    const directUrl = `${baseUrl}${url.pathname}${url.search}${separator}dt=${encodeURIComponent(token)}`;
+                    const separator = fetchUrl.includes('?') ? '&' : '?';
+                    const directUrl = `${fetchUrl}${separator}dt=${encodeURIComponent(token)}`;
                     window.open(directUrl, '_blank');
                     return;
                 }
             }
 
             // Standard blob download for desktop browsers
-            const response = await fetch(url.toString(), {
+            const response = await fetch(fetchUrl, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
@@ -205,7 +213,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
 
             const contentDisposition = response.headers.get('content-disposition');
             const filename =
-                tryGetFilenameFromContentDisposition(contentDisposition) ?? url.pathname.split('/').pop() ?? 'download';
+                tryGetFilenameFromContentDisposition(contentDisposition) ?? parsed.pathname.split('/').pop() ?? 'download';
             const blob = await response.blob();
             downloadBlob(blob, filename);
         } catch (err) {
