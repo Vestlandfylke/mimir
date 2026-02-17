@@ -179,10 +179,23 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
         if (!messageRef.current) return;
 
         try {
-            // Capture the message element as a PNG blob
+            // Capture the message element as a PNG blob.
+            // skipAutoScale avoids re-reading cross-origin stylesheets (e.g. Google Fonts)
+            // that throw SecurityError: "Cannot access rules" in the browser console.
             const dataUrl = await htmlToImage.toPng(messageRef.current, {
                 backgroundColor: features[FeatureKeys.DarkMode].enabled ? '#1f1f1f' : '#f5f5f5',
-                pixelRatio: 2, // Higher quality
+                pixelRatio: 2,
+                skipAutoScale: true,
+                filter: (node: HTMLElement) => {
+                    // Skip external stylesheet link elements that cause CORS errors
+                    if (node.tagName === 'LINK' && node.getAttribute('rel') === 'stylesheet') {
+                        const href = node.getAttribute('href') ?? '';
+                        if (href.startsWith('http') && !href.includes(window.location.hostname)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
             });
 
             // Convert data URL to blob
