@@ -180,22 +180,14 @@ export const ChatHistoryItem: React.FC<ChatHistoryItemProps> = ({ message, messa
 
         try {
             // Capture the message element as a PNG blob.
-            // skipAutoScale avoids re-reading cross-origin stylesheets (e.g. Google Fonts)
-            // that throw SecurityError: "Cannot access rules" in the browser console.
+            // skipFonts prevents html-to-image from reading cssRules on cross-origin
+            // stylesheets (e.g. Google Fonts) which throws SecurityError in the console.
+            // The rendered fonts still look correct because the browser has already loaded them;
+            // they just won't be embedded in the PNG (which is fine for clipboard use).
             const dataUrl = await htmlToImage.toPng(messageRef.current, {
                 backgroundColor: features[FeatureKeys.DarkMode].enabled ? '#1f1f1f' : '#f5f5f5',
                 pixelRatio: 2,
-                skipAutoScale: true,
-                filter: (node: HTMLElement) => {
-                    // Skip external stylesheet link elements that cause CORS errors
-                    if (node.tagName === 'LINK' && node.getAttribute('rel') === 'stylesheet') {
-                        const href = node.getAttribute('href') ?? '';
-                        if (href.startsWith('http') && !href.includes(window.location.hostname)) {
-                            return false;
-                        }
-                    }
-                    return true;
-                },
+                skipFonts: true,
             });
 
             // Convert data URL to blob
