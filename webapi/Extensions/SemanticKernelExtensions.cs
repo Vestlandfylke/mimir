@@ -112,7 +112,7 @@ internal static class SemanticKernelExtensions
                 mcpPlanService: sp.GetService<McpPlanService>(),
                 telemetryService: sp.GetService<ITelemetryService>(),
                 modelKernelFactory: sp.GetService<ModelKernelFactory>(),
-                leiarKontekstCitationService: sp.GetService<LeiarKontekstCitationService>(),
+                pluginCitationService: sp.GetService<PluginCitationService>(),
                 piiSanitizationService: sp.GetService<PiiSanitizationService>()),
             nameof(ChatPlugin));
 
@@ -137,12 +137,14 @@ internal static class SemanticKernelExtensions
         kernel.ImportPluginFromObject(new NorwegianTimePlugin(), "TimePlugin");
 
         // File generation plugin - allows AI to create downloadable files
+        // TemplateService is optional; if not registered the plugin falls back to plain generation
         kernel.ImportPluginFromObject(
             new FileGenerationPlugin(
                 sp.GetRequiredService<GeneratedFileRepository>(),
                 sp.GetRequiredService<ILogger<FileGenerationPlugin>>(),
                 sp.GetRequiredService<IHttpContextAccessor>(),
-                sp.GetRequiredService<CopilotChat.WebApi.Auth.IAuthInfo>()),
+                sp.GetRequiredService<CopilotChat.WebApi.Auth.IAuthInfo>(),
+                sp.GetService<TemplateService>()),
             nameof(FileGenerationPlugin));
 
         // MCP plugins are NOT registered here - they are registered in ChatController

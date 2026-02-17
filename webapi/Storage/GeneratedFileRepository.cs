@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Models.Storage;
 
@@ -25,6 +25,18 @@ internal sealed class GeneratedFileRepository : Repository<GeneratedFile>
     public Task<IEnumerable<GeneratedFile>> FindByChatIdAsync(string chatId)
     {
         return base.StorageContext.QueryEntitiesAsync(e => e.ChatId == chatId);
+    }
+
+    /// <summary>
+    /// Finds all generated files for a specific user across all chats.
+    /// This is a cross-partition query (UserId is not the partition key),
+    /// but is acceptable for an infrequent user-triggered action.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <returns>List of generated files belonging to the user</returns>
+    public Task<IEnumerable<GeneratedFile>> FindByUserIdAsync(string userId)
+    {
+        return base.StorageContext.QueryEntitiesAsync(e => e.UserId == userId);
     }
 
     /// <summary>

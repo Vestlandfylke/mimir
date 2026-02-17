@@ -101,6 +101,9 @@ export const appSlice = createSlice({
         setChatManagementModalOpen: (state: AppState, action: PayloadAction<boolean>) => {
             state.isChatManagementModalOpen = action.payload;
         },
+        setFileManagementModalOpen: (state: AppState, action: PayloadAction<boolean>) => {
+            state.isFileManagementModalOpen = action.payload;
+        },
         setBrandColor: (state: AppState, action: PayloadAction<BrandColorKey>) => {
             state.brandColor = action.payload;
             // Persist to localStorage
@@ -134,6 +137,7 @@ export const {
     setConnectionReconnected,
     setAvailableTemplates,
     setChatManagementModalOpen,
+    setFileManagementModalOpen,
     setBrandColor,
     setServiceError,
     clearServiceError,

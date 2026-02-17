@@ -21,13 +21,13 @@ internal sealed class LeiarKontekstPlugin
     private readonly ILogger _logger;
     private readonly LeiarKontekstPluginOptions _options;
     private readonly SearchClient _searchClient;
-    private readonly LeiarKontekstCitationService? _citationService;
+    private readonly PluginCitationService? _citationService;
     private readonly PiiSanitizationService? _piiSanitizationService;
 
     public LeiarKontekstPlugin(
         LeiarKontekstPluginOptions options,
         ILogger logger,
-        LeiarKontekstCitationService? citationService = null,
+        PluginCitationService? citationService = null,
         PiiSanitizationService? piiSanitizationService = null)
     {
         this._options = options ?? throw new ArgumentNullException(nameof(options));
@@ -152,7 +152,8 @@ internal sealed class LeiarKontekstPlugin
                         documentTitle: doc.Title,
                         source: doc.Source,
                         snippet: snippet,
-                        relevanceScore: doc.Score
+                        relevanceScore: doc.Score,
+                        sourceType: "Leiardokument"
                     );
                 }
             }
@@ -257,7 +258,8 @@ internal sealed class LeiarKontekstPlugin
                         documentTitle: docTitle,
                         source: source,
                         snippet: snippet,
-                        relevanceScore: result.Score ?? 1.0
+                        relevanceScore: result.Score ?? 1.0,
+                        sourceType: "Leiardokument"
                     );
                 }
 

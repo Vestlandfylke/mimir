@@ -49,6 +49,8 @@ export interface Citation {
     sourceName: string;
     snippet: string;
     relevanceScore: number;
+    /** The source plugin type, e.g. "Leiardokument", "SharePoint", "Lovdata", "Kunnskapsbase", "Opplasta dokument" */
+    sourceType?: string;
 }
 
 export interface IChatMessage {

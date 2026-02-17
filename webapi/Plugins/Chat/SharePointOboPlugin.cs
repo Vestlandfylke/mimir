@@ -21,6 +21,7 @@ internal sealed class SharePointOboPlugin
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IDocumentTextExtractor _textExtractor;
     private readonly SharePointOboPluginOptions _options;
+    private readonly PluginCitationService? _citationService;
 
     private const string GraphApiBaseUrl = "https://graph.microsoft.com/v1.0";
 
@@ -32,13 +33,15 @@ internal sealed class SharePointOboPlugin
         IHttpClientFactory httpClientFactory,
         IDocumentTextExtractor textExtractor,
         SharePointOboPluginOptions options,
-        ILogger logger)
+        ILogger logger,
+        PluginCitationService? citationService = null)
     {
         this._bearerToken = bearerToken ?? throw new ArgumentNullException(nameof(bearerToken));
         this._httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         this._textExtractor = textExtractor ?? throw new ArgumentNullException(nameof(textExtractor));
         this._options = options ?? throw new ArgumentNullException(nameof(options));
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this._citationService = citationService;
     }
 
     /// <summary>
@@ -308,6 +311,19 @@ internal sealed class SharePointOboPlugin
                 memoryStream,
                 metadata.Name,
                 this._options.MaxContentLength);
+
+            // Register citation for display in the UI
+            if (this._citationService != null)
+            {
+                var snippet = text.Length > 500 ? text.Substring(0, 500) + "..." : text;
+                this._citationService.AddCitation(
+                    documentTitle: metadata.Name!,
+                    source: metadata.WebUrl ?? documentIdOrPath,
+                    snippet: snippet,
+                    relevanceScore: 1.0,
+                    sourceType: "SharePoint"
+                );
+            }
 
             return $"=== Content from: {metadata.Name} ===\n\n{text}";
         }
@@ -681,6 +697,31 @@ internal sealed class SharePointOboPlugin
             if (results.Count == 0)
             {
                 return "No results found across SharePoint sites.";
+            }
+
+            // Register citations for search results that the LLM will use
+            if (this._citationService != null)
+            {
+                foreach (var r in results)
+                {
+                    if (r is Dictionary<string, object?> dict)
+                    {
+                        var docTitle = dict.TryGetValue("Title", out var t) ? t?.ToString() : null;
+                        var webUrl = dict.TryGetValue("WebUrl", out var u) ? u?.ToString() : "";
+                        var summary = dict.TryGetValue("Summary", out var s) ? s?.ToString() : "";
+
+                        if (!string.IsNullOrEmpty(docTitle))
+                        {
+                            this._citationService.AddCitation(
+                                documentTitle: docTitle,
+                                source: webUrl ?? "",
+                                snippet: summary ?? "",
+                                relevanceScore: 0.8,
+                                sourceType: "SharePoint"
+                            );
+                        }
+                    }
+                }
             }
 
             return JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true });
@@ -1062,6 +1103,19 @@ internal sealed class SharePointOboPlugin
             if (result.Length < 50)
             {
                 return $"Page '{title}' was found but has minimal text content. Description: {description}";
+            }
+
+            // Register citation for display in the UI
+            if (this._citationService != null)
+            {
+                var snippet = result.Length > 500 ? result.Substring(0, 500) + "..." : result;
+                this._citationService.AddCitation(
+                    documentTitle: title ?? "SharePoint-side",
+                    source: pageIdOrUrl.StartsWith("http") ? pageIdOrUrl : "",
+                    snippet: snippet,
+                    relevanceScore: 1.0,
+                    sourceType: "SharePoint"
+                );
             }
 
             return result;

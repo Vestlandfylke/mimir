@@ -8,6 +8,7 @@ using CopilotChat.WebApi.Services;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 
 namespace CopilotChat.WebApi;
@@ -41,7 +42,7 @@ internal sealed class Program
             .AddChatCopilotAuthentication(builder.Configuration)
             .AddChatCopilotAuthorization()
             .AddSingleton<IDocumentTextExtractor, DocumentTextExtractor>() // Document text extraction for SharePoint plugin
-            .AddScoped<LeiarKontekstCitationService>(); // Citation collection for LeiarKontekst plugin
+            .AddScoped<PluginCitationService>(); // Citation collection for all plugins (LeiarKontekst, SharePoint, Lovdata, etc.)
 
         // Configure and add semantic services
         builder
@@ -81,6 +82,14 @@ internal sealed class Program
 
         // Add PII sanitization service for detecting and masking sensitive data (personnummer, bank accounts, etc.)
         builder.Services.AddSingleton<PiiSanitizationService>();
+
+        // Add download token service for mobile/Teams file downloads (short-lived one-time tokens)
+        builder.Services.AddSingleton<DownloadTokenService>();
+
+        // Add file generation template service for Vestland-branded Word/PowerPoint documents
+        builder.Services.Configure<CopilotChat.WebApi.Plugins.FileGeneration.FileGenerationOptions>(
+            builder.Configuration.GetSection(CopilotChat.WebApi.Plugins.FileGeneration.FileGenerationOptions.SectionName));
+        builder.Services.AddSingleton<CopilotChat.WebApi.Plugins.FileGeneration.TemplateService>();
 
         TelemetryDebugWriter.IsTracingDisabled = Debugger.IsAttached;
 
@@ -147,6 +156,13 @@ internal sealed class Program
 
         // Configure middleware and endpoints
         WebApplication app = builder.Build();
+
+        // Forward headers from Azure Front Door so request.Host/Scheme reflect the original client values
+        app.UseForwardedHeaders(new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+        });
+
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseCors();

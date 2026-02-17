@@ -1,10 +1,11 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CopilotChat.WebApi.Options;
+using CopilotChat.WebApi.Services;
 using Microsoft.SemanticKernel;
 
 namespace CopilotChat.WebApi.Plugins.Chat;
@@ -28,14 +29,17 @@ internal sealed class LovdataPlugin
     private readonly ILogger _logger;
     private readonly LovdataPluginOptions _options;
     private readonly HttpClient _httpClient;
+    private readonly PluginCitationService? _citationService;
 
     public LovdataPlugin(
         LovdataPluginOptions options,
         ILogger logger,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        PluginCitationService? citationService = null)
     {
         this._options = options ?? throw new ArgumentNullException(nameof(options));
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        this._citationService = citationService;
 
         this._httpClient = httpClientFactory.CreateClient();
         this._httpClient.BaseAddress = new Uri(options.BaseUrl);
@@ -233,6 +237,16 @@ internal sealed class LovdataPlugin
             sb.AppendLine("Bruk GetLawContentAsync med referansen (ruleFile) for å hente lovteksten.");
             sb.AppendLine("Døme: GetLawContentAsync(\"NL\", \"lov/2005-06-17-62\") for Arbeidsmiljøloven");
 
+            // Register citation for the law listing
+            var snippetLaws = string.Join(", ", laws.Take(5).Select(l => l.ShortTitle ?? l.Title ?? l.RuleFile ?? ""));
+            this._citationService?.AddCitation(
+                documentTitle: $"Lovdata - Lover i {source}" + (filter != null ? $" ({filter})" : ""),
+                source: "https://lovdata.no",
+                snippet: $"Funne {totalCount} lover. Inkluderer: {snippetLaws}",
+                relevanceScore: 0.8,
+                sourceType: "Lovdata"
+            );
+
             return sb.ToString();
         }
         catch (Exception ex)
@@ -259,6 +273,16 @@ internal sealed class LovdataPlugin
         if (!IsApiConfigured())
         {
             this._logger.LogWarning("Lovdata API key not configured");
+
+            // Register citation even when API is not configured - the direct link is still useful
+            this._citationService?.AddCitation(
+                documentTitle: lawReference,
+                source: $"https://lovdata.no/dokument/{source}/{lawReference}",
+                snippet: $"Direkte lenkje til {lawReference} på Lovdata.no",
+                relevanceScore: 0.9,
+                sourceType: "Lovdata"
+            );
+
             return GetApiNotConfiguredMessage() + $"\n\n**Direkte lenkje:** https://lovdata.no/dokument/{source}/{lawReference}";
         }
 
@@ -299,6 +323,19 @@ internal sealed class LovdataPlugin
             sb.AppendLine(lawContent);
             sb.AppendLine("\n---");
             sb.AppendLine($"*Kjelde: https://lovdata.no/dokument/{source}/{lawReference}*");
+
+            // Register citation for display in the UI
+            if (this._citationService != null)
+            {
+                var snippet = lawContent.Length > 500 ? lawContent.Substring(0, 500) + "..." : lawContent;
+                this._citationService.AddCitation(
+                    documentTitle: lawReference,
+                    source: $"https://lovdata.no/dokument/{source}/{lawReference}",
+                    snippet: snippet,
+                    relevanceScore: 1.0,
+                    sourceType: "Lovdata"
+                );
+            }
 
             return sb.ToString();
         }
@@ -365,6 +402,19 @@ internal sealed class LovdataPlugin
             sb.AppendLine(lawContent);
             sb.AppendLine("\n---");
             sb.AppendLine($"*Kjelde: Lovdata - historisk versjon per {date}*");
+
+            // Register citation for display in the UI
+            if (this._citationService != null)
+            {
+                var snippet = lawContent.Length > 500 ? lawContent.Substring(0, 500) + "..." : lawContent;
+                this._citationService.AddCitation(
+                    documentTitle: $"{lawReference} (per {date})",
+                    source: $"https://lovdata.no/dokument/{source}/{lawReference}",
+                    snippet: snippet,
+                    relevanceScore: 1.0,
+                    sourceType: "Lovdata"
+                );
+            }
 
             return sb.ToString();
         }
@@ -433,6 +483,15 @@ internal sealed class LovdataPlugin
             sb.AppendLine("\n---");
             sb.AppendLine("Bruk GetLawAtDateAsync for å hente ein spesifikk versjon.");
 
+            // Register citation for the timeline
+            this._citationService?.AddCitation(
+                documentTitle: $"Lovdata - Endringshistorikk: {lawReference}",
+                source: $"https://lovdata.no/dokument/{source}/{lawReference}",
+                snippet: $"Endringshistorikk med {versions.Count} versjonar for {lawReference}.",
+                relevanceScore: 0.85,
+                sourceType: "Lovdata"
+            );
+
             return sb.ToString();
         }
         catch (Exception ex)
@@ -481,6 +540,15 @@ internal sealed class LovdataPlugin
         sb.AppendLine("- Forvaltningslova: https://lovdata.no/lov/1967-02-10");
         sb.AppendLine("- Offentleglova: https://lovdata.no/lov/2006-05-19-16");
         sb.AppendLine("- Personopplysningslova: https://lovdata.no/lov/2018-06-15-38");
+
+        // Register citation for the common law references
+        this._citationService?.AddCitation(
+            documentTitle: "Lovdata - Vanlege lover for leiarar",
+            source: "https://lovdata.no",
+            snippet: "Oversikt over vanlege lover: Arbeidsmiljøloven, Ferieloven, Forvaltningsloven, Offentleglova, Kommuneloven, Personopplysningsloven m.fl.",
+            relevanceScore: 0.85,
+            sourceType: "Lovdata"
+        );
 
         return Task.FromResult(sb.ToString());
     }

@@ -288,6 +288,20 @@ const registerSignalREvents = (hubConnection: signalR.HubConnection, store: Stor
             });
         }
 
+        // Update citations if present (plugin citations arrive after streaming completes)
+        if (message.citations && message.citations.length > 0) {
+            store.dispatch({
+                type: 'conversations/updateMessageProperty',
+                payload: {
+                    chatId,
+                    messageIdOrIndex: messageId,
+                    property: 'citations',
+                    value: message.citations,
+                    frontLoad: false,
+                },
+            });
+        }
+
         // Update reasoning if present
         if (message.reasoning) {
             store.dispatch({

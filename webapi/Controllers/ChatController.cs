@@ -46,7 +46,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
     private readonly LeiarKontekstPluginOptions _leiarKontekstPluginOptions;
     private readonly LovdataPluginOptions _lovdataPluginOptions;
     private readonly MimirKnowledgePluginOptions _mimirKnowledgePluginOptions;
-    private readonly LeiarKontekstCitationService _leiarKontekstCitationService;
+    private readonly PluginCitationService _pluginCitationService;
     private readonly PluginHintService _pluginHintService;
     private readonly PromptsOptions _promptsOptions;
     private readonly IDictionary<string, Plugin> _plugins;
@@ -68,7 +68,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
         IOptions<LeiarKontekstPluginOptions> leiarKontekstPluginOptions,
         IOptions<LovdataPluginOptions> lovdataPluginOptions,
         IOptions<MimirKnowledgePluginOptions> mimirKnowledgePluginOptions,
-        LeiarKontekstCitationService leiarKontekstCitationService,
+        PluginCitationService pluginCitationService,
         PluginHintService pluginHintService,
         IOptions<PromptsOptions> promptsOptions,
         IDictionary<string, Plugin> plugins,
@@ -86,7 +86,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
         this._leiarKontekstPluginOptions = leiarKontekstPluginOptions.Value;
         this._lovdataPluginOptions = lovdataPluginOptions.Value;
         this._mimirKnowledgePluginOptions = mimirKnowledgePluginOptions.Value;
-        this._leiarKontekstCitationService = leiarKontekstCitationService;
+        this._pluginCitationService = pluginCitationService;
         this._pluginHintService = pluginHintService;
         this._promptsOptions = promptsOptions.Value;
         this._plugins = plugins;
@@ -206,7 +206,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
 
         // Store the citation service in kernel data so ChatPlugin can access it
         // This ensures the correct scoped instance is used regardless of kernel lifetime
-        kernel.Data["LeiarKontekstCitationService"] = this._leiarKontekstCitationService;
+        kernel.Data["PluginCitationService"] = this._pluginCitationService;
 
         // Register plugins that have been enabled
         var openApiPluginAuthHeaders = this.GetPluginAuthHeaders(this.HttpContext.Request.Headers);
@@ -491,7 +491,8 @@ internal sealed class ChatController : ControllerBase, IDisposable
                 this._httpClientFactory,
                 this._documentTextExtractor,
                 this._sharePointOboPluginOptions,
-                this._logger),
+                this._logger,
+                this._pluginCitationService),
             "sharePointObo");
 
         return Task.CompletedTask;
@@ -522,13 +523,13 @@ internal sealed class ChatController : ControllerBase, IDisposable
         this._logger.LogInformation("Enabling Leiar Kontekst plugin for leader assistant.");
 
         // Clear any previous citations before registering the plugin
-        this._leiarKontekstCitationService.Clear();
+        this._pluginCitationService.Clear();
 
         kernel.ImportPluginFromObject(
             new LeiarKontekstPlugin(
                 this._leiarKontekstPluginOptions,
                 this._logger,
-                this._leiarKontekstCitationService,
+                this._pluginCitationService,
                 this._piiSanitizationService),
             LeiarKontekstPluginOptions.PluginName);
     }
@@ -561,7 +562,8 @@ internal sealed class ChatController : ControllerBase, IDisposable
             new LovdataPlugin(
                 this._lovdataPluginOptions,
                 this._logger,
-                this._httpClientFactory),
+                this._httpClientFactory,
+                this._pluginCitationService),
             LovdataPluginOptions.PluginName);
     }
 
@@ -585,7 +587,8 @@ internal sealed class ChatController : ControllerBase, IDisposable
             new MimirKnowledgePlugin(
                 this._mimirKnowledgePluginOptions,
                 this._logger,
-                this._piiSanitizationService),
+                this._piiSanitizationService,
+                this._pluginCitationService),
             MimirKnowledgePluginOptions.PluginName);
     }
 
@@ -831,7 +834,7 @@ internal sealed class ChatController : ControllerBase, IDisposable
         this.RegisterMimirKnowledgePlugin(kernel);
 
         // Store the citation service in kernel data for plan execution
-        kernel.Data["LeiarKontekstCitationService"] = this._leiarKontekstCitationService;
+        kernel.Data["PluginCitationService"] = this._pluginCitationService;
 
         // Execute the approved plan
         try

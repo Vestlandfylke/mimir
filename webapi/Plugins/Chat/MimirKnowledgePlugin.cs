@@ -23,15 +23,18 @@ public sealed class MimirKnowledgePlugin
     private readonly MimirKnowledgePluginOptions _options;
     private readonly SearchClient _searchClient;
     private readonly PiiSanitizationService? _piiSanitizationService;
+    private readonly PluginCitationService? _citationService;
 
     public MimirKnowledgePlugin(
         MimirKnowledgePluginOptions options,
         ILogger logger,
-        PiiSanitizationService? piiSanitizationService = null)
+        PiiSanitizationService? piiSanitizationService = null,
+        PluginCitationService? citationService = null)
     {
         this._options = options ?? throw new ArgumentNullException(nameof(options));
         this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this._piiSanitizationService = piiSanitizationService;
+        this._citationService = citationService;
 
         // Initialize Azure AI Search client
         var credential = new AzureKeyCredential(options.ApiKey!);
@@ -149,6 +152,22 @@ public sealed class MimirKnowledgePlugin
                 }
 
                 documents.Add(doc);
+
+                // Register citation for display in the UI
+                if (this._citationService != null)
+                {
+                    var citationSnippet = doc.Highlights?.Any() == true
+                        ? string.Join(" ", doc.Highlights)
+                        : (doc.Content.Length > 500 ? doc.Content.Substring(0, 500) + "..." : doc.Content);
+
+                    this._citationService.AddCitation(
+                        documentTitle: doc.Title,
+                        source: doc.Source,
+                        snippet: citationSnippet,
+                        relevanceScore: doc.Score,
+                        sourceType: "Kunnskapsbase"
+                    );
+                }
             }
 
             if (!documents.Any())
@@ -245,6 +264,8 @@ public sealed class MimirKnowledgePlugin
                 sb.AppendLine($"## {title}\n");
                 sb.AppendLine(content);
                 sb.AppendLine();
+
+                this.RegisterKnowledgeCitation(title, content, "mimir-knowledge://features", result.Score ?? 0);
             }
 
             if (sb.Length < 50)
@@ -315,6 +336,8 @@ public sealed class MimirKnowledgePlugin
                 sb.AppendLine($"## {title}\n");
                 sb.AppendLine(content);
                 sb.AppendLine();
+
+                this.RegisterKnowledgeCitation(title, content, "mimir-knowledge://ui", result.Score ?? 0);
             }
 
             if (sb.Length < 50)
@@ -378,6 +401,8 @@ public sealed class MimirKnowledgePlugin
                 sb.AppendLine($"## {title}\n");
                 sb.AppendLine(content);
                 sb.AppendLine();
+
+                this.RegisterKnowledgeCitation(title, content, "mimir-knowledge://prompting", result.Score ?? 0);
             }
 
             if (sb.Length < 50)
@@ -439,6 +464,8 @@ public sealed class MimirKnowledgePlugin
                 sb.AppendLine($"## {title}\n");
                 sb.AppendLine(content);
                 sb.AppendLine();
+
+                this.RegisterKnowledgeCitation(title, content, "mimir-knowledge://history", result.Score ?? 0);
             }
 
             if (!foundDocuments)
@@ -553,11 +580,18 @@ public sealed class MimirKnowledgePlugin
             }
 
             sb.AppendLine("---");
-            sb.AppendLine($"**Totalt:** {documentsByCategory.Values.Sum(v => v.Count)} dokument");
+            var totalDocs = documentsByCategory.Values.Sum(v => v.Count);
+            sb.AppendLine($"**Totalt:** {totalDocs} dokument");
             sb.AppendLine("\nDu kan spørje meg om innhaldet i kvart av desse dokumenta!");
 
             this._logger.LogInformation("MimirKnowledge: Found {Count} documents in {Categories} categories",
-                documentsByCategory.Values.Sum(v => v.Count), documentsByCategory.Count);
+                totalDocs, documentsByCategory.Count);
+
+            this.RegisterKnowledgeCitation(
+                "Dokumentoversikt - Mimir kunnskapsbase",
+                $"Oversikt over {totalDocs} dokument i {documentsByCategory.Count} kategoriar.",
+                "mimir-knowledge://documents",
+                1.0);
 
             return sb.ToString();
         }
@@ -615,6 +649,8 @@ public sealed class MimirKnowledgePlugin
                 sb.AppendLine($"## {title}\n");
                 sb.AppendLine(content);
                 sb.AppendLine();
+
+                this.RegisterKnowledgeCitation(title, content, "mimir-knowledge://policy", result.Score ?? 0);
             }
 
             if (sb.Length < 50)
@@ -629,6 +665,26 @@ public sealed class MimirKnowledgePlugin
             this._logger.LogError(ex, "Error getting AI policy");
             return $"Det oppstod ein feil: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Helper to register a citation from a knowledge base document.
+    /// </summary>
+    private void RegisterKnowledgeCitation(string title, string content, string source, double score)
+    {
+        if (this._citationService == null)
+        {
+            return;
+        }
+
+        var snippet = content.Length > 500 ? content.Substring(0, 500) + "..." : content;
+        this._citationService.AddCitation(
+            documentTitle: title,
+            source: source,
+            snippet: snippet,
+            relevanceScore: score,
+            sourceType: "Kunnskapsbase"
+        );
     }
 
     private static string GetFieldValue(SearchDocument document, string fieldName)

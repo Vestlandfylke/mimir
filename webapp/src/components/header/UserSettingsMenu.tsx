@@ -19,6 +19,7 @@ import {
 } from '@fluentui/react-components';
 import {
     ChatMultiple20Regular,
+    DocumentMultiple20Regular,
     Info20Regular,
     QuestionCircle20Regular,
     Settings20Regular,
@@ -28,7 +29,7 @@ import { AuthHelper } from '../../libs/auth/AuthHelper';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState, resetState } from '../../redux/app/store';
 import { FeatureKeys } from '../../redux/features/app/AppState';
-import { setChatManagementModalOpen } from '../../redux/features/app/appSlice';
+import { setChatManagementModalOpen, setFileManagementModalOpen } from '../../redux/features/app/appSlice';
 import { useTour } from '../tour';
 import { SettingsDialog } from './settings-dialog/SettingsDialog';
 
@@ -65,6 +66,10 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
 
     const onManageChats = useCallback(() => {
         dispatch(setChatManagementModalOpen(true));
+    }, [dispatch]);
+
+    const onManageFiles = useCallback(() => {
+        dispatch(setFileManagementModalOpen(true));
     }, [dispatch]);
 
     const onStartTour = useCallback(() => {
@@ -124,6 +129,13 @@ export const UserSettingsMenu: FC<IUserSettingsProps> = ({ setLoadingState }) =>
                                 }}
                             >
                                 Innstillingar
+                            </MenuItem>
+                            <MenuItem
+                                data-testid="manageFilesMenuItem"
+                                icon={<DocumentMultiple20Regular />}
+                                onClick={onManageFiles}
+                            >
+                                Mine filer
                             </MenuItem>
                             <MenuItem
                                 data-testid="manageChatsMenuItem"

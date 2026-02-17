@@ -18,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="Markdig" />
     <PackageReference Include="PdfPig" />
     <PackageReference Include="QuestPDF" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
@@ -58,6 +59,15 @@
     <None Update="data\eng.traineddata">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="templates\word_template.docx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="templates\Presentasjon.pptx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

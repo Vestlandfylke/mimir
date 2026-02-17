@@ -1,25 +1,27 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using CopilotChat.WebApi.Models.Storage;
 
 namespace CopilotChat.WebApi.Services;
 
 /// <summary>
-/// Scoped service to collect citations from the LeiarKontekst plugin during a request.
-/// This allows the plugin to register citations that can be included in the chat response.
+/// Scoped service to collect citations from plugins during a request.
+/// This allows any plugin (LeiarKontekst, SharePoint, Lovdata, MimirKnowledge, etc.)
+/// to register citations that will be displayed in the chat response.
 /// </summary>
-internal sealed class LeiarKontekstCitationService
+public sealed class PluginCitationService
 {
     private readonly Dictionary<string, CitationSource> _citations = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Adds a citation from a search result.
+    /// Adds a citation from a plugin search/retrieval result.
     /// </summary>
     /// <param name="documentTitle">The title of the document.</param>
-    /// <param name="source">The source/path of the document.</param>
+    /// <param name="source">The source/path/URL of the document.</param>
     /// <param name="snippet">A relevant snippet from the document.</param>
     /// <param name="relevanceScore">The relevance score from the search.</param>
-    public void AddCitation(string documentTitle, string source, string snippet, double relevanceScore)
+    /// <param name="sourceType">The type of source (e.g., "Leiardokument", "SharePoint", "Lovdata", "Kunnskapsbase").</param>
+    public void AddCitation(string documentTitle, string source, string snippet, double relevanceScore, string sourceType = "")
     {
         // Use document title as key to avoid duplicates
         var key = documentTitle;
@@ -31,8 +33,9 @@ internal sealed class LeiarKontekstCitationService
                 Link = source,
                 SourceContentType = GetContentType(source),
                 SourceName = documentTitle,
-                Snippet = TruncateSnippet(snippet, 1000), // Limit snippet size
-                RelevanceScore = relevanceScore
+                Snippet = TruncateSnippet(snippet, 1000),
+                RelevanceScore = relevanceScore,
+                SourceType = sourceType
             };
         }
     }

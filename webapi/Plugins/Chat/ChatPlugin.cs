@@ -92,9 +92,9 @@ internal sealed class ChatPlugin
     private readonly ModelKernelFactory? _modelKernelFactory;
 
     /// <summary>
-    /// Service for collecting citations from the Leiar Kontekst plugin.
+    /// Service for collecting citations from plugins (LeiarKontekst, SharePoint, Lovdata, etc.).
     /// </summary>
-    private readonly LeiarKontekstCitationService? _leiarKontekstCitationService;
+    private readonly PluginCitationService? _pluginCitationService;
 
     /// <summary>
     /// PII sanitization service for masking sensitive data in retrieved content.
@@ -131,7 +131,7 @@ internal sealed class ChatPlugin
         McpPlanService? mcpPlanService = null,
         ITelemetryService? telemetryService = null,
         ModelKernelFactory? modelKernelFactory = null,
-        LeiarKontekstCitationService? leiarKontekstCitationService = null,
+        PluginCitationService? pluginCitationService = null,
         PiiSanitizationService? piiSanitizationService = null)
     {
         this._logger = logger;
@@ -149,7 +149,7 @@ internal sealed class ChatPlugin
         this._mcpPlanService = mcpPlanService;
         this._telemetryService = telemetryService;
         this._modelKernelFactory = modelKernelFactory;
-        this._leiarKontekstCitationService = leiarKontekstCitationService;
+        this._pluginCitationService = pluginCitationService;
         this._piiSanitizationService = piiSanitizationService;
         this._enableResponseStreaming = serviceOptions.Value.EnableResponseStreaming;
     }
@@ -481,6 +481,15 @@ internal sealed class ChatPlugin
         // compressed into short memory snippets. With GPT-5.2's 128K context, raw chat history
         // is both higher quality and more reliable than extracted memory fragments.
         // This saves 2 gpt-4o-mini calls + 2+ embedding calls per message.
+
+        // Re-merge citations from plugins that were called DURING streaming/function invocation.
+        // CreateBotMessageOnClient runs before the stream is consumed, so plugin citations
+        // (LeiarKontekst, SharePoint, Lovdata, MimirKnowledge) are only available now.
+        var updatedCitations = this.MergeCitationsFromPlugins(citations);
+        if (updatedCitations != null)
+        {
+            chatMessage.Citations = updatedCitations;
+        }
 
         // Calculate total token usage for dependency functions and prompt template
         await this.UpdateBotResponseStatusOnClientAsync(chatId, "Lagrar tokenbruk", cancellationToken);
@@ -1024,6 +1033,14 @@ internal sealed class ChatPlugin
                 }
             }
             normalMessage.Content = contentBuilder.ToString();
+
+            // Re-merge citations from plugins called during auto-invoke streaming
+            var updatedCitations = this.MergeCitationsFromPlugins(citations);
+            if (updatedCitations != null)
+            {
+                normalMessage.Citations = updatedCitations;
+            }
+
             if (!this._enableResponseStreaming)
             {
                 await this.UpdateMessageOnClient(normalMessage, cancellationToken);
@@ -1569,21 +1586,21 @@ internal sealed class ChatPlugin
 
         // Get the citation service from kernel data (set by ChatController per-request)
         // This ensures we use the correct scoped instance regardless of kernel lifetime
-        LeiarKontekstCitationService? citationService = null;
-        if (this._kernel.Data.TryGetValue("LeiarKontekstCitationService", out var serviceObj))
+        PluginCitationService? citationService = null;
+        if (this._kernel.Data.TryGetValue("PluginCitationService", out var serviceObj))
         {
-            citationService = serviceObj as LeiarKontekstCitationService;
+            citationService = serviceObj as PluginCitationService;
         }
 
         // Fall back to constructor-injected service (for backwards compatibility)
-        citationService ??= this._leiarKontekstCitationService;
+        citationService ??= this._pluginCitationService;
 
-        // Add citations from Leiar Kontekst plugin if available
+        // Add citations from plugins if available
         if (citationService != null && citationService.HasCitations)
         {
-            var leiarCitations = citationService.GetCitations().ToList();
-            allCitations.AddRange(leiarCitations);
-            this._logger.LogInformation("Added {Count} citations from Leiar Kontekst plugin", leiarCitations.Count);
+            var pluginCitations = citationService.GetCitations().ToList();
+            allCitations.AddRange(pluginCitations);
+            this._logger.LogInformation("Added {Count} citations from plugins", pluginCitations.Count);
         }
 
         return allCitations.Count > 0 ? allCitations : null;

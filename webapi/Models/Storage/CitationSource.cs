@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using Microsoft.KernelMemory;
 
@@ -9,7 +9,7 @@ namespace CopilotChat.WebApi.Models.Storage;
 /// This is a replica of the <see cref="Citation"/> class in Kernel Memory.
 /// Creating a replica here is to avoid taking a direct dependency on Kernel Memory in our data model.
 /// </summary>
-internal sealed class CitationSource
+public sealed class CitationSource
 {
     /// <summary>
     /// Link of the citation.
@@ -37,6 +37,12 @@ internal sealed class CitationSource
     public double RelevanceScore { get; set; } = 0.0;
 
     /// <summary>
+    /// The type of source plugin that provided this citation.
+    /// E.g., "Leiardokument", "SharePoint", "Lovdata", "Kunnskapsbase", "Opplasta dokument".
+    /// </summary>
+    public string SourceType { get; set; } = string.Empty;
+
+    /// <summary>
     /// Converts a <see cref="Citation"/> to a <see cref="CitationSource"/>.
     /// </summary>
     public static CitationSource FromKernelMemoryCitation(Citation citation, string snippet, double relevanceScore)
@@ -47,7 +53,8 @@ internal sealed class CitationSource
             SourceContentType = citation.SourceContentType,
             SourceName = citation.SourceName,
             Snippet = snippet,
-            RelevanceScore = relevanceScore
+            RelevanceScore = relevanceScore,
+            SourceType = "Opplasta dokument"
         };
 
         return citationSource;

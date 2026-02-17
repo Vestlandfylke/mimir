@@ -10,6 +10,8 @@ import remarkMath from 'remark-math';
 import { AuthHelper } from '../../../libs/auth/AuthHelper';
 import { AlertType } from '../../../libs/models/AlertType';
 import { IChatMessage } from '../../../libs/models/ChatMessage';
+import { FileService } from '../../../libs/services/FileService';
+import { BackendServiceUrl } from '../../../libs/services/BaseService';
 import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { FeatureKeys } from '../../../redux/features/app/AppState';
@@ -164,6 +166,31 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
             const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
             const url = new URL(href, window.location.origin);
 
+            // On mobile/Teams WebViews, blob downloads don't work.
+            // Use a token-based direct URL instead.
+            const isMobileOrTeams =
+                /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ||
+                /Teams/i.test(navigator.userAgent) ||
+                /Electron/i.test(navigator.userAgent);
+
+            if (isMobileOrTeams) {
+                // Extract fileId from the URL path: /files/{fileId}/...
+                const pathParts = url.pathname.split('/').filter(Boolean);
+                const filesIdx = pathParts.indexOf('files');
+                const fileId = filesIdx >= 0 && filesIdx + 1 < pathParts.length ? pathParts[filesIdx + 1] : null;
+
+                if (fileId) {
+                    const fileService = new FileService();
+                    const token = await fileService.getDownloadTokenAsync(fileId, accessToken);
+                    const baseUrl = BackendServiceUrl.replace(/\/$/, '');
+                    const separator = url.search ? '&' : '?';
+                    const directUrl = `${baseUrl}${url.pathname}${url.search}${separator}dt=${encodeURIComponent(token)}`;
+                    window.open(directUrl, '_blank');
+                    return;
+                }
+            }
+
+            // Standard blob download for desktop browsers
             const response = await fetch(url.toString(), {
                 method: 'GET',
                 headers: {

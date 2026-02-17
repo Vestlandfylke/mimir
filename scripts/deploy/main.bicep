@@ -78,6 +78,15 @@ param deployWebSearcherPlugin bool = false
 @description('Whether to deploy pre-built binary packages to the cloud')
 param deployPackages bool = true
 
+@description('Whether to deploy Azure Front Door Premium with WAF protection')
+param deployFrontDoor bool = false
+
+@description('Custom domain for Front Door (e.g., mimir.vlfk.no). Leave empty to use only the azurefd.net endpoint.')
+param frontDoorCustomDomain string = ''
+
+@description('Existing Front Door ID for origin locking. If empty and deployFrontDoor=true, origin locking must be configured manually after deployment.')
+param frontDoorId string = ''
+
 @description('Region for the resources')
 param location string = resourceGroup().location
 
@@ -183,6 +192,30 @@ resource appServiceWebConfig 'Microsoft.Web/sites/config@2022-09-01' = {
     use32BitWorkerProcess: false
     vnetRouteAllEnabled: true
     webSocketsEnabled: true
+    // Origin locking: when a Front Door ID is provided, restrict App Service to only accept
+    // traffic from Azure Front Door with matching instance ID.
+    // Deploy Front Door first, get the ID from outputs, then redeploy with frontDoorId parameter.
+    ipSecurityRestrictions: !empty(frontDoorId) ? [
+      {
+        ipAddress: 'AzureFrontDoor.Backend'
+        action: 'Allow'
+        tag: 'ServiceTag'
+        priority: 100
+        name: 'Allow Azure Front Door'
+        headers: {
+          'x-azure-fdid': [
+            frontDoorId
+          ]
+        }
+      }
+      {
+        ipAddress: 'Any'
+        action: 'Deny'
+        priority: 2147483647
+        name: 'Deny all'
+      }
+    ] : []
+    ipSecurityRestrictionsDefaultAction: !empty(frontDoorId) ? 'Deny' : 'Allow'
     appSettings: concat(
       [
         {
@@ -1262,7 +1295,144 @@ resource bingSearchService 'Microsoft.Bing/accounts@2020-06-10' = if (deployWebS
   kind: 'Bing.Search.v7'
 }
 
+// ========================================================================
+// Azure Front Door Premium + WAF (Web Application Firewall)
+// Provides: WAF (OWASP protection), Bot Protection, DDoS, CDN, Origin Locking
+// ========================================================================
+
+resource frontDoorWafPolicy 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2024-02-01' = if (deployFrontDoor) {
+  name: 'waf${replace(uniqueName, '-', '')}'
+  location: 'global'
+  sku: {
+    name: 'Premium_AzureFrontDoor'
+  }
+  properties: {
+    policySettings: {
+      enabledState: 'Enabled'
+      mode: 'Prevention'
+      requestBodyCheck: 'Enabled'
+    }
+    managedRules: {
+      managedRuleSets: [
+        {
+          ruleSetType: 'Microsoft_DefaultRuleSet'
+          ruleSetVersion: '2.1'
+          ruleSetAction: 'Block'
+        }
+        {
+          ruleSetType: 'Microsoft_BotManagerRuleSet'
+          ruleSetVersion: '1.1'
+        }
+      ]
+    }
+  }
+}
+
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-02-01' = if (deployFrontDoor) {
+  name: 'afd-${uniqueName}'
+  location: 'global'
+  sku: {
+    name: 'Premium_AzureFrontDoor'
+  }
+  properties: {
+    originResponseTimeoutSeconds: 120
+  }
+}
+
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = if (deployFrontDoor) {
+  parent: frontDoorProfile
+  name: 'mimir'
+  location: 'global'
+  properties: {
+    enabledState: 'Enabled'
+  }
+}
+
+resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = if (deployFrontDoor) {
+  parent: frontDoorProfile
+  name: 'mimir-backend'
+  properties: {
+    loadBalancingSettings: {
+      sampleSize: 4
+      successfulSamplesRequired: 3
+      additionalLatencyInMilliseconds: 50
+    }
+    healthProbeSettings: {
+      probePath: '/healthz'
+      probeRequestType: 'HEAD'
+      probeProtocol: 'Https'
+      probeIntervalInSeconds: 30
+    }
+    sessionAffinityState: 'Enabled'
+  }
+}
+
+resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = if (deployFrontDoor) {
+  parent: frontDoorOriginGroup
+  name: 'mimir-appservice'
+  properties: {
+    hostName: appServiceWeb.properties.defaultHostName
+    originHostHeader: appServiceWeb.properties.defaultHostName
+    httpPort: 80
+    httpsPort: 443
+    priority: 1
+    weight: 1000
+    enabledState: 'Enabled'
+    enforceCertificateNameCheck: true
+  }
+}
+
+resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = if (deployFrontDoor) {
+  parent: frontDoorEndpoint
+  name: 'mimir-route'
+  properties: {
+    originGroup: {
+      id: frontDoorOriginGroup.id
+    }
+    supportedProtocols: [
+      'Https'
+    ]
+    patternsToMatch: [
+      '/*'
+    ]
+    forwardingProtocol: 'HttpsOnly'
+    httpsRedirect: 'Enabled'
+    linkToDefaultDomain: 'Enabled'
+    cacheConfiguration: null
+  }
+  dependsOn: [
+    frontDoorOrigin
+  ]
+}
+
+resource frontDoorSecurityPolicy 'Microsoft.Cdn/profiles/securityPolicies@2024-02-01' = if (deployFrontDoor) {
+  parent: frontDoorProfile
+  name: 'waf-mimir'
+  properties: {
+    parameters: {
+      type: 'WebApplicationFirewall'
+      wafPolicy: {
+        id: frontDoorWafPolicy.id
+      }
+      associations: [
+        {
+          domains: [
+            {
+              id: frontDoorEndpoint.id
+            }
+          ]
+          patternsToMatch: [
+            '/*'
+          ]
+        }
+      ]
+    }
+  }
+}
+
 output webapiUrl string = appServiceWeb.properties.defaultHostName
 output webapiName string = appServiceWeb.name
 output memoryPipelineName string = appServiceMemoryPipeline.name
 output pluginNames array = concat([], (deployWebSearcherPlugin) ? [functionAppWebSearcherPlugin.name] : [])
+output frontDoorEndpointHostname string = deployFrontDoor ? frontDoorEndpoint.properties.hostName : ''
+output frontDoorInstanceId string = deployFrontDoor ? frontDoorProfile.properties.frontDoorId : ''

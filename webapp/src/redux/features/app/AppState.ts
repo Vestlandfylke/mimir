@@ -80,6 +80,7 @@ export interface AppState {
     connectionReconnected: boolean; // Flag to trigger message sync after reconnection
     availableTemplates: IAvailableTemplate[]; // Specialized assistants available to the user
     isChatManagementModalOpen: boolean; // Flag to show chat management modal when at chat limit
+    isFileManagementModalOpen: boolean; // Flag to show file management modal
     brandColor: BrandColorKey; // Selected brand/accent color
     serviceError?: ServiceError; // Critical service error that shows the unavailable overlay
 }
@@ -213,5 +214,6 @@ export const initialState: AppState = {
     connectionReconnected: false,
     availableTemplates: [],
     isChatManagementModalOpen: false,
+    isFileManagementModalOpen: false,
     brandColor: getSavedBrandColor(),
 };

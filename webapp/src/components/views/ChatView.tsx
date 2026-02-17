@@ -4,11 +4,12 @@ import { FC, useState, useEffect, useCallback } from 'react';
 import { useChat } from '../../libs/hooks';
 import { useAppDispatch, useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
-import { setChatManagementModalOpen } from '../../redux/features/app/appSlice';
+import { setChatManagementModalOpen, setFileManagementModalOpen } from '../../redux/features/app/appSlice';
 import { Breakpoints } from '../../styles';
 import { ChatWindow } from '../chat/ChatWindow';
 import { ChatList } from '../chat/chat-list/ChatList';
 import { ChatManagementModal } from '../chat/chat-list/ChatManagementModal';
+import { FileManagementModal } from '../files/FileManagementModal';
 
 const useClasses = makeStyles({
     container: {
@@ -84,7 +85,7 @@ export const ChatView: FC = () => {
     const classes = useClasses();
     const dispatch = useAppDispatch();
     const { selectedId } = useAppSelector((state: RootState) => state.conversations);
-    const { isChatManagementModalOpen } = useAppSelector((state: RootState) => state.app);
+    const { isChatManagementModalOpen, isFileManagementModalOpen } = useAppSelector((state: RootState) => state.app);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const chat = useChat();
@@ -114,6 +115,10 @@ export const ChatView: FC = () => {
 
     const handleCloseManagementModal = useCallback(() => {
         dispatch(setChatManagementModalOpen(false));
+    }, [dispatch]);
+
+    const handleCloseFileModal = useCallback(() => {
+        dispatch(setFileManagementModalOpen(false));
     }, [dispatch]);
 
     const handleDeleteChats = useCallback(
@@ -177,6 +182,9 @@ export const ChatView: FC = () => {
                 onClose={handleCloseManagementModal}
                 onDeleteChats={handleDeleteChats}
             />
+
+            {/* File management modal */}
+            <FileManagementModal isOpen={isFileManagementModalOpen} onClose={handleCloseFileModal} />
         </div>
     );
 };

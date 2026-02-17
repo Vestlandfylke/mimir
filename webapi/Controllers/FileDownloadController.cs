@@ -2,6 +2,7 @@
 
 using System.Text;
 using CopilotChat.WebApi.Auth;
+using CopilotChat.WebApi.Services;
 using CopilotChat.WebApi.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,38 +18,162 @@ internal sealed class FileDownloadController : ControllerBase
     private readonly ILogger<FileDownloadController> _logger;
     private readonly GeneratedFileRepository _fileRepository;
     private readonly IAuthInfo _authInfo;
+    private readonly DownloadTokenService _downloadTokenService;
 
     public FileDownloadController(
         ILogger<FileDownloadController> logger,
         GeneratedFileRepository fileRepository,
-        IAuthInfo authInfo)
+        IAuthInfo authInfo,
+        DownloadTokenService downloadTokenService)
     {
         this._logger = logger;
         this._fileRepository = fileRepository;
         this._authInfo = authInfo;
+        this._downloadTokenService = downloadTokenService;
+    }
+
+    /// <summary>
+    /// Get all files for the authenticated user across all chats.
+    /// Returns metadata only (not file content).
+    /// </summary>
+    [HttpGet]
+    [Route("files/my")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyFilesAsync()
+    {
+        try
+        {
+            var isAuthenticated = this.HttpContext?.User?.Identity?.IsAuthenticated == true;
+            if (!isAuthenticated)
+            {
+                return this.StatusCode(StatusCodes.Status401Unauthorized, "Du må vere logga inn for å sjå filene dine");
+            }
+
+            var userId = this._authInfo.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return this.StatusCode(StatusCodes.Status401Unauthorized, "Kunne ikkje identifisere brukaren");
+            }
+
+            var files = await this._fileRepository.FindByUserIdAsync(userId);
+
+            // Filter out expired files and clean them up
+            var now = DateTimeOffset.UtcNow;
+            var activeFiles = new List<object>();
+
+            foreach (var file in files)
+            {
+                if (file.ExpiresOn.HasValue && file.ExpiresOn.Value < now)
+                {
+                    // Clean up expired file
+                    await this._fileRepository.DeleteAsync(file);
+                    continue;
+                }
+
+                activeFiles.Add(new
+                {
+                    file.Id,
+                    file.FileName,
+                    file.ContentType,
+                    file.Size,
+                    file.CreatedOn,
+                    file.ExpiresOn,
+                    file.ChatId,
+                    DownloadUrl = $"/files/{file.Id}/{Uri.EscapeDataString(file.FileName)}?chatId={file.ChatId}"
+                });
+            }
+
+            // Sort by CreatedOn descending (newest first)
+            var sortedFiles = activeFiles.OrderByDescending(f => ((dynamic)f).CreatedOn);
+
+            return this.Ok(sortedFiles);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "Error getting files for user");
+            return this.StatusCode(StatusCodes.Status500InternalServerError,
+                "Ein feil oppstod ved henting av filene dine. Prøv igjen seinare.");
+        }
+    }
+
+    /// <summary>
+    /// Generate a short-lived download token for a file.
+    /// This enables file downloads on mobile browsers and Teams WebViews
+    /// where the standard blob + anchor click approach does not work.
+    /// The returned token can be appended as ?dt=TOKEN to the download URL.
+    /// </summary>
+    [HttpPost]
+    [Route("files/{fileId}/download-token")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public IActionResult GenerateDownloadToken(string fileId)
+    {
+        var isAuthenticated = this.HttpContext?.User?.Identity?.IsAuthenticated == true;
+        if (!isAuthenticated)
+        {
+            return this.StatusCode(StatusCodes.Status401Unauthorized, "Du må vere logga inn");
+        }
+
+        var userId = this._authInfo.UserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            // Fall back to name for backward compatibility
+            userId = this._authInfo.Name;
+        }
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return this.StatusCode(StatusCodes.Status401Unauthorized, "Kunne ikkje identifisere brukaren");
+        }
+
+        var token = this._downloadTokenService.GenerateToken(fileId, userId);
+
+        return this.Ok(new { token });
     }
 
     /// <summary>
     /// Download a generated file.
+    /// The optional {slug} segment allows the filename to appear in the URL path,
+    /// so browsers use it as the default download name (e.g., /files/{id}/rapport.docx).
     /// </summary>
     /// <param name="fileId">The ID of the file to download</param>
     /// <param name="chatId">The chat ID (used as partition key in storage)</param>
     /// <returns>The file content</returns>
     [HttpGet]
-    [Route("files/{fileId}")]
+    [Route("files/{fileId}/{slug?}")]
     // NOTE: We intentionally allow this endpoint to be hit directly from the browser without auth headers.
     // The UI performs authenticated fetch for downloads, and we return 401/403 for protected files.
+    // For mobile/Teams, a short-lived download token (?dt=xxx) can be used instead of Bearer auth.
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> DownloadFileAsync(string fileId, [FromQuery] string? chatId = null)
+    public async Task<IActionResult> DownloadFileAsync(string fileId, [FromQuery] string? chatId = null, [FromQuery] string? dt = null)
     {
         try
         {
             var isAuthenticated = this.HttpContext?.User?.Identity?.IsAuthenticated == true;
             var requestUserId = isAuthenticated ? this._authInfo.UserId : string.Empty;
             var requestUserName = isAuthenticated ? this._authInfo.Name : string.Empty;
+
+            // Check for download token as alternative auth (for mobile/Teams)
+            string? tokenUserId = null;
+            if (!string.IsNullOrEmpty(dt))
+            {
+                tokenUserId = this._downloadTokenService.ValidateAndConsume(dt, fileId);
+                if (tokenUserId != null)
+                {
+                    this._logger.LogInformation("File {FileId} download authorized via download token for user", fileId);
+                    // Token is valid - use the token's user identity
+                    requestUserId = tokenUserId;
+                    isAuthenticated = true;
+                }
+                else
+                {
+                    this._logger.LogWarning("Invalid or expired download token for file {FileId}", fileId);
+                }
+            }
 
             this._logger.LogInformation(
                 "Downloading file {FileId} for user {UserId} (chatId: {ChatId})",
@@ -204,7 +329,7 @@ internal sealed class FileDownloadController : ControllerBase
                 f.Size,
                 f.CreatedOn,
                 f.ExpiresOn,
-                DownloadUrl = $"/files/{f.Id}"
+                DownloadUrl = $"/files/{f.Id}/{Uri.EscapeDataString(f.FileName)}"
             });
 
             return this.Ok(fileList);

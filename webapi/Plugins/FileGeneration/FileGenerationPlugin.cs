@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) Microsoft. All rights reserved.
 
 using System.ComponentModel;
 using System.Text;
@@ -30,17 +30,20 @@ internal sealed class FileGenerationPlugin
     private readonly ILogger<FileGenerationPlugin> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthInfo _authInfo;
+    private readonly TemplateService? _templateService;
 
     public FileGenerationPlugin(
         GeneratedFileRepository fileRepository,
         ILogger<FileGenerationPlugin> logger,
         IHttpContextAccessor httpContextAccessor,
-        IAuthInfo authInfo)
+        IAuthInfo authInfo,
+        TemplateService? templateService = null)
     {
         this._fileRepository = fileRepository;
         this._logger = logger;
         this._httpContextAccessor = httpContextAccessor;
         this._authInfo = authInfo;
+        this._templateService = templateService;
     }
 
     /// <summary>
@@ -111,7 +114,7 @@ internal sealed class FileGenerationPlugin
 
             await this._fileRepository.CreateAsync(file);
 
-            var downloadUrl = this.GetDownloadUrl(fileId, chatId);
+            var downloadUrl = this.GetDownloadUrl(fileId, chatId, fileName);
             this._logger.LogInformation("Created downloadable file {FileName} with ID {FileId} in chat {ChatId}", fileName, fileId, chatId);
 
             return downloadUrl;
@@ -124,18 +127,37 @@ internal sealed class FileGenerationPlugin
     }
 
     /// <summary>
-    /// Creates a downloadable Word document (.docx) from plain text content.
-    /// The server generates a valid .docx so the model doesn't need to produce base64.
+    /// Creates a downloadable Word document (.docx) using the Vestland template.
+    /// Markdown content is converted to formatted paragraphs with the template's styles
+    /// (Overskrift1-4, Punktliste, bold/italic).
     /// </summary>
-    [KernelFunction, Description("Lag ei ekte Word-fil (.docx) som brukaren kan laste ned. Innhald er vanleg tekst; serveren byggjer ei gyldig .docx.")]
+    [KernelFunction, Description("Lag ei ekte Word-fil (.docx) med Vestland-branding som brukaren kan laste ned. Skriv innhaldet i Markdown-format (# overskrifter, - punktlister, **feit**, *kursiv*). Serveren konverterer automatisk til formatert Word-dokument med riktige stilar.")]
     public async Task<string> CreateWordFile(
         [Description("Filnamn (t.d. 'rapport.docx')")] string fileName,
-        [Description("Tekstinnhald som skal inn i Word-dokumentet")] string content)
+        [Description("Innhald i Markdown-format. Bruk # for overskrifter, - for punktlister, **feit**, *kursiv*.")] string content,
+        [Description("Dokumenttittel (visast i header og footer)")] string? title = null,
+        [Description("Forfattarnamn (visast i footer)")] string? author = null,
+        [Description("Dokumenttype, t.d. 'Rapport', 'Notat', 'Rutine' (visast i footer)")] string? docType = null)
     {
         try
         {
             fileName = EnsureExtension(fileName, ".docx");
-            var bytes = BuildDocxFromPlainText(content);
+            byte[] bytes;
+
+            if (this._templateService != null)
+            {
+                bytes = this._templateService.GenerateFromWordTemplate(
+                    title: title ?? Path.GetFileNameWithoutExtension(fileName),
+                    markdownContent: content,
+                    author: author,
+                    date: null, // Auto-fills with today's date
+                    docType: docType);
+            }
+            else
+            {
+                bytes = BuildDocxFromPlainText(content);
+            }
+
             var contentBase64 = Convert.ToBase64String(bytes);
             return await this.CreateBinaryFile(fileName, contentBase64);
         }
@@ -170,17 +192,29 @@ internal sealed class FileGenerationPlugin
     }
 
     /// <summary>
-    /// Creates a downloadable PowerPoint file (.pptx) from slide content.
+    /// Creates a downloadable PowerPoint file (.pptx) using the Vestland template.
+    /// Slides are created dynamically from the template's slide layouts.
     /// </summary>
-    [KernelFunction, Description("Lag ei ekte PowerPoint-fil (.pptx). Send inn lysbilete som JSON array med tittel og innhald for kvart lysbilde.")]
+    [KernelFunction, Description("Lag ei ekte PowerPoint-fil (.pptx) med Vestland-branding. Send inn lysbilete som JSON array der kvar slide har ein 'type'. Tilgjengelege typar: 'forside' (tittelside), 'innhald' (tittel + innhald), 'innhald_m_undertittel' (tittel + undertittel + innhald), 'kapittel' (seksjonsskille), 'avslutting' (takk-side). Bruk '- punkt' i content for punktlister.")]
     public async Task<string> CreatePowerPointFile(
         [Description("Filnamn (t.d. 'presentasjon.pptx')")] string fileName,
-        [Description("Lysbilete som JSON array: [{\"title\": \"Tittel\", \"content\": \"Punktliste eller tekst\"}, ...]")] string slidesJson)
+        [Description("Lysbilete som JSON array: [{\"type\": \"forside\", \"title\": \"Tittel\", \"subtitle\": \"Undertittel\"}, {\"type\": \"innhald\", \"title\": \"Emne\", \"content\": \"- Punkt 1\\n- Punkt 2\"}, {\"type\": \"avslutting\"}]")] string slidesJson)
     {
         try
         {
             fileName = EnsureExtension(fileName, ".pptx");
-            var bytes = BuildPptxFromSlides(slidesJson);
+            byte[] bytes;
+
+            if (this._templateService != null)
+            {
+                var slides = TemplateService.ParseSlideDefinitions(slidesJson);
+                bytes = this._templateService.GenerateFromPptxTemplate(slides);
+            }
+            else
+            {
+                bytes = BuildPptxFromSlides(slidesJson);
+            }
+
             var contentBase64 = Convert.ToBase64String(bytes);
             return await this.CreateBinaryFile(fileName, contentBase64);
         }
@@ -252,7 +286,7 @@ internal sealed class FileGenerationPlugin
 
             await this._fileRepository.CreateAsync(file);
 
-            var downloadUrl = this.GetDownloadUrl(fileId, chatId);
+            var downloadUrl = this.GetDownloadUrl(fileId, chatId, fileName);
             this._logger.LogInformation("Created binary file {FileName} with ID {FileId} in chat {ChatId}", fileName, fileId, chatId);
 
             return downloadUrl;
@@ -720,18 +754,23 @@ internal sealed class FileGenerationPlugin
 
     /// <summary>
     /// Gets the full download URL for a file based on the current request context.
+    /// The filename is included in the URL path so browsers use it as the default download name.
     /// </summary>
-    private string GetDownloadUrl(string fileId, string chatId)
+    private string GetDownloadUrl(string fileId, string chatId, string? fileName = null)
     {
+        var filePath = string.IsNullOrEmpty(fileName)
+            ? $"/files/{fileId}"
+            : $"/files/{fileId}/{Uri.EscapeDataString(fileName)}";
+
         var httpContext = this._httpContextAccessor.HttpContext;
         if (httpContext != null)
         {
             var request = httpContext.Request;
             var baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}";
-            return $"{baseUrl}/files/{fileId}?chatId={chatId}";
+            return $"{baseUrl}{filePath}?chatId={chatId}";
         }
 
         // Fallback to relative URL if HttpContext is not available
-        return $"/files/{fileId}?chatId={chatId}";
+        return $"{filePath}?chatId={chatId}";
     }
 }
