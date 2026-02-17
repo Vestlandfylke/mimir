@@ -213,7 +213,9 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
 
             const contentDisposition = response.headers.get('content-disposition');
             const filename =
-                tryGetFilenameFromContentDisposition(contentDisposition) ?? parsed.pathname.split('/').pop() ?? 'download';
+                tryGetFilenameFromContentDisposition(contentDisposition) ??
+                parsed.pathname.split('/').pop() ??
+                'download';
             const blob = await response.blob();
             downloadBlob(blob, filename);
         } catch (err) {
