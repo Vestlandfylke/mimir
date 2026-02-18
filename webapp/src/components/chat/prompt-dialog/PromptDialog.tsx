@@ -463,7 +463,7 @@ export const PromptDialog: React.FC<IPromptDialogProps> = ({ message }) => {
                         <Label size="small" color="brand">
                             Vil du lære meir om prompts? Klikk{' '}
                             <Link
-                                href="https://learn.microsoft.com/en-us/semantic-kernel/concepts/prompts/"
+                                href="https://vlfksky.sharepoint.com/sites/IT/SitePages/Tips-for-%C3%A5-f%C3%A5-gode-svar-fr%C3%A5-Mimir.aspx"
                                 target="_blank"
                                 rel="noreferrer"
                             >

@@ -258,15 +258,13 @@ export const FileManagementModal: React.FC<FileManagementModalProps> = ({ isOpen
                 const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
                 const baseUrl = BackendServiceUrl.replace(/\/$/, '');
 
-                // On mobile/Teams WebViews, blob downloads don't work (download attribute
-                // and programmatic anchor clicks are blocked). Use a token-based direct URL instead.
-                const isMobileOrTeams =
-                    /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ||
-                    /Teams/i.test(navigator.userAgent) ||
-                    // Teams desktop also uses embedded browser
-                    /Electron/i.test(navigator.userAgent);
+                // On actual mobile devices, blob downloads are unreliable (download attribute
+                // and programmatic anchor clicks are often blocked in mobile WebViews).
+                // Use a token-based direct URL instead. Desktop (including Teams desktop) uses
+                // the standard blob approach which downloads in-place without opening a new window.
+                const isMobile = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
 
-                if (isMobileOrTeams) {
+                if (isMobile) {
                     const token = await fileService.getDownloadTokenAsync(file.id, accessToken);
                     const separator = file.downloadUrl.includes('?') ? '&' : '?';
                     const directUrl = `${baseUrl}${file.downloadUrl}${separator}dt=${encodeURIComponent(token)}`;

@@ -154,14 +154,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
     const rawContent = stripDiagramRequestPrefix(message.content);
     const content = utils.replaceCitationLinksWithIndices(utils.formatChatTextContent(rawContent), message);
 
-    const handleFilesLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-        // If auth is disabled, a normal navigation is fine (PassThrough backend).
-        if (!AuthHelper.isAuthAAD()) {
-            return;
-        }
-
-        e.preventDefault();
-
+    const handleFilesLinkClick = async (href: string) => {
         try {
             const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
 
@@ -175,14 +168,13 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
             const baseUrl = BackendServiceUrl.replace(/\/$/, '');
             const fetchUrl = `${baseUrl}${relativePath}`;
 
-            // On mobile/Teams WebViews, blob downloads don't work.
-            // Use a token-based direct URL instead.
-            const isMobileOrTeams =
-                /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ||
-                /Teams/i.test(navigator.userAgent) ||
-                /Electron/i.test(navigator.userAgent);
+            // On actual mobile devices, blob downloads are unreliable (download attribute
+            // and programmatic anchor clicks are often blocked in mobile WebViews).
+            // Use a token-based direct URL instead. Desktop (including Teams desktop) uses
+            // the standard blob approach which downloads in-place without opening a new window.
+            const isMobile = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
 
-            if (isMobileOrTeams) {
+            if (isMobile) {
                 // Extract fileId from the URL path: /files/{fileId}/...
                 const pathParts = parsed.pathname.split('/').filter(Boolean);
                 const filesIdx = pathParts.indexOf('files');
@@ -229,14 +221,33 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
         }
     };
 
+    // Event delegation: intercept clicks on any <a> with a /files/ URL.
+    // This is more robust than relying solely on the ReactMarkdown `a` component
+    // because it catches links regardless of how they are rendered.
+    const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        const anchor = target.closest('a');
+        if (!anchor) return;
+
+        const href = anchor.getAttribute('href') ?? '';
+        if (!href || !isFilesEndpointLink(href)) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!AuthHelper.isAuthAAD()) {
+            window.open(href, '_blank');
+            return;
+        }
+        void handleFilesLinkClick(href);
+    };
+
     return (
-        <div className={classes.content}>
+        <div className={classes.content} onClick={handleContainerClick}>
             <ReactMarkdown
                 remarkPlugins={remarkPlugins}
                 rehypePlugins={rehypePlugins}
                 components={{
-                    // We fully render block code in the `code` renderer (CodeBlock / MermaidBlock),
-                    // so `pre` should not introduce any extra wrapper.
                     pre: ({ children }) => <>{children}</>,
                     code: ({ className, children, ...props }) => {
                         const raw = String(children ?? '');
@@ -244,14 +255,10 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
                         const match = /language-(\w+)/.exec(className ?? '');
                         const lang = match?.[1]?.toLowerCase();
 
-                        // Render Mermaid fenced blocks: ```mermaid ... ```
                         if (lang === 'mermaid') {
                             return <MermaidBlock code={text} isDark={isDarkMode} />;
                         }
 
-                        // Inline vs block:
-                        // - fenced/indented blocks often contain newlines
-                        // - language-xxx className indicates fenced block with language
                         const isBlock = raw.includes('\n') || Boolean(className);
                         if (!isBlock) {
                             return (
@@ -267,12 +274,7 @@ export const ChatHistoryTextContent: React.FC<ChatHistoryTextContentProps> = mem
                         const safeHref = href ?? '';
                         if (safeHref && isFilesEndpointLink(safeHref)) {
                             return (
-                                <a
-                                    {...props}
-                                    href={safeHref}
-                                    className={classes.link}
-                                    onClick={(e) => void handleFilesLinkClick(e, safeHref)}
-                                >
+                                <a {...props} href={safeHref} className={classes.link}>
                                     {children}
                                 </a>
                             );
