@@ -9,6 +9,7 @@ export interface IChatSession {
     memoryBalance: number;
     enabledPlugins: string[];
     modelId?: string;
+    template?: string; // Template type from backend (e.g. "leader", "klarsprak")
     createdOn?: string | number; // Timestamp from backend (ISO string or ms)
     createdBy?: string; // User ID of the chat creator (null for old chats)
 }

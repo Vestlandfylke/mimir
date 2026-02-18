@@ -174,12 +174,16 @@ export const useChat = () => {
                         messages: [result.initialBotMessage],
                         enabledHostedPlugins: result.chatSession.enabledPlugins,
                         users: [loggedInUser],
-                        botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, template),
+                        botProfilePicture: getBotProfilePicture(
+                            Object.keys(conversations).length,
+                            result.chatSession.template ?? template,
+                        ),
                         input: '',
                         botResponseStatus: undefined,
                         userDataLoaded: false,
                         disabled: false,
                         hidden: false,
+                        template: result.chatSession.template ?? template,
                         createdBy: result.chatSession.createdBy,
                     };
 
@@ -410,9 +414,6 @@ export const useChat = () => {
                         chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].timestamp : undefined;
                     const chatCreatedTimestamp = parseTimestamp(chatSession.createdOn);
 
-                    // Detect template from title for proper bot icon
-                    const detectedTemplate = chatSession.title.includes('Leiar-assistent') ? 'leader' : undefined;
-
                     loadedConversations[chatSession.id] = {
                         id: chatSession.id,
                         title: chatSession.title,
@@ -421,13 +422,14 @@ export const useChat = () => {
                         users: chatUsers,
                         messages: chatMessages,
                         enabledHostedPlugins: chatSession.enabledPlugins,
-                        botProfilePicture: getBotProfilePicture(index, detectedTemplate),
+                        botProfilePicture: getBotProfilePicture(index, chatSession.template),
                         input: '',
                         botResponseStatus: undefined,
-                        userDataLoaded: chatMessages.length > 0, // Only marked as loaded if we fetched messages
+                        userDataLoaded: chatMessages.length > 0,
                         lastUpdatedTimestamp: lastMessageTimestamp ?? chatCreatedTimestamp,
                         disabled: false,
                         hidden: !features[FeatureKeys.MultiUserChat].enabled && chatUsers.length > 1,
+                        template: chatSession.template,
                         createdBy: chatSession.createdBy,
                     };
                 }
@@ -498,9 +500,6 @@ export const useChat = () => {
             await botService.uploadAsync(bot, accessToken).then(async (chatSession: IChatSession) => {
                 const chatMessages = await chatService.getChatMessagesAsync(chatSession.id, 0, 100, accessToken);
 
-                // Detect template from title for proper bot icon
-                const detectedTemplate = chatSession.title.includes('Leiar-assistent') ? 'leader' : undefined;
-
                 const newChat: ChatState = {
                     id: chatSession.id,
                     title: chatSession.title,
@@ -509,12 +508,13 @@ export const useChat = () => {
                     users: [loggedInUser],
                     messages: chatMessages,
                     enabledHostedPlugins: chatSession.enabledPlugins,
-                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, detectedTemplate),
+                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, chatSession.template),
                     input: '',
                     botResponseStatus: undefined,
                     userDataLoaded: false,
                     disabled: false,
                     hidden: false,
+                    template: chatSession.template,
                     createdBy: chatSession.createdBy,
                 };
 
@@ -612,9 +612,6 @@ export const useChat = () => {
                 // Get chat users
                 const chatUsers = await chatService.getAllChatParticipantsAsync(result.id, accessToken);
 
-                // Detect template from title for proper bot icon
-                const detectedTemplate = result.title.includes('Leiar-assistent') ? 'leader' : undefined;
-
                 const newChat: ChatState = {
                     id: result.id,
                     title: result.title,
@@ -623,12 +620,13 @@ export const useChat = () => {
                     messages: chatMessages,
                     enabledHostedPlugins: result.enabledPlugins,
                     users: chatUsers,
-                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, detectedTemplate),
+                    botProfilePicture: getBotProfilePicture(Object.keys(conversations).length, result.template),
                     input: '',
                     botResponseStatus: undefined,
                     userDataLoaded: false,
                     disabled: false,
                     hidden: false,
+                    template: result.template,
                     createdBy: result.createdBy,
                 };
 
