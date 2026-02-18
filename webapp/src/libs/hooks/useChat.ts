@@ -665,15 +665,12 @@ export const useChat = () => {
         }
     };
 
-    const editChat = async (chatId: string, title: string, syetemDescription: string, memoryBalance: number) => {
+    const editChat = async (
+        chatId: string,
+        fields: { title?: string; systemDescription?: string; memoryBalance?: number },
+    ) => {
         try {
-            await chatService.editChatAsync(
-                chatId,
-                title,
-                syetemDescription,
-                memoryBalance,
-                await AuthHelper.getSKaaSAccessToken(instance, inProgress),
-            );
+            await chatService.editChatAsync(chatId, fields, await AuthHelper.getSKaaSAccessToken(instance, inProgress));
         } catch (e: any) {
             const errorMessage = `Error editing chat ${chatId}. Details: ${getErrorDetails(e)}`;
             dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));

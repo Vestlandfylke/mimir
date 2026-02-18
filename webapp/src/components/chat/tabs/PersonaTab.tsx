@@ -407,7 +407,7 @@ export const PersonaTab: React.FC = () => {
                 customInstructions,
             );
 
-            await chat.editChat(selectedId, chatState.title, newSystemDescription, chatState.memoryBalance);
+            await chat.editChat(selectedId, { systemDescription: newSystemDescription });
             dispatch(
                 editConversationSystemDescription({
                     id: selectedId,

@@ -130,24 +130,14 @@ export class ChatService extends BaseService {
 
     public editChatAsync = async (
         chatId: string,
-        title: string,
-        systemDescription: string,
-        memoryBalance: number,
+        fields: { title?: string; systemDescription?: string; memoryBalance?: number },
         accessToken: string,
     ): Promise<any> => {
-        const body: IChatSession = {
-            id: chatId,
-            title,
-            systemDescription,
-            memoryBalance,
-            enabledPlugins: [], // edit will not modify the enabled plugins
-        };
-
         const result = await this.getResponseAsync<IChatSession>(
             {
                 commandPath: `chats/${chatId}`,
                 method: 'PATCH',
-                body,
+                body: fields,
             },
             accessToken,
         );

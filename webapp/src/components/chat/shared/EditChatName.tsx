@@ -38,7 +38,7 @@ interface IEditChatNameProps {
 export const EditChatName: React.FC<IEditChatNameProps> = ({ name, chatId, exitEdits, textButtons }) => {
     const classes = useClasses();
     const dispatch = useAppDispatch();
-    const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
+    const { selectedId } = useAppSelector((state: RootState) => state.conversations);
     const chat = useChat();
 
     const [title = '', setTitle] = useState<string | undefined>(name);
@@ -49,8 +49,7 @@ export const EditChatName: React.FC<IEditChatNameProps> = ({ name, chatId, exitE
 
     const onSaveTitleChange = async () => {
         if (name !== title) {
-            const chatState = conversations[selectedId];
-            await chat.editChat(chatId, title, chatState.systemDescription, chatState.memoryBalance).then(() => {
+            await chat.editChat(chatId, { title }).then(() => {
                 dispatch(editConversationTitle({ id: chatId, newTitle: title }));
             });
         }
